@@ -341,6 +341,170 @@
             color: var(--sidebar-label);
         }
 
+        /* ===== SIDEBAR FOOTER (APP VERSION) ===== */
+        .sidebar-footer {
+            padding: 12px 14px 14px 14px;
+            border-top: 1px solid var(--sidebar-border);
+            background: var(--bg-surface-subtle);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+        }
+
+        .version-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 10px;
+            border-radius: 8px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            user-select: none;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+        }
+
+        .version-card:hover {
+            border-color: var(--luno-primary);
+            box-shadow: 0 3px 10px rgba(76, 53, 222, 0.12);
+            transform: translateY(-1px);
+        }
+
+        .version-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .version-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--sidebar-label);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .version-pulse {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulse-green 2s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 5px rgba(16, 185, 129, 0);
+            }
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+            }
+        }
+
+        .version-number {
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .version-codename {
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: var(--bg-surface-subtle);
+            padding: 1px 5px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .version-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 7px;
+            border-radius: 12px;
+            background: rgba(16, 185, 129, 0.1);
+            color: #059669;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .sidebar-copyright {
+            font-size: 10.5px;
+            color: var(--sidebar-label);
+            text-align: center;
+            margin-top: 1px;
+        }
+
+        /* ===== TIMELINE CHANGELOG ===== */
+        .timeline-version {
+            position: relative;
+            padding-left: 18px;
+            margin-top: 10px;
+        }
+
+        .timeline-version::before {
+            content: '';
+            position: absolute;
+            left: 5px;
+            top: 6px;
+            bottom: 6px;
+            width: 2px;
+            background: var(--border-color);
+        }
+
+        .timeline-item {
+            position: relative;
+            margin-bottom: 18px;
+        }
+
+        .timeline-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .timeline-badge {
+            position: relative;
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 6px;
+            background: var(--bg-surface-hover);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            margin-bottom: 6px;
+        }
+
+        .timeline-badge.current {
+            background: var(--luno-primary);
+            color: #ffffff;
+            border-color: var(--luno-primary);
+            box-shadow: 0 2px 6px rgba(76, 53, 222, 0.25);
+        }
+
+        .timeline-content {
+            background: var(--bg-surface-subtle);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 14px;
+        }
+
         /* ===== MAIN LAYOUT ===== */
         .main-wrapper {
             flex-grow: 1;
@@ -1177,6 +1341,29 @@
                 <a href="/setting/data" class="submenu-item {{ Request::is('setting/data*') ? 'active' : '' }}">2. Reset Data Laporan</a>
             </div>
         </nav>
+
+        <!-- Sidebar Footer Version Card -->
+        <div class="sidebar-footer">
+            <div class="version-card" onclick="openAppVersionModal()" title="Klik untuk melihat catatan rilis & pembaruan versi (Changelog)">
+                <div class="version-info">
+                    <div class="version-label">
+                        <span class="version-pulse"></span>
+                        <span>Versi Sistem</span>
+                    </div>
+                    <div class="version-number">
+                        {{ config('app.version', 'v2.4.0') }}
+                        <span class="version-codename">{{ config('app.version_date', '04 Sep 2026') }}</span>
+                    </div>
+                </div>
+                <div class="version-badge">
+                    <i class="ph-bold ph-sparkle"></i>
+                    <span>Terbaru</span>
+                </div>
+            </div>
+            <div class="sidebar-copyright">
+                &copy; {{ date('Y') }} BPKAD Prov. Kalsel
+            </div>
+        </div>
     </aside>
 
     <!-- Main Wrapper -->
@@ -1276,6 +1463,107 @@
                 });
             }
         });
+
+        function openAppVersionModal() {
+            const modal = document.getElementById('appVersionModal');
+            if (modal) modal.classList.add('active');
+        }
+
+        function closeAppVersionModal() {
+            const modal = document.getElementById('appVersionModal');
+            if (modal) modal.classList.remove('active');
+        }
     </script>
+
+    <!-- Modal Changelog & Versi Aplikasi -->
+    <div class="modal-overlay" id="appVersionModal">
+        <div class="modal-content" style="max-width: 580px;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(76, 53, 222, 0.12); color: var(--luno-primary); display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                        <i class="ph-bold ph-git-branch"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 700;">Catatan Rilis & Versi Aplikasi</h3>
+                        <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Informasi pembaruan terkini sistem KONBELPEG</p>
+                    </div>
+                </div>
+                <button class="btn-close" onclick="closeAppVersionModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px 24px; max-height: 60vh; overflow-y: auto;">
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 10px; margin-bottom: 20px;">
+                    <div>
+                        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #059669; letter-spacing: 0.5px;">Versi Terpasang Saat Ini</div>
+                        <div style="font-size: 16px; font-weight: 800; color: var(--text-main);">
+                            {{ config('app.version', 'v2.4.0') }} &bull; <span style="font-size: 13px; font-weight: 600; color: var(--text-muted);">{{ config('app.version_title', 'Integrasi HIS_GPOK') }}</span>
+                        </div>
+                    </div>
+                    <span style="font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; background: #10b981; color: white;">
+                        Rilis {{ config('app.version_date', '04 Sep 2026') }}
+                    </span>
+                </div>
+
+                <div class="timeline-version">
+                    <!-- v2.4.0 -->
+                    <div class="timeline-item">
+                        <div class="timeline-badge current">v2.4.0 (Terbaru)</div>
+                        <div class="timeline-content">
+                            <h4 style="margin: 0 0 6px 0; font-size: 13.5px; font-weight: 700; color: var(--text-main);">Integrasi DBF Histori Gaji Pokok (HIS_GPOK) & Manajemen DBF Ganda</h4>
+                            <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+                                <li>Integrasi database <code>HIS_GPOK</code> untuk membaca nomor SK, TMT gaji, dan gapok baru.</li>
+                                <li>Identifikasi otomatis status SK: <strong>Terjadwal di SIMGAJI</strong> (351) vs <strong>Belum Diinput</strong> (124).</li>
+                                <li>Penyelesaian anomali NIP <code>200006152021012001</code> (Ivo Putri Viddy Andini) terverifikasi terjadwal.</li>
+                                <li>Manajemen berkas ganda di <code>/master/simgaji-dbf</code> dengan auto-detect kolom DBF.</li>
+                                <li>Kolom Status SK SIMGAJI pada ekspor Excel & PDF.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- v2.3.0 -->
+                    <div class="timeline-item">
+                        <div class="timeline-badge">v2.3.0</div>
+                        <div class="timeline-content">
+                            <h4 style="margin: 0 0 6px 0; font-size: 13.5px; font-weight: 700; color: var(--text-main);">Ekuivalensi Romawi PPPK & Filter Pensiunan</h4>
+                            <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+                                <li>Ekuivalensi cerdas pangkat PPPK (contoh: IX sama dengan 09/9), mengeliminasi 4.806 <em>false positives</em>.</li>
+                                <li>Filter status kepegawaian (Semua, Pegawai Aktif, Pensiun BUP/Janda/Duda).</li>
+                                <li>Perbaikan nama SKPD saat ekspor Excel pada tab Perbedaan Tanggal Lahir.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- v2.2.0 -->
+                    <div class="timeline-item">
+                        <div class="timeline-badge">v2.2.0</div>
+                        <div class="timeline-content">
+                            <h4 style="margin: 0 0 6px 0; font-size: 13.5px; font-weight: 700; color: var(--text-main);">Zona Waktu WITA & Estetika Antarmuka</h4>
+                            <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+                                <li>Standarisasi zona waktu ke WITA / GMT+8 (Asia/Makassar).</li>
+                                <li>Pembersihan sidebar dan penyesuaian light palette.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- v2.1.0 -->
+                    <div class="timeline-item">
+                        <div class="timeline-badge">v2.1.0</div>
+                        <div class="timeline-content">
+                            <h4 style="margin: 0 0 6px 0; font-size: 13.5px; font-weight: 700; color: var(--text-main);">Modul Rekonsiliasi SIMGAJI Cepat</h4>
+                            <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+                                <li>Parser DBF native dan 6 kategori pencocokan otomatis.</li>
+                                <li>Sinkronisasi master data langsung & caching instan.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; border-top: 1px solid var(--border-color); background: var(--bg-surface-subtle);">
+                <a href="https://github.com/rullyperdhana/konbelpeg/blob/main/CHANGELOG.md" target="_blank" style="font-size: 12px; color: var(--luno-primary); font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 5px;">
+                    <i class="ph-bold ph-arrow-square-out"></i> Buka Changelog Lengkap di GitHub
+                </a>
+                <button type="button" class="btn btn-primary" onclick="closeAppVersionModal()">Tutup</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

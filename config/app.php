@@ -15,6 +15,10 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    'version' => env('APP_VERSION', 'v2.4.0'),
+    'version_date' => '04 September 2026',
+    'version_title' => 'Integrasi HIS_GPOK & Manajemen DBF Ganda',
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment
