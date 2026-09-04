@@ -4,6 +4,17 @@ Dokumen ini mencatat seluruh riwayat pembaruan, evolusi fitur, perbaikan bug, da
 
 ---
 
+## 📌 [v2.4.1] - 2026-09-04
+### 🎯 Pangkat Efektif SIMGAJI Mengadopsi HIS_GPOK (124 Selisih Riil)
+- **Pengakuan Pangkat SIMGAJI Berdasarkan HIS_GPOK**:
+  - Kolom *Pangkat di SIMGAJI* kini secara otomatis mengadopsi pangkat aktif mutakhir dari database `HIS_GPOK` (misal: Ivo Putri Viddy Andini diakui berpangkat **`III/a (3A)`**, bukan lagi `II/d`).
+  - Menampilkan referensi master berjalan *Master: II/d (2D)* untuk kejelasan audit.
+- **Fokus Antrean Kerja Operator**:
+  - Tab *Kenaikan Pangkat* kini secara default memfilter dan menampilkan **124 pegawai** yang benar-benar belum diinput ke SIMGAJI (badge count tab menampilkan 124).
+  - Sebanyak **351 pegawai** yang SK-nya sudah selesai dikerjakan di SIMGAJI otomatis berstatus **🟢 Sudah Sesuai di SIMGAJI via HIS_GPOK**.
+
+---
+
 ## 📌 [v2.4.0] - 2026-09-04
 ### 🚀 Integrasi DBF Histori Gaji Pokok (HIS_GPOK) & Manajemen DBF Ganda
 - **Integrasi Database `HIS_GPOK` (Histori SK & Gaji Pokok)**:
@@ -13,7 +24,7 @@ Dokumen ini mencatat seluruh riwayat pembaruan, evolusi fitur, perbaikan bug, da
     - 🟢 **Terjadwal di SIMGAJI (`sudah_terjadwal`)**: Pegawai yang SK kenaikan pangkatnya telah masuk ke database SIMGAJI dengan TMT gaji masa depan (contoh: Maret/April 2026).
     - 🔴 **Belum Diinput di SIMGAJI (`belum_diinput`)**: Pegawai yang datanya memang belum diproses atau diinput oleh operator SIMGAJI.
   - **Penyelesaian Kasus NIP 200006152021012001 (Ivo Putri Viddy Andini)**:
-    - Terverifikasi berstatus *Terjadwal di SIMGAJI* dengan Golongan IX, No. SK `800.1.3.2/02/BKD/2026`, dan TMT Gaji `01/03/2026`.
+    - Terverifikasi berstatus *Terjadwal di SIMGAJI* dengan Golongan III/a, No. SK `800.1.3.2/02/BKD/2026`, dan TMT Gaji `01/03/2026`.
 - **Sub-Filter Status SK SIMGAJI**:
   - Dropdown filter dinamis pada tab Kenaikan Pangkat:
     - `Semua Status SK (475)`

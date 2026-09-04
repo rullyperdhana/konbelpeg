@@ -149,7 +149,7 @@ class RekonsiliasiSimgajiController extends Controller
         $activeTab = $request->get('tab', 'aktif_baru');
         $search = trim((string) $request->get('search', ''));
         $statusPensiun = $request->get('status_pensiun', 'semua');
-        $statusSk = $request->get('status_sk', 'semua');
+        $statusSk = $request->get('status_sk', 'belum_diinput');
 
         $data = $this->getReconciliationData();
 
@@ -733,7 +733,7 @@ class RekonsiliasiSimgajiController extends Controller
         $activeTab = $request->get('tab', 'aktif_baru');
         $search = $request->get('search', '');
         $statusPensiun = $request->get('status_pensiun', 'semua');
-        $statusSk = $request->get('status_sk', 'semua');
+        $statusSk = $request->get('status_sk', 'belum_diinput');
         $data = $this->getReconciliationData();
 
         if (isset($data['error'])) {
@@ -932,7 +932,7 @@ class RekonsiliasiSimgajiController extends Controller
         $activeTab = $request->get('tab', 'aktif_baru');
         $search = $request->get('search', '');
         $statusPensiun = $request->get('status_pensiun', 'semua');
-        $statusSk = $request->get('status_sk', 'semua');
+        $statusSk = $request->get('status_sk', 'belum_diinput');
         $data = $this->getReconciliationData();
 
         if (isset($data['error'])) {
@@ -1197,12 +1197,22 @@ class RekonsiliasiSimgajiController extends Controller
                             }
                         }
 
+                        $pangkatSimgaji = ($statusSk === 'sudah_terjadwal' && ! empty($skInfo['pangkat_his']))
+                            ? $skInfo['pangkat_his']
+                            : $d['golru_converted'];
+
+                        $rawPangkatSimgaji = ($statusSk === 'sudah_terjadwal' && ! empty($his['kdpangkat']))
+                            ? $his['kdpangkat']
+                            : $d['kdpangkat'];
+
                         $bedaPangkat[] = [
                             'nip' => $nip,
                             'nama' => $db->nama,
                             'golru_app' => $db->golru ?: '-',
-                            'pangkat_simgaji' => $d['golru_converted'],
-                            'pangkat_raw_dbf' => $d['kdpangkat'],
+                            'pangkat_simgaji' => $pangkatSimgaji,
+                            'pangkat_raw_dbf' => $rawPangkatSimgaji,
+                            'pangkat_mst' => $d['golru_converted'],
+                            'pangkat_raw_mst' => $d['kdpangkat'],
                             'skpd' => $db->unitKerja ? $db->unitKerja->skpd : '-',
                             'is_pensiun' => $isPensiun,
                             'status_kepegawaian' => $ketPensiun,
@@ -1301,7 +1311,8 @@ class RekonsiliasiSimgajiController extends Controller
                     'total_app' => $dbPegawais->count(),
                     'in_both' => $inBothCount,
                     'aktif_baru_count' => count($aktifBaru),
-                    'beda_pangkat_count' => count($bedaPangkat),
+                    'beda_pangkat_count' => $bedaPangkatBelumDiinputCount,
+                    'beda_pangkat_total_count' => count($bedaPangkat),
                     'beda_pangkat_aktif_count' => $bedaPangkatAktifCount,
                     'beda_pangkat_pensiun_count' => $bedaPangkatPensiunCount,
                     'beda_pangkat_belum_diinput_count' => $bedaPangkatBelumDiinputCount,

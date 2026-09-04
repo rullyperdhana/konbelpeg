@@ -207,14 +207,14 @@
         <div class="luno-widget-top">
             <div>
                 <p class="luno-widget-title">Kenaikan Pangkat</p>
-                <h3 class="luno-widget-value" style="color: #0284c7;">{{ number_format($summary['beda_pangkat_count'] ?? 0, 0, ',', '.') }}</h3>
+                <h3 class="luno-widget-value" style="color: #ef4444;">{{ number_format($summary['beda_pangkat_belum_diinput_count'] ?? ($summary['beda_pangkat_count'] ?? 0), 0, ',', '.') }}</h3>
             </div>
             <div class="luno-widget-icon icon-primary">
                 <i class="ph-bold ph-trend-up"></i>
             </div>
         </div>
         <div class="luno-widget-bottom">
-            <span class="luno-trend-neutral"><i class="ph-bold ph-seal-check"></i> Aktif: {{ number_format($summary['beda_pangkat_aktif_count'] ?? 0, 0, ',', '.') }} &bull; Pensiun: {{ number_format($summary['beda_pangkat_pensiun_count'] ?? 0, 0, ',', '.') }}</span>
+            <span class="luno-trend-up"><i class="ph-bold ph-check-circle"></i> Sesuai di HIS_GPOK: {{ number_format($summary['beda_pangkat_terjadwal_count'] ?? 0, 0, ',', '.') }}</span>
         </div>
     </div>
 
@@ -229,7 +229,7 @@
             </div>
         </div>
         <div class="luno-widget-bottom">
-            <span class="luno-trend-neutral"><i class="ph-bold ph-arrows-left-right"></i> Mutasi / Beda Unit</span>
+            <span class="luno-trend-neutral"><i class="ph-bold ph-arrows-left-right"></i> Mutasi / Salah Penempatan</span>
         </div>
     </div>
 
@@ -265,10 +265,11 @@
 
             <a href="{{ route('laporan.rekonsiliasi_simgaji.index', ['tab' => 'beda_pangkat']) }}" 
                class="btn {{ $activeTab === 'beda_pangkat' ? 'btn-primary' : 'btn-export' }}"
-               style="font-size: 13px; font-weight: 600; padding: 8px 14px;">
+               style="font-size: 13px; font-weight: 600; padding: 8px 14px;"
+               title="{{ $summary['beda_pangkat_belum_diinput_count'] ?? 0 }} belum diinput di SIMGAJI, {{ $summary['beda_pangkat_terjadwal_count'] ?? 0 }} sudah sesuai di HIS_GPOK">
                 <i class="ph-bold ph-trend-up"></i> Kenaikan Pangkat
                 <span class="badge" style="background: rgba(255,255,255,0.25); color: inherit; padding: 2px 7px; border-radius: 999px; margin-left: 6px; font-size: 11px;">
-                    {{ $summary['beda_pangkat_count'] ?? 0 }}
+                    {{ $summary['beda_pangkat_belum_diinput_count'] ?? ($summary['beda_pangkat_count'] ?? 0) }}
                 </span>
             </a>
 
@@ -357,14 +358,14 @@
                     </select>
 
                     <select name="status_sk" class="form-control" style="width: auto; padding: 7px 12px; font-size: 12.5px; font-weight: 600; border-radius: 8px;" onchange="this.form.submit()" title="Filter status SK di SIMGAJI">
-                        <option value="semua" {{ ($statusSk ?? 'semua') === 'semua' ? 'selected' : '' }}>
-                            Semua Status SK ({{ $summary['beda_pangkat_count'] ?? 0 }})
-                        </option>
-                        <option value="belum_diinput" {{ ($statusSk ?? 'semua') === 'belum_diinput' ? 'selected' : '' }}>
+                        <option value="belum_diinput" {{ ($statusSk ?? 'belum_diinput') === 'belum_diinput' ? 'selected' : '' }}>
                             🔴 Belum Diinput di SIMGAJI ({{ $summary['beda_pangkat_belum_diinput_count'] ?? 0 }})
                         </option>
-                        <option value="sudah_terjadwal" {{ ($statusSk ?? 'semua') === 'sudah_terjadwal' ? 'selected' : '' }}>
-                            🟢 Sudah Terjadwal di SIMGAJI ({{ $summary['beda_pangkat_terjadwal_count'] ?? 0 }})
+                        <option value="sudah_terjadwal" {{ ($statusSk ?? 'belum_diinput') === 'sudah_terjadwal' ? 'selected' : '' }}>
+                            🟢 Sudah Sesuai di SIMGAJI via HIS_GPOK ({{ $summary['beda_pangkat_terjadwal_count'] ?? 0 }})
+                        </option>
+                        <option value="semua" {{ ($statusSk ?? 'belum_diinput') === 'semua' ? 'selected' : '' }}>
+                            Semua Riwayat ({{ $summary['beda_pangkat_total_count'] ?? 475 }})
                         </option>
                     </select>
                 </div>
@@ -499,11 +500,16 @@
                                 <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #059669; padding: 4px 10px; border-radius: 6px; font-weight: 700;">
                                     <i class="ph-bold ph-arrow-up"></i> {{ $row['pangkat_simgaji'] }} ({{ $row['pangkat_raw_dbf'] }})
                                 </span>
+                                @if(!empty($row['pangkat_mst']) && $row['pangkat_mst'] !== $row['pangkat_simgaji'])
+                                    <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;" title="Pangkat tercatat pada master aktif berjalan SIMGAJI">
+                                        Master: {{ $row['pangkat_mst'] }} ({{ $row['pangkat_raw_mst'] ?? '' }})
+                                    </div>
+                                @endif
                             </td>
                             <td>
                                 @if(($row['status_sk'] ?? '') === 'sudah_terjadwal')
                                     <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;">
-                                        <i class="ph-bold ph-check-circle"></i> Terjadwal di SIMGAJI
+                                        <i class="ph-bold ph-check-circle"></i> Sudah Sesuai di SIMGAJI
                                     </span>
                                     @if(!empty($row['sk_info']))
                                         <div style="margin-top: 4px; font-size: 11px; color: var(--text-muted); line-height: 1.4;">
@@ -516,7 +522,7 @@
                                     @endif
                                 @else
                                     <span class="badge" style="background: rgba(239, 68, 68, 0.12); color: #dc2626; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;">
-                                        <i class="ph-bold ph-warning-circle"></i> Belum Diinput
+                                        <i class="ph-bold ph-warning-circle"></i> Belum Diinput di SIMGAJI
                                     </span>
                                     <div style="margin-top: 3px; font-size: 11px; color: var(--text-muted);">
                                         Perlu pemutakhiran SK

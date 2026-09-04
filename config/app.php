@@ -15,9 +15,9 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
-    'version' => env('APP_VERSION', 'v2.4.0'),
+    'version' => env('APP_VERSION', 'v2.4.1'),
     'version_date' => '04 September 2026',
-    'version_title' => 'Integrasi HIS_GPOK & Manajemen DBF Ganda',
+    'version_title' => 'Pangkat Efektif SIMGAJI HIS_GPOK (124 Selisih Riil)',
 
     /*
     |--------------------------------------------------------------------------
