@@ -207,14 +207,16 @@
         <div class="luno-widget-top">
             <div>
                 <p class="luno-widget-title">Kenaikan Pangkat</p>
-                <h3 class="luno-widget-value" style="color: #ef4444;">{{ number_format($summary['beda_pangkat_belum_diinput_count'] ?? ($summary['beda_pangkat_count'] ?? 0), 0, ',', '.') }}</h3>
+                <h3 class="luno-widget-value" style="color: #ef4444;">{{ number_format($summary['beda_pangkat_count'] ?? 0, 0, ',', '.') }}</h3>
             </div>
             <div class="luno-widget-icon icon-primary">
                 <i class="ph-bold ph-trend-up"></i>
             </div>
         </div>
         <div class="luno-widget-bottom">
-            <span class="luno-trend-up"><i class="ph-bold ph-check-circle"></i> Sesuai di HIS_GPOK: {{ number_format($summary['beda_pangkat_terjadwal_count'] ?? 0, 0, ',', '.') }}</span>
+            <span class="luno-trend-neutral" style="font-size: 11px;">
+                <strong style="color: #2563eb;">{{ $summary['beda_pangkat_simgaji_tinggi_count'] ?? 0 }}</strong> SIMGAJI Tinggi • <strong style="color: #dc2626;">{{ $summary['beda_pangkat_belum_diinput_count'] ?? 0 }}</strong> Belum Diinput
+            </span>
         </div>
     </div>
 
@@ -266,10 +268,10 @@
             <a href="{{ route('laporan.rekonsiliasi_simgaji.index', ['tab' => 'beda_pangkat']) }}" 
                class="btn {{ $activeTab === 'beda_pangkat' ? 'btn-primary' : 'btn-export' }}"
                style="font-size: 13px; font-weight: 600; padding: 8px 14px;"
-               title="{{ $summary['beda_pangkat_belum_diinput_count'] ?? 0 }} belum diinput di SIMGAJI, {{ $summary['beda_pangkat_terjadwal_count'] ?? 0 }} sudah sesuai di HIS_GPOK">
+               title="{{ $summary['beda_pangkat_simgaji_tinggi_count'] ?? 0 }} SIMGAJI lebih tinggi, {{ $summary['beda_pangkat_belum_diinput_count'] ?? 0 }} belum diinput di SIMGAJI, {{ $summary['beda_pangkat_terjadwal_count'] ?? 0 }} sudah sesuai di HIS_GPOK">
                 <i class="ph-bold ph-trend-up"></i> Kenaikan Pangkat
                 <span class="badge" style="background: rgba(255,255,255,0.25); color: inherit; padding: 2px 7px; border-radius: 999px; margin-left: 6px; font-size: 11px;">
-                    {{ $summary['beda_pangkat_belum_diinput_count'] ?? ($summary['beda_pangkat_count'] ?? 0) }}
+                    {{ $summary['beda_pangkat_count'] ?? 0 }}
                 </span>
             </a>
 
@@ -358,13 +360,19 @@
                     </select>
 
                     <select name="status_sk" class="form-control" style="width: auto; padding: 7px 12px; font-size: 12.5px; font-weight: 600; border-radius: 8px;" onchange="this.form.submit()" title="Filter status SK di SIMGAJI">
-                        <option value="belum_diinput" {{ ($statusSk ?? 'belum_diinput') === 'belum_diinput' ? 'selected' : '' }}>
+                        <option value="semua_selisih" {{ ($statusSk ?? 'semua_selisih') === 'semua_selisih' ? 'selected' : '' }}>
+                            ⚡ Semua Perlu Penyesuaian ({{ $summary['beda_pangkat_count'] ?? 0 }})
+                        </option>
+                        <option value="simgaji_lebih_tinggi" {{ ($statusSk ?? 'semua_selisih') === 'simgaji_lebih_tinggi' ? 'selected' : '' }}>
+                            🔵 Pangkat di SIMGAJI Lebih Tinggi ({{ $summary['beda_pangkat_simgaji_tinggi_count'] ?? 0 }})
+                        </option>
+                        <option value="belum_diinput" {{ ($statusSk ?? 'semua_selisih') === 'belum_diinput' ? 'selected' : '' }}>
                             🔴 Belum Diinput di SIMGAJI ({{ $summary['beda_pangkat_belum_diinput_count'] ?? 0 }})
                         </option>
-                        <option value="sudah_terjadwal" {{ ($statusSk ?? 'belum_diinput') === 'sudah_terjadwal' ? 'selected' : '' }}>
+                        <option value="sudah_terjadwal" {{ ($statusSk ?? 'semua_selisih') === 'sudah_terjadwal' ? 'selected' : '' }}>
                             🟢 Sudah Sesuai di SIMGAJI via HIS_GPOK ({{ $summary['beda_pangkat_terjadwal_count'] ?? 0 }})
                         </option>
-                        <option value="semua" {{ ($statusSk ?? 'belum_diinput') === 'semua' ? 'selected' : '' }}>
+                        <option value="semua" {{ ($statusSk ?? 'semua_selisih') === 'semua' ? 'selected' : '' }}>
                             Semua Riwayat ({{ $summary['beda_pangkat_total_count'] ?? 475 }})
                         </option>
                     </select>
@@ -374,7 +382,7 @@
             <button type="submit" class="btn btn-export">
                 <i class="ph-bold ph-magnifying-glass"></i> Cari
             </button>
-            @if($search || ($statusPensiun ?? 'semua') !== 'semua' || ($statusSk ?? 'semua') !== 'semua')
+            @if($search || ($statusPensiun ?? 'semua') !== 'semua' || ($statusSk ?? 'semua_selisih') !== 'semua_selisih')
                 <a href="{{ route('laporan.rekonsiliasi_simgaji.index', ['tab' => $activeTab]) }}" class="btn btn-export" style="color: var(--danger-text);" title="Reset semua filter">
                     <i class="ph-bold ph-x"></i> Reset
                 </a>
@@ -395,6 +403,7 @@
                 @csrf
                 <input type="hidden" name="sync_all" value="1">
                 <input type="hidden" name="status_pensiun" value="{{ $statusPensiun ?? 'semua' }}">
+                <input type="hidden" name="status_sk" value="{{ $statusSk ?? 'semua_selisih' }}">
                 <button type="submit" class="btn btn-primary">
                     <i class="ph-bold ph-arrows-clockwise"></i> Perbarui Semua Pangkat ({{ $paginatedItems->total() }})
                 </button>
@@ -520,12 +529,29 @@
                                             @endif
                                         </div>
                                     @endif
+                                @elseif(($row['status_sk'] ?? '') === 'simgaji_lebih_tinggi')
+                                    <span class="badge" style="background: rgba(37, 99, 235, 0.12); color: #2563eb; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;">
+                                        <i class="ph-bold ph-arrow-circle-up"></i> Pangkat di SIMGAJI Lebih Tinggi
+                                    </span>
+                                    <div style="margin-top: 3px; font-size: 11px; color: var(--text-muted); line-height: 1.35;">
+                                        SIMGAJI: <strong style="color: #2563eb;">{{ $row['pangkat_simgaji'] }}</strong> &gt; Aplikasi: <strong>{{ $row['golru_app'] }}</strong>
+                                        @if(!empty($row['sk_info']['nomorskep']))
+                                            <br><span title="Nomor SK"><i class="ph-bold ph-file-text"></i> {{ $row['sk_info']['nomorskep'] }}</span>
+                                        @endif
+                                        @if(!empty($row['sk_info']['tmtgaji']))
+                                            <br><span>TMT Gaji: <strong>{{ date('d/m/Y', strtotime($row['sk_info']['tmtgaji'])) }}</strong></span>
+                                            @if(!empty($row['sk_info']['gapok']))
+                                                • <span>Rp {{ number_format((float)$row['sk_info']['gapok'], 0, ',', '.') }}</span>
+                                            @endif
+                                        @endif
+                                    </div>
                                 @else
                                     <span class="badge" style="background: rgba(239, 68, 68, 0.12); color: #dc2626; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;">
                                         <i class="ph-bold ph-warning-circle"></i> Belum Diinput di SIMGAJI
                                     </span>
-                                    <div style="margin-top: 3px; font-size: 11px; color: var(--text-muted);">
-                                        Perlu pemutakhiran SK
+                                    <div style="margin-top: 3px; font-size: 11px; color: var(--text-muted); line-height: 1.35;">
+                                        Aplikasi: <strong style="color: #dc2626;">{{ $row['golru_app'] }}</strong> &gt; SIMGAJI: <strong>{{ $row['pangkat_simgaji'] }}</strong>
+                                        <br>Perlu pemutakhiran SK di SIMGAJI
                                     </div>
                                 @endif
                             </td>

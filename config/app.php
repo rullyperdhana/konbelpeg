@@ -15,9 +15,9 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
-    'version' => env('APP_VERSION', 'v2.4.1'),
+    'version' => env('APP_VERSION', 'v2.4.2'),
     'version_date' => '04 September 2026',
-    'version_title' => 'Pangkat Efektif SIMGAJI HIS_GPOK (124 Selisih Riil)',
+    'version_title' => 'Klasifikasi Pangkat SIMGAJI Lebih Tinggi vs Belum Diinput',
 
     /*
     |--------------------------------------------------------------------------

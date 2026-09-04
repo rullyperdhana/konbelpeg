@@ -239,15 +239,25 @@
                         </td>
                         <td>
                             @if(($row['status_sk'] ?? '') === 'sudah_terjadwal')
-                                <span class="badge badge-success">Terjadwal di SIMGAJI</span>
+                                <span class="badge badge-success">Sesuai di SIMGAJI</span>
                                 @if(!empty($row['sk_info']['nomorskep']))
                                     <br><small style="color: #475569; font-size: 8px;">No: {{ $row['sk_info']['nomorskep'] }}</small>
                                 @endif
                                 @if(!empty($row['sk_info']['tmtgaji']))
-                                    <br><small style="color: #2563eb; font-size: 8px;">TMT Gaji: {{ $row['sk_info']['tmtgaji'] }}</small>
+                                    <br><small style="color: #2563eb; font-size: 8px;">TMT Gaji: {{ date('d/m/Y', strtotime($row['sk_info']['tmtgaji'])) }}</small>
+                                @endif
+                            @elseif(($row['status_sk'] ?? '') === 'simgaji_lebih_tinggi')
+                                <span class="badge" style="background: #dbeafe; color: #1e40af;">SIMGAJI Lebih Tinggi</span>
+                                <br><small style="color: #1e40af; font-size: 8px;">SIMGAJI: {{ $row['pangkat_simgaji'] }} &gt; App: {{ $row['golru_app'] }}</small>
+                                @if(!empty($row['sk_info']['nomorskep']))
+                                    <br><small style="color: #475569; font-size: 8px;">No: {{ $row['sk_info']['nomorskep'] }}</small>
+                                @endif
+                                @if(!empty($row['sk_info']['tmtgaji']))
+                                    <br><small style="color: #2563eb; font-size: 8px;">TMT Gaji: {{ date('d/m/Y', strtotime($row['sk_info']['tmtgaji'])) }}</small>
                                 @endif
                             @else
                                 <span class="badge badge-danger">Belum Diinput</span>
+                                <br><small style="color: #64748b; font-size: 8px;">App: {{ $row['golru_app'] }} &gt; SIMGAJI: {{ $row['pangkat_simgaji'] }}</small>
                             @endif
                         </td>
                     @elseif($activeTab === 'beda_skpd')

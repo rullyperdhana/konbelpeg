@@ -87,6 +87,42 @@ class RekonsiliasiSimgajiController extends Controller
         return $appNorm === $simgajiNorm;
     }
 
+    private function getPangkatScore(?string $pangkat): int
+    {
+        if (! $pangkat || $pangkat === '-') {
+            return 0;
+        }
+
+        $p = trim(strtoupper($pangkat));
+
+        $pnsMap = [
+            'I/A' => 1, 'I/B' => 2, 'I/C' => 3, 'I/D' => 4,
+            'II/A' => 5, 'II/B' => 6, 'II/C' => 7, 'II/D' => 8,
+            'III/A' => 9, 'III/B' => 10, 'III/C' => 11, 'III/D' => 12,
+            'IV/A' => 13, 'IV/B' => 14, 'IV/C' => 15, 'IV/D' => 16, 'IV/E' => 17,
+        ];
+
+        if (isset($pnsMap[$p])) {
+            return $pnsMap[$p];
+        }
+
+        $pppkRomawi = [
+            'I' => 101, 'II' => 102, 'III' => 103, 'IV' => 104, 'V' => 105, 'VI' => 106,
+            'VII' => 107, 'VIII' => 108, 'IX' => 109, 'X' => 110, 'XI' => 111, 'XII' => 112,
+            'XIII' => 113, 'XIV' => 114, 'XV' => 115, 'XVI' => 116, 'XVII' => 117,
+        ];
+
+        if (isset($pppkRomawi[$p])) {
+            return $pppkRomawi[$p];
+        }
+
+        if (is_numeric($p) && (int) $p >= 1 && (int) $p <= 17) {
+            return 100 + (int) $p;
+        }
+
+        return 0;
+    }
+
     private array $skpdCodeMap = [
         '001' => 'DINAS PENDIDIKAN DAN KEBUDAYAAN',
         '002' => 'DINAS KESEHATAN',
@@ -149,7 +185,7 @@ class RekonsiliasiSimgajiController extends Controller
         $activeTab = $request->get('tab', 'aktif_baru');
         $search = trim((string) $request->get('search', ''));
         $statusPensiun = $request->get('status_pensiun', 'semua');
-        $statusSk = $request->get('status_sk', 'belum_diinput');
+        $statusSk = $request->get('status_sk', 'semua_selisih');
 
         $data = $this->getReconciliationData();
 
@@ -175,7 +211,11 @@ class RekonsiliasiSimgajiController extends Controller
                 $items = $items->filter(fn ($item) => ! empty($item['is_pensiun']));
             }
 
-            if ($statusSk === 'belum_diinput') {
+            if ($statusSk === 'semua_selisih') {
+                $items = $items->filter(fn ($item) => in_array($item['status_sk'] ?? '', ['simgaji_lebih_tinggi', 'belum_diinput']));
+            } elseif ($statusSk === 'simgaji_lebih_tinggi') {
+                $items = $items->filter(fn ($item) => ($item['status_sk'] ?? '') === 'simgaji_lebih_tinggi');
+            } elseif ($statusSk === 'belum_diinput') {
                 $items = $items->filter(fn ($item) => ($item['status_sk'] ?? '') === 'belum_diinput');
             } elseif ($statusSk === 'sudah_terjadwal') {
                 $items = $items->filter(fn ($item) => ($item['status_sk'] ?? '') === 'sudah_terjadwal');
@@ -310,8 +350,31 @@ class RekonsiliasiSimgajiController extends Controller
         $bedaPangkat = collect($data['beda_pangkat'])->keyBy('nip');
         $selectedNips = $request->input('selected_nips', []);
         $syncAll = $request->boolean('sync_all');
+        $statusSk = $request->input('status_sk');
+        $statusPensiun = $request->input('status_pensiun');
 
-        $targetNips = $syncAll ? $bedaPangkat->keys()->toArray() : (array) $selectedNips;
+        if ($syncAll) {
+            $filtered = collect($data['beda_pangkat']);
+            if ($statusPensiun === 'aktif') {
+                $filtered = $filtered->filter(fn ($x) => empty($x['is_pensiun']));
+            } elseif ($statusPensiun === 'pensiun') {
+                $filtered = $filtered->filter(fn ($x) => ! empty($x['is_pensiun']));
+            }
+
+            if ($statusSk === 'simgaji_lebih_tinggi') {
+                $filtered = $filtered->filter(fn ($x) => ($x['status_sk'] ?? '') === 'simgaji_lebih_tinggi');
+            } elseif ($statusSk === 'belum_diinput') {
+                $filtered = $filtered->filter(fn ($x) => ($x['status_sk'] ?? '') === 'belum_diinput');
+            } elseif ($statusSk === 'sudah_terjadwal') {
+                $filtered = $filtered->filter(fn ($x) => ($x['status_sk'] ?? '') === 'sudah_terjadwal');
+            } else {
+                // Default: prioritaskan pembaruan pangkat yang di SIMGAJI lebih tinggi
+                $filtered = $filtered->filter(fn ($x) => ($x['status_sk'] ?? '') === 'simgaji_lebih_tinggi');
+            }
+            $targetNips = $filtered->pluck('nip')->toArray();
+        } else {
+            $targetNips = (array) $selectedNips;
+        }
 
         if (empty($targetNips)) {
             return redirect()->back()->with('error', 'Pilih minimal satu pegawai untuk diperbarui pangkatnya.');
@@ -733,7 +796,7 @@ class RekonsiliasiSimgajiController extends Controller
         $activeTab = $request->get('tab', 'aktif_baru');
         $search = $request->get('search', '');
         $statusPensiun = $request->get('status_pensiun', 'semua');
-        $statusSk = $request->get('status_sk', 'belum_diinput');
+        $statusSk = $request->get('status_sk', 'semua_selisih');
         $data = $this->getReconciliationData();
 
         if (isset($data['error'])) {
@@ -749,7 +812,11 @@ class RekonsiliasiSimgajiController extends Controller
                 $items = $items->filter(fn ($item) => ! empty($item['is_pensiun']));
             }
 
-            if ($statusSk === 'belum_diinput') {
+            if ($statusSk === 'semua_selisih') {
+                $items = $items->filter(fn ($item) => in_array($item['status_sk'] ?? '', ['simgaji_lebih_tinggi', 'belum_diinput']));
+            } elseif ($statusSk === 'simgaji_lebih_tinggi') {
+                $items = $items->filter(fn ($item) => ($item['status_sk'] ?? '') === 'simgaji_lebih_tinggi');
+            } elseif ($statusSk === 'belum_diinput') {
                 $items = $items->filter(fn ($item) => ($item['status_sk'] ?? '') === 'belum_diinput');
             } elseif ($statusSk === 'sudah_terjadwal') {
                 $items = $items->filter(fn ($item) => ($item['status_sk'] ?? '') === 'sudah_terjadwal');
@@ -859,7 +926,12 @@ class RekonsiliasiSimgajiController extends Controller
                 $sheet->setCellValue('D'.$rowNum, $item['skpd'] ?? '-');
                 $sheet->setCellValue('E'.$rowNum, $item['golru_app'] ?? '-');
                 $sheet->setCellValue('F'.$rowNum, $item['pangkat_simgaji'] ?? '-');
-                $statusSkText = ($item['status_sk'] ?? '') === 'sudah_terjadwal' ? 'Sudah Terjadwal di SIMGAJI' : 'Belum Diinput di SIMGAJI';
+                $statusSkText = match ($item['status_sk'] ?? '') {
+                    'sudah_terjadwal' => 'Sudah Sesuai di SIMGAJI',
+                    'simgaji_lebih_tinggi' => 'Pangkat di SIMGAJI Lebih Tinggi',
+                    'belum_diinput' => 'Belum Diinput di SIMGAJI',
+                    default => 'Belum Diinput di SIMGAJI',
+                };
                 $sheet->setCellValue('G'.$rowNum, $statusSkText);
                 $sheet->setCellValue('H'.$rowNum, $item['sk_info']['nomorskep'] ?? '-');
                 $sheet->setCellValue('I'.$rowNum, ! empty($item['sk_info']['tmtgaji']) ? date('d/m/Y', strtotime($item['sk_info']['tmtgaji'])) : '-');
@@ -932,7 +1004,7 @@ class RekonsiliasiSimgajiController extends Controller
         $activeTab = $request->get('tab', 'aktif_baru');
         $search = $request->get('search', '');
         $statusPensiun = $request->get('status_pensiun', 'semua');
-        $statusSk = $request->get('status_sk', 'belum_diinput');
+        $statusSk = $request->get('status_sk', 'semua_selisih');
         $data = $this->getReconciliationData();
 
         if (isset($data['error'])) {
@@ -948,7 +1020,11 @@ class RekonsiliasiSimgajiController extends Controller
                 $items = $items->filter(fn ($item) => ! empty($item['is_pensiun']));
             }
 
-            if ($statusSk === 'belum_diinput') {
+            if ($statusSk === 'semua_selisih') {
+                $items = $items->filter(fn ($item) => in_array($item['status_sk'] ?? '', ['simgaji_lebih_tinggi', 'belum_diinput']));
+            } elseif ($statusSk === 'simgaji_lebih_tinggi') {
+                $items = $items->filter(fn ($item) => ($item['status_sk'] ?? '') === 'simgaji_lebih_tinggi');
+            } elseif ($statusSk === 'belum_diinput') {
                 $items = $items->filter(fn ($item) => ($item['status_sk'] ?? '') === 'belum_diinput');
             } elseif ($statusSk === 'sudah_terjadwal') {
                 $items = $items->filter(fn ($item) => ($item['status_sk'] ?? '') === 'sudah_terjadwal');
@@ -1205,6 +1281,30 @@ class RekonsiliasiSimgajiController extends Controller
                             ? $his['kdpangkat']
                             : $d['kdpangkat'];
 
+                        if ($statusSk !== 'sudah_terjadwal') {
+                            $scoreApp = $this->getPangkatScore($db->golru);
+                            $scoreSimgaji = $this->getPangkatScore($pangkatSimgaji);
+
+                            if ($scoreSimgaji > $scoreApp && $scoreSimgaji > 0 && $scoreApp > 0) {
+                                $statusSk = 'simgaji_lebih_tinggi';
+                                if (isset($hisPangkatMap[$nipStr])) {
+                                    $his = $hisPangkatMap[$nipStr];
+                                    $skInfo = [
+                                        'nomorskep' => $his['nomorskep'],
+                                        'tglskep' => $his['tglskep'],
+                                        'penerbitsk' => $his['penerbitsk'],
+                                        'tmt' => $his['tmt'],
+                                        'tmtgaji' => $his['tmtgaji'],
+                                        'gapok' => $his['gapok'],
+                                        'keterangan' => $his['keterangan'],
+                                        'pangkat_his' => $his['kdpangkat_converted'],
+                                    ];
+                                }
+                            } else {
+                                $statusSk = 'belum_diinput';
+                            }
+                        }
+
                         $bedaPangkat[] = [
                             'nip' => $nip,
                             'nama' => $db->nama,
@@ -1302,8 +1402,10 @@ class RekonsiliasiSimgajiController extends Controller
 
             $bedaPangkatAktifCount = count(array_filter($bedaPangkat, fn ($x) => empty($x['is_pensiun'])));
             $bedaPangkatPensiunCount = count(array_filter($bedaPangkat, fn ($x) => ! empty($x['is_pensiun'])));
+            $bedaPangkatSimgajiTinggiCount = count(array_filter($bedaPangkat, fn ($x) => ($x['status_sk'] ?? '') === 'simgaji_lebih_tinggi'));
             $bedaPangkatBelumDiinputCount = count(array_filter($bedaPangkat, fn ($x) => ($x['status_sk'] ?? '') === 'belum_diinput'));
             $bedaPangkatTerjadwalCount = count(array_filter($bedaPangkat, fn ($x) => ($x['status_sk'] ?? '') === 'sudah_terjadwal'));
+            $bedaPangkatActiveCount = $bedaPangkatSimgajiTinggiCount + $bedaPangkatBelumDiinputCount;
 
             $result = [
                 'summary' => [
@@ -1311,10 +1413,11 @@ class RekonsiliasiSimgajiController extends Controller
                     'total_app' => $dbPegawais->count(),
                     'in_both' => $inBothCount,
                     'aktif_baru_count' => count($aktifBaru),
-                    'beda_pangkat_count' => $bedaPangkatBelumDiinputCount,
+                    'beda_pangkat_count' => $bedaPangkatActiveCount,
                     'beda_pangkat_total_count' => count($bedaPangkat),
                     'beda_pangkat_aktif_count' => $bedaPangkatAktifCount,
                     'beda_pangkat_pensiun_count' => $bedaPangkatPensiunCount,
+                    'beda_pangkat_simgaji_tinggi_count' => $bedaPangkatSimgajiTinggiCount,
                     'beda_pangkat_belum_diinput_count' => $bedaPangkatBelumDiinputCount,
                     'beda_pangkat_terjadwal_count' => $bedaPangkatTerjadwalCount,
                     'beda_skpd_count' => count($bedaSkpd),

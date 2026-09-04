@@ -4,6 +4,32 @@ Dokumen ini mencatat seluruh riwayat pembaruan, evolusi fitur, perbaikan bug, da
 
 ---
 
+## 📌 [v2.4.2] - 2026-09-04
+### 🎯 Klasifikasi Presisi: "Pangkat di SIMGAJI Lebih Tinggi" vs "Belum Diinput di SIMGAJI"
+- **Penyesuaian Status & Skoring Hierarki Kepangkatan**:
+  - Mengimplementasikan evaluasi hierarki kepangkatan (`getPangkatScore`) untuk membedakan arah selisih pangkat antara Aplikasi vs SIMGAJI:
+    1. 🔵 **Pangkat di SIMGAJI Lebih Tinggi (`simgaji_lebih_tinggi` - 85 Pegawai)**:
+       - Kasus di mana pegawai sudah resmi naik pangkat di SIMGAJI, namun data di aplikasi master belum diperbarui (contoh: NIP `197004192007012012` - Marsyidah, S.Pd; di Aplikasi masih `III/d`, sedangkan di SIMGAJI sudah `IV/a` / `4A`).
+       - Dilengkapi nomor SK kenaikan pangkat (`800.1.3.2/03/BKD/2026`), TMT Gaji (`01/09/2026`), dan Gapok dari database `HIS_GPOK`.
+       - Tombol **Update** langsung memutakhirkan pangkat aplikasi ke pangkat mutakhir SIMGAJI.
+    2. 🔴 **Belum Diinput di SIMGAJI (`belum_diinput` - 39 Pegawai)**:
+       - Kasus di mana pangkat di Aplikasi lebih tinggi dari SIMGAJI (Aplikasi > SIMGAJI), dan belum diproses/dientri oleh operator SIMGAJI.
+    3. 🟢 **Sudah Sesuai di SIMGAJI via HIS_GPOK (`sudah_terjadwal` - 351 Pegawai)**:
+       - Pegawai dengan SK kenaikan pangkat yang sudah terjadwal/sesuai di riwayat SIMGAJI.
+- **Pembaruan Antarmuka & Filter Dropdown**:
+  - Filter `status_sk` diperkaya:
+    - `⚡ Semua Perlu Penyesuaian (124)`
+    - `🔵 Pangkat di SIMGAJI Lebih Tinggi (85)`
+    - `🔴 Belum Diinput di SIMGAJI (39)`
+    - `🟢 Sudah Sesuai di SIMGAJI via HIS_GPOK (351)`
+    - `Semua Riwayat (475)`
+  - Widget *Kenaikan Pangkat* menampilkan ringkasan komposisi: `85 SIMGAJI Tinggi • 39 Belum Diinput`.
+  - Tombol sinkronisasi massal (*Perbarui Semua Pangkat*) secara aman memprioritaskan pegawai dengan status SIMGAJI Lebih Tinggi agar tidak mendowngrade pangkat pegawai.
+- **Pembaruan Ekspor Dokumen**:
+  - Format Excel dan cetak PDF kini secara eksplisit mencantumkan status `Pangkat di SIMGAJI Lebih Tinggi` dengan keterangan perbandingan pangkat dan detail SK.
+
+---
+
 ## 📌 [v2.4.1] - 2026-09-04
 ### 🎯 Pangkat Efektif SIMGAJI Mengadopsi HIS_GPOK (124 Selisih Riil)
 - **Pengakuan Pangkat SIMGAJI Berdasarkan HIS_GPOK**:
