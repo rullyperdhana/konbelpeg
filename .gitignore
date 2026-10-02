@@ -32,3 +32,18 @@ Thumbs.db
 *.xlsx
 *.xls
 *.csv
+
+# Database & Data files (confidential)
+*.sqlite
+*.sqlite*
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.sql
+*.sql.gz
+*.dump
+/database/*.sqlite*
+/storage/app/simgaji/*
+!/storage/app/simgaji/.gitignore
+

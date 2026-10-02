@@ -57,6 +57,7 @@
                     <option value="auto" selected>✨ Otomatis Deteksi (Direkomendasikan)</option>
                     <option value="mst_pgw">👤 Master Pegawai (MST_PGW)</option>
                     <option value="his_gpok">📜 Histori Gaji Pokok & SK (HIS_GPOK)</option>
+                    <option value="kel">👨‍👩‍👧‍👦 Riwayat Anggota Keluarga & Tanggungan (KEL)</option>
                 </select>
                 <small style="color: var(--text-muted); font-size: 11.5px; display: block; margin-top: 4px;">
                     Sistem membaca kolom DBF secara otomatis untuk menentukan kategori.
@@ -75,7 +76,7 @@
     </div>
 
     <!-- Active Cards Grid -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
         <!-- Card 1: Active MST_PGW -->
         <div class="card" style="padding: 20px; display: flex; flex-direction: column; justify-content: space-between; border-top: 3px solid #2563eb;">
             <div>
@@ -106,6 +107,13 @@
                             <div style="margin-top: 4px; font-style: italic; color: var(--text-muted); font-size: 11.5px;">{{ $activeMstPgw['keterangan'] ?? '-' }}</div>
                         </div>
                     </div>
+                    <form action="{{ route('master.simgaji_dbf.sync') }}" method="POST" style="margin-bottom: 10px;">
+                        @csrf
+                        <input type="hidden" name="type" value="master">
+                        <button type="submit" class="btn btn-export" style="width: 100%; justify-content: center; font-size: 11.5px; color: #2563eb; border-color: rgba(37, 99, 235, 0.3);" title="Sinkronkan NIK, No. Rekening, dan NPWP ke Master Pegawai">
+                            <i class="ph-bold ph-arrows-clockwise"></i> Sinkronkan NIK & Rekening ({{ number_format($totalPegawaiWithFinancial ?? 0, 0, ',', '.') }} terisi)
+                        </button>
+                    </form>
                 @else
                     <div style="padding: 16px; text-align: center; color: var(--text-muted); background: var(--bg-surface-secondary, #f8fafc); border-radius: 8px; font-size: 12px;">
                         Belum ada Master Pegawai aktif.
@@ -114,7 +122,7 @@
             </div>
 
             <div style="font-size: 11.5px; color: var(--text-muted); border-top: 1px solid var(--border-color); padding-top: 10px;">
-                <i class="ph-bold ph-info" style="color: #2563eb;"></i> Digunakan sebagai acuan snapshot pangkat, SKPD, dan status pensiun berjalan.
+                <i class="ph-bold ph-info" style="color: #2563eb;"></i> Sumber NIK, nomor rekening, NPWP, dan acuan snapshot SKPD/pangkat.
             </div>
         </div>
 
@@ -159,6 +167,55 @@
                 <i class="ph-bold ph-check-circle" style="color: #10b981;"></i> Mendeteksi SK Kenaikan Pangkat yang sudah diinput di SIMGAJI namun baru berlaku bulan mendatang.
             </div>
         </div>
+
+        <!-- Card 3: Active KEL (Keluarga & Tanggungan) -->
+        <div class="card" style="padding: 20px; display: flex; flex-direction: column; justify-content: space-between; border-top: 3px solid #059669;">
+            <div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 32px; height: 32px; border-radius: 6px; background: rgba(5, 150, 105, 0.1); color: #059669; display: flex; align-items: center; justify-content: center; font-size: 17px;">
+                            <i class="ph-bold ph-users-four"></i>
+                        </div>
+                        <div>
+                            <h4 style="margin: 0; font-size: 14px; font-weight: 700;">3. Riwayat Keluarga</h4>
+                            <span style="font-size: 11px; color: var(--text-muted);">Anggota Keluarga & Tanggungan</span>
+                        </div>
+                    </div>
+                    <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; padding: 3px 8px; border-radius: 999px; font-weight: 700; font-size: 10.5px;">
+                        <i class="ph-bold ph-check"></i> AKTIF
+                    </span>
+                </div>
+
+                @if(!empty($activeKel))
+                    <div style="background: var(--bg-surface-secondary, #f8fafc); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+                        <div style="font-size: 13px; font-weight: 700; color: var(--text-main); margin-bottom: 8px; word-break: break-all;">
+                            <i class="ph-bold ph-file-code" style="color: #059669;"></i> {{ $activeKel['filename'] }}
+                        </div>
+                        <div style="font-size: 12px; line-height: 1.6;">
+                            <div><span style="color: var(--text-muted);">Total Anggota:</span> <strong style="color: #059669;">{{ number_format($activeKel['records'] ?? 0, 0, ',', '.') }} orang</strong></div>
+                            <div><span style="color: var(--text-muted);">Tersimpan DB:</span> <strong style="color: #059669;">{{ number_format($totalKeluargaDb ?? 0, 0, ',', '.') }} record</strong></div>
+                            <div><span style="color: var(--text-muted);">Ukuran:</span> {{ $activeKel['size'] ?? '-' }}</div>
+                            <div style="margin-top: 4px; font-style: italic; color: var(--text-muted); font-size: 11.5px;">{{ $activeKel['keterangan'] ?? '-' }}</div>
+                        </div>
+                    </div>
+                    <form action="{{ route('master.simgaji_dbf.sync') }}" method="POST" style="margin-bottom: 10px;">
+                        @csrf
+                        <input type="hidden" name="type" value="keluarga">
+                        <button type="submit" class="btn btn-export" style="width: 100%; justify-content: center; font-size: 11.5px; color: #059669; border-color: rgba(16, 185, 129, 0.3);" title="Muat ulang 70rb record anggota keluarga ke database">
+                            <i class="ph-bold ph-arrows-clockwise"></i> Sinkronkan Data Keluarga ke Database
+                        </button>
+                    </form>
+                @else
+                    <div style="padding: 16px; text-align: center; color: var(--text-muted); background: var(--bg-surface-secondary, #f8fafc); border-radius: 8px; font-size: 12px;">
+                        Belum ada file KEL (Keluarga) aktif.
+                    </div>
+                @endif
+            </div>
+
+            <div style="font-size: 11.5px; color: var(--text-muted); border-top: 1px solid var(--border-color); padding-top: 10px;">
+                <i class="ph-bold ph-users" style="color: #059669;"></i> Menampilkan daftar suami/istri dan anak pada riwayat Trace Gaji dan profil pegawai.
+            </div>
+        </div>
     </div>
 </div>
 
@@ -194,14 +251,18 @@
             <tbody>
                 @forelse($files as $index => $file)
                     @php
-                        $isHis = ($file['type'] ?? '') === 'his_gpok';
+                        $fileType = $file['type'] ?? 'mst_pgw';
                     @endphp
                     <tr>
                         <td style="text-align: center;">{{ $index + 1 }}</td>
                         <td>
-                            @if($isHis)
+                            @if($fileType === 'his_gpok')
                                 <span class="badge" style="background: rgba(147, 51, 234, 0.1); color: #9333ea; padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 11px;">
                                     <i class="ph-bold ph-clock-counter-clockwise"></i> Histori Gaji & SK
+                                </span>
+                            @elseif($fileType === 'kel')
+                                <span class="badge" style="background: rgba(5, 150, 105, 0.1); color: #059669; padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 11px;">
+                                    <i class="ph-bold ph-users-four"></i> Riwayat Keluarga
                                 </span>
                             @else
                                 <span class="badge" style="background: rgba(37, 99, 235, 0.1); color: #2563eb; padding: 4px 8px; border-radius: 6px; font-weight: 600; font-size: 11px;">
@@ -225,7 +286,7 @@
                         <td style="text-align: center;"><code>{{ $file['size'] }}</code></td>
                         <td style="text-align: center;">
                             <span class="badge" style="background: rgba(76, 53, 222, 0.08); color: var(--luno-primary); padding: 4px 8px; border-radius: 6px; font-weight: 700;">
-                                {{ number_format($file['records'] ?? 0, 0, ',', '.') }} {{ $isHis ? 'record' : 'pegawai' }}
+                                {{ number_format($file['records'] ?? 0, 0, ',', '.') }} {{ $fileType === 'his_gpok' ? 'record' : ($fileType === 'kel' ? 'anggota' : 'pegawai') }}
                             </span>
                         </td>
                         <td style="text-align: center;"><small>{{ $file['uploaded_at'] }}</small></td>
@@ -251,7 +312,7 @@
                                     </form>
                                 @endif
 
-                                @if(!in_array($file['id'], ['default_mst_pgw', 'default_his_gpok']))
+                                @if(!in_array($file['id'], ['default_mst_pgw', 'default_his_gpok', 'default_kel']))
                                     <form action="{{ route('master.simgaji_dbf.delete', $file['id']) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus file ini dari riwayat?');" style="display: inline;">
                                         @csrf
                                         @method('DELETE')

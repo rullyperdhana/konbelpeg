@@ -18,7 +18,7 @@
 <body>
     <div class="header">
         <h2>LAPORAN REALISASI GAJI</h2>
-        <p>PERIODE: {{ $periode ?: 'SEMUA PERIODE' }}</p>
+        <p>PERIODE: {{ $periode ?: 'SEMUA PERIODE' }} @if(!empty($jenisGajiFilter) && $jenisGajiFilter !== 'Semua') | KRITERIA: {{ strtoupper($jenisGajiFilter) }} @endif</p>
         @if($skpdFilter)
             <p>UNIT KERJA: {{ strtoupper($skpdFilter) }}</p>
         @endif
@@ -128,36 +128,49 @@
         <table>
             <thead>
                 <tr>
-                    <th style="width: 30px;">NO</th>
+                    <th style="width: 25px;">NO</th>
                     <th>PERIODE</th>
                     <th>NIP</th>
                     <th>NAMA PEGAWAI</th>
                     <th>STATUS</th>
                     <th>UNIT KERJA</th>
+                    <th>KRITERIA GAJI</th>
                     <th>GAJI POKOK</th>
                     <th>TOTAL DIBAYARKAN</th>
                 </tr>
             </thead>
             <tbody>
-                @forelse($realisasis as $index => $pegawai)
-                @php $tpp = $pegawai->realisasiGajis->first(); @endphp
-                <tr style="{{ !$tpp ? 'background-color: #fef2f2;' : '' }}">
-                    <td class="center">{{ $index + 1 }}</td>
-                    <td class="center">{{ $periode ?: 'SEMUA PERIODE' }}</td>
-                    <td>{{ $pegawai->nip ?? '-' }}</td>
-                    <td>{{ $pegawai->nama ?? '-' }}</td>
-                    <td class="center">{{ $pegawai->status_pegawai ?? '-' }}</td>
-                    <td style="font-size: 8px;">{{ $pegawai->unitKerja?->skpd ?? '-' }}</td>
-                    @if($tpp)
-                        <td class="money">{{ number_format($tpp->gaji_pokok, 0, ',', '.') }}</td>
-                        <td class="money">{{ number_format($tpp->gaji_bersih, 0, ',', '.') }}</td>
+                @php $no = 1; @endphp
+                @forelse($realisasis as $pegawai)
+                    @if($pegawai->realisasiGajis->isEmpty())
+                        <tr style="background-color: #fef2f2;">
+                            <td class="center">{{ $no++ }}</td>
+                            <td class="center">{{ $periode ?: 'SEMUA PERIODE' }}</td>
+                            <td>{{ $pegawai->nip ?? '-' }}</td>
+                            <td>{{ $pegawai->nama ?? '-' }}</td>
+                            <td class="center">{{ $pegawai->status_pegawai ?? '-' }}</td>
+                            <td style="font-size: 8px;">{{ $pegawai->unitKerja?->skpd ?? '-' }}</td>
+                            <td class="center">-</td>
+                            <td colspan="2" class="center" style="color: #991b1b; font-weight: bold;">Rp 0 (Belum Dibayarkan)</td>
+                        </tr>
                     @else
-                        <td colspan="2" class="center" style="color: #991b1b; font-weight: bold;">Rp 0 (Belum Dibayarkan)</td>
+                        @foreach($pegawai->realisasiGajis as $gaji)
+                        <tr>
+                            <td class="center">{{ $no++ }}</td>
+                            <td class="center">{{ $gaji->periode ?? $periode }}</td>
+                            <td>{{ $pegawai->nip ?? '-' }}</td>
+                            <td>{{ $pegawai->nama ?? '-' }}</td>
+                            <td class="center">{{ $pegawai->status_pegawai ?? '-' }}</td>
+                            <td style="font-size: 8px;">{{ $pegawai->unitKerja?->skpd ?? '-' }}</td>
+                            <td class="center" style="font-size: 8px;">{{ $gaji->jenis_gaji ?? 'Gaji Induk' }}</td>
+                            <td class="money">{{ number_format($gaji->gaji_pokok, 0, ',', '.') }}</td>
+                            <td class="money">{{ number_format($gaji->gaji_bersih, 0, ',', '.') }}</td>
+                        </tr>
+                        @endforeach
                     @endif
-                </tr>
                 @empty
                 <tr>
-                    <td colspan="8" class="center">Data tidak tersedia</td>
+                    <td colspan="9" class="center">Data tidak tersedia</td>
                 </tr>
                 @endforelse
             </tbody>

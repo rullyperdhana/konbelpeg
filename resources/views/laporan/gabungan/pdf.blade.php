@@ -30,7 +30,7 @@
 </head>
 <body>
     <h2 style="text-align: center; font-size: 14px; margin-bottom: 5px;">LAPORAN GABUNGAN REALISASI GAJI DAN TPP</h2>
-    <h3 style="text-align: center; font-size: 12px; margin-top: 0;">PERIODE: {{ strtoupper($periode) }}</h3>
+    <h3 style="text-align: center; font-size: 12px; margin-top: 0;">PERIODE: {{ strtoupper($periode) }} @if(!empty($jenisGaji) && $jenisGaji !== 'Semua') | KRITERIA GAJI: {{ strtoupper($jenisGaji) }} @endif</h3>
 
     <table>
         <thead>

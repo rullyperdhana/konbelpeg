@@ -42,10 +42,21 @@
             <!-- Jenis Data -->
             <div class="form-group" style="margin: 0;">
                 <label>Jenis Realisasi Data *</label>
-                <select name="jenis" required>
+                <select name="jenis" id="selectJenis" onchange="toggleKriteriaGaji()" required>
                     <option value="">-- Pilih Jenis Data --</option>
                     <option value="GAJI">Realisasi Gaji (DBF / Excel)</option>
                     <option value="TPP">Realisasi TPP</option>
+                </select>
+            </div>
+
+            <!-- Kriteria Gaji (Khusus GAJI) -->
+            <div class="form-group" id="groupKriteriaGaji" style="margin: 0; display: none;">
+                <label>Kriteria Gaji</label>
+                <select name="jenis_gaji">
+                    <option value="SEMUA">Semua Kriteria Gaji</option>
+                    @foreach($daftarJenisGaji as $jg)
+                        <option value="{{ $jg }}">{{ $jg }}</option>
+                    @endforeach
                 </select>
             </div>
             
@@ -85,10 +96,21 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    function toggleKriteriaGaji() {
+        const jenis = document.getElementById('selectJenis').value;
+        const group = document.getElementById('groupKriteriaGaji');
+        if (jenis === 'GAJI') {
+            group.style.display = 'block';
+        } else {
+            group.style.display = 'none';
+        }
+    }
+
     function confirmDelete() {
         const jenis = document.querySelector('select[name="jenis"]').value;
         const periode = document.querySelector('select[name="periode"]').value;
         const status = document.querySelector('select[name="status_pegawai"]').value;
+        const jenisGaji = document.querySelector('select[name="jenis_gaji"]').value;
         
         if (!jenis || !periode) {
             Swal.fire({
@@ -100,9 +122,11 @@
             return;
         }
 
+        const kriteriaText = (jenis === 'GAJI' && jenisGaji !== 'SEMUA') ? ` (Kriteria: <b>${jenisGaji}</b>)` : '';
+
         Swal.fire({
             title: 'Konfirmasi Penghapusan',
-            html: `Anda akan menghapus data <b>Realisasi ${jenis}</b> untuk periode <b>${periode}</b> (${status}).<br><br><span style="color:#dc2626; font-weight:600;">Tindakan ini tidak dapat dibatalkan!</span>`,
+            html: `Anda akan menghapus data <b>Realisasi ${jenis}</b>${kriteriaText} untuk periode <b>${periode}</b> (${status}).<br><br><span style="color:#dc2626; font-weight:600;">Tindakan ini tidak dapat dibatalkan!</span>`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#dc2626',

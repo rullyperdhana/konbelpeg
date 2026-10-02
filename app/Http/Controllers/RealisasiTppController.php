@@ -25,37 +25,47 @@ class RealisasiTppController extends Controller
         $kesehatanCond = "pegawais.jenis_pegawai = 'KESEHATAN'";
         $guruCond = "pegawais.jenis_pegawai IN ('GURU', 'TENDIK')";
 
+        $tppSub = DB::table('realisasi_tpps')
+            ->select('pegawai_id')
+            ->selectRaw('COUNT(id) as count_rec')
+            ->selectRaw('SUM(total_dibayarkan) as total_dibayarkan');
+
+        if ($periode && $periode !== 'Semua Periode') {
+            $tppSub->where(function ($q) use ($periode) {
+                $q->where('periode', $periode)
+                    ->orWhere('periode_kas', $periode);
+            });
+        }
+        $tppSub->groupBy('pegawai_id');
+
         $query = DB::table('pegawais')
             ->join('unit_kerjas', 'pegawais.unit_kerja_id', '=', 'unit_kerjas.id')
-            ->leftJoin('realisasi_tpps', function ($join) use ($periode) {
-                $join->on('pegawais.id', '=', 'realisasi_tpps.pegawai_id');
-                if ($periode) {
-                    $join->where('realisasi_tpps.periode', '=', $periode);
-                }
+            ->leftJoinSub($tppSub, 'tpp_summary', function ($join) {
+                $join->on('pegawais.id', '=', 'tpp_summary.pegawai_id');
             })
             ->select(
                 'unit_kerjas.skpd',
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PNS' AND realisasi_tpps.id IS NOT NULL THEN 1 ELSE 0 END) as count_pns"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND ($guruCond) AND realisasi_tpps.id IS NOT NULL THEN 1 ELSE 0 END) as count_pppk_guru"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND NOT ($guruCond) AND ($kesehatanCond) AND realisasi_tpps.id IS NOT NULL THEN 1 ELSE 0 END) as count_pppk_kes"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND NOT ($guruCond) AND NOT ($kesehatanCond) AND realisasi_tpps.id IS NOT NULL THEN 1 ELSE 0 END) as count_pppk_teknis"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND ($guruCond) AND realisasi_tpps.id IS NOT NULL THEN 1 ELSE 0 END) as count_paruh_guru"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND ($kesehatanCond) AND realisasi_tpps.id IS NOT NULL THEN 1 ELSE 0 END) as count_paruh_kes"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND NOT ($kesehatanCond) AND realisasi_tpps.id IS NOT NULL THEN 1 ELSE 0 END) as count_paruh_teknis"),
-                DB::raw('SUM(CASE WHEN realisasi_tpps.id IS NOT NULL THEN 1 ELSE 0 END) as count_total'),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PNS' AND realisasi_tpps.id IS NULL THEN 1 ELSE 0 END) as count_belum_dibayar_pns"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND realisasi_tpps.id IS NULL THEN 1 ELSE 0 END) as count_belum_dibayar_pppk"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND realisasi_tpps.id IS NULL THEN 1 ELSE 0 END) as count_belum_dibayar_paruh"),
-                DB::raw('SUM(CASE WHEN realisasi_tpps.id IS NULL THEN 1 ELSE 0 END) as count_belum_dibayar_total'),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PNS' AND tpp_summary.pegawai_id IS NOT NULL THEN 1 ELSE 0 END) as count_pns"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND ($guruCond) AND tpp_summary.pegawai_id IS NOT NULL THEN 1 ELSE 0 END) as count_pppk_guru"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND NOT ($guruCond) AND ($kesehatanCond) AND tpp_summary.pegawai_id IS NOT NULL THEN 1 ELSE 0 END) as count_pppk_kes"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND NOT ($guruCond) AND NOT ($kesehatanCond) AND tpp_summary.pegawai_id IS NOT NULL THEN 1 ELSE 0 END) as count_pppk_teknis"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND ($guruCond) AND tpp_summary.pegawai_id IS NOT NULL THEN 1 ELSE 0 END) as count_paruh_guru"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND ($kesehatanCond) AND tpp_summary.pegawai_id IS NOT NULL THEN 1 ELSE 0 END) as count_paruh_kes"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND NOT ($kesehatanCond) AND tpp_summary.pegawai_id IS NOT NULL THEN 1 ELSE 0 END) as count_paruh_teknis"),
+                DB::raw('SUM(CASE WHEN tpp_summary.pegawai_id IS NOT NULL THEN 1 ELSE 0 END) as count_total'),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PNS' AND tpp_summary.pegawai_id IS NULL THEN 1 ELSE 0 END) as count_belum_dibayar_pns"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND tpp_summary.pegawai_id IS NULL THEN 1 ELSE 0 END) as count_belum_dibayar_pppk"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND tpp_summary.pegawai_id IS NULL THEN 1 ELSE 0 END) as count_belum_dibayar_paruh"),
+                DB::raw('SUM(CASE WHEN tpp_summary.pegawai_id IS NULL THEN 1 ELSE 0 END) as count_belum_dibayar_total'),
 
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PNS' THEN realisasi_tpps.total_dibayarkan ELSE 0 END) as tpp_pns"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND ($guruCond) THEN realisasi_tpps.total_dibayarkan ELSE 0 END) as tpp_pppk_guru"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND NOT ($guruCond) AND ($kesehatanCond) THEN realisasi_tpps.total_dibayarkan ELSE 0 END) as tpp_pppk_kes"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND NOT ($guruCond) AND NOT ($kesehatanCond) THEN realisasi_tpps.total_dibayarkan ELSE 0 END) as tpp_pppk_teknis"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND ($guruCond) THEN realisasi_tpps.total_dibayarkan ELSE 0 END) as tpp_paruh_guru"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND ($kesehatanCond) THEN realisasi_tpps.total_dibayarkan ELSE 0 END) as tpp_paruh_kes"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND NOT ($kesehatanCond) THEN realisasi_tpps.total_dibayarkan ELSE 0 END) as tpp_paruh_teknis"),
-                DB::raw('SUM(realisasi_tpps.total_dibayarkan) as tpp_total')
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PNS' THEN IFNULL(tpp_summary.total_dibayarkan, 0) ELSE 0 END) as tpp_pns"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND ($guruCond) THEN IFNULL(tpp_summary.total_dibayarkan, 0) ELSE 0 END) as tpp_pppk_guru"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND NOT ($guruCond) AND ($kesehatanCond) THEN IFNULL(tpp_summary.total_dibayarkan, 0) ELSE 0 END) as tpp_pppk_kes"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND NOT ($guruCond) AND NOT ($kesehatanCond) THEN IFNULL(tpp_summary.total_dibayarkan, 0) ELSE 0 END) as tpp_pppk_teknis"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND ($guruCond) THEN IFNULL(tpp_summary.total_dibayarkan, 0) ELSE 0 END) as tpp_paruh_guru"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND ($kesehatanCond) THEN IFNULL(tpp_summary.total_dibayarkan, 0) ELSE 0 END) as tpp_paruh_kes"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND NOT ($kesehatanCond) THEN IFNULL(tpp_summary.total_dibayarkan, 0) ELSE 0 END) as tpp_paruh_teknis"),
+                DB::raw('SUM(IFNULL(tpp_summary.total_dibayarkan, 0)) as tpp_total')
             );
 
         if ($skpdFilter) {
@@ -71,13 +81,21 @@ class RealisasiTppController extends Controller
         $periode = $request->get('periode_filter');
         $skpdFilter = $request->get('skpd_filter');
 
-        $periodes = RealisasiTpp::select('periode')->distinct()->orderBy('periode', 'desc')->pluck('periode');
+        $periodesLegacy = RealisasiTpp::whereNull('periode_kas')->select('periode')->distinct()->pluck('periode')->toArray();
+        $periodesSpecific = RealisasiTpp::whereNotNull('periode_kas')->select('periode')->distinct()->pluck('periode')->toArray();
+        $periodesKas = RealisasiTpp::whereNotNull('periode_kas')->select('periode_kas')->distinct()->pluck('periode_kas')->toArray();
+        $periodes = array_values(array_unique(array_merge($periodesKas, $periodesSpecific, $periodesLegacy)));
+        rsort($periodes);
+
         $filterUnitKerjas = UnitKerja::whereNotNull('skpd')->pluck('skpd')->unique()->sort()->values();
 
         // Calculate Grand Totals across all filtered data
         $tppQuery = RealisasiTpp::query();
         if ($periode) {
-            $tppQuery->where('periode', $periode);
+            $tppQuery->where(function ($q) use ($periode) {
+                $q->where('periode', $periode)
+                    ->orWhere('periode_kas', $periode);
+            });
         }
         if ($skpdFilter) {
             $tppQuery->whereHas('pegawai.unitKerja', fn ($q) => $q->where('skpd', $skpdFilter));
@@ -92,7 +110,10 @@ class RealisasiTppController extends Controller
         } else {
             $query = Pegawai::with(['unitKerja', 'jabatan', 'realisasiTpps' => function ($q) use ($periode) {
                 if ($periode) {
-                    $q->where('periode', $periode);
+                    $q->where(function ($sub) use ($periode) {
+                        $sub->where('periode', $periode)
+                            ->orWhere('periode_kas', $periode);
+                    });
                 }
             }]);
 
@@ -121,7 +142,10 @@ class RealisasiTppController extends Controller
         } else {
             $query = Pegawai::with(['unitKerja', 'jabatan', 'realisasiTpps' => function ($q) use ($periode) {
                 if ($periode) {
-                    $q->where('periode', $periode);
+                    $q->where(function ($sub) use ($periode) {
+                        $sub->where('periode', $periode)
+                            ->orWhere('periode_kas', $periode);
+                    });
                 }
             }]);
 
@@ -286,7 +310,10 @@ class RealisasiTppController extends Controller
             // Rinci Excel Logic
             $query = Pegawai::with(['unitKerja', 'jabatan', 'realisasiTpps' => function ($q) use ($periode) {
                 if ($periode != 'Semua Periode') {
-                    $q->where('periode', $periode);
+                    $q->where(function ($sub) use ($periode) {
+                        $sub->where('periode', $periode)
+                            ->orWhere('periode_kas', $periode);
+                    });
                 }
             }]);
             if ($skpdFilter) {
@@ -295,31 +322,51 @@ class RealisasiTppController extends Controller
             $pegawais = $query->get();
 
             $sheet->setCellValue('A1', 'NO');
-            $sheet->setCellValue('B1', 'PERIODE');
-            $sheet->setCellValue('C1', 'NIP');
-            $sheet->setCellValue('D1', 'NAMA');
-            $sheet->setCellValue('E1', 'STATUS');
-            $sheet->setCellValue('F1', 'UNIT KERJA');
-            $sheet->setCellValue('G1', 'TPP BRUTO');
-            $sheet->setCellValue('H1', 'NOMINAL PLT');
-            $sheet->setCellValue('I1', 'TOTAL DIBAYARKAN');
+            $sheet->setCellValue('B1', 'PERIODE KAS');
+            $sheet->setCellValue('C1', 'HAK KINERJA');
+            $sheet->setCellValue('D1', 'TAHAP');
+            $sheet->setCellValue('E1', 'NIP');
+            $sheet->setCellValue('F1', 'NAMA');
+            $sheet->setCellValue('G1', 'STATUS');
+            $sheet->setCellValue('H1', 'UNIT KERJA');
+            $sheet->setCellValue('I1', 'TPP BRUTO');
+            $sheet->setCellValue('J1', 'NOMINAL PLT');
+            $sheet->setCellValue('K1', 'TOTAL DIBAYARKAN');
 
-            $sheet->getStyle('A1:I1')->getFont()->setBold(true);
+            $sheet->getStyle('A1:K1')->getFont()->setBold(true);
 
             $row = 2;
             $no = 1;
             foreach ($pegawais as $pegawai) {
-                $tpp = $pegawai->realisasiTpps->first();
-                $sheet->setCellValue('A'.$row, $no++);
-                $sheet->setCellValue('B'.$row, $periode);
-                $sheet->setCellValueExplicit('C'.$row, $pegawai->nip ?? '-', DataType::TYPE_STRING);
-                $sheet->setCellValue('D'.$row, $pegawai->nama ?? '-');
-                $sheet->setCellValue('E'.$row, $pegawai->status_pegawai ?? '-');
-                $sheet->setCellValue('F'.$row, $pegawai->unitKerja?->skpd ?? '-');
-                $sheet->setCellValue('G'.$row, $tpp ? $tpp->tpp_bruto : 0);
-                $sheet->setCellValue('H'.$row, $tpp ? $tpp->nominal_plt : 0);
-                $sheet->setCellValue('I'.$row, $tpp ? $tpp->total_dibayarkan : 0);
-                $row++;
+                if ($pegawai->realisasiTpps->isEmpty()) {
+                    $sheet->setCellValue('A'.$row, $no++);
+                    $sheet->setCellValue('B'.$row, $periode);
+                    $sheet->setCellValue('C'.$row, '-');
+                    $sheet->setCellValue('D'.$row, '-');
+                    $sheet->setCellValueExplicit('E'.$row, $pegawai->nip ?? '-', DataType::TYPE_STRING);
+                    $sheet->setCellValue('F'.$row, $pegawai->nama ?? '-');
+                    $sheet->setCellValue('G'.$row, $pegawai->status_pegawai ?? '-');
+                    $sheet->setCellValue('H'.$row, $pegawai->unitKerja?->skpd ?? '-');
+                    $sheet->setCellValue('I'.$row, 0);
+                    $sheet->setCellValue('J'.$row, 0);
+                    $sheet->setCellValue('K'.$row, 0);
+                    $row++;
+                } else {
+                    foreach ($pegawai->realisasiTpps as $tpp) {
+                        $sheet->setCellValue('A'.$row, $no++);
+                        $sheet->setCellValue('B'.$row, $tpp->periode_kas ?: $tpp->periode);
+                        $sheet->setCellValue('C'.$row, $tpp->bulan_kinerja ?: '-');
+                        $sheet->setCellValue('D'.$row, $tpp->tahap_bayar ?: 'Reguler');
+                        $sheet->setCellValueExplicit('E'.$row, $pegawai->nip ?? '-', DataType::TYPE_STRING);
+                        $sheet->setCellValue('F'.$row, $pegawai->nama ?? '-');
+                        $sheet->setCellValue('G'.$row, $pegawai->status_pegawai ?? '-');
+                        $sheet->setCellValue('H'.$row, $pegawai->unitKerja?->skpd ?? '-');
+                        $sheet->setCellValue('I'.$row, $tpp->tpp_bruto);
+                        $sheet->setCellValue('J'.$row, $tpp->nominal_plt);
+                        $sheet->setCellValue('K'.$row, $tpp->total_dibayarkan);
+                        $row++;
+                    }
+                }
             }
         }
 
@@ -336,6 +383,10 @@ class RealisasiTppController extends Controller
     {
         $request->validate([
             'file' => 'required|mimes:xlsx,csv,xls|max:10240',
+            'periode_kas' => 'nullable|string|max:100',
+            'bulan_kinerja' => 'nullable|string|max:100',
+            'tahap_bayar' => 'nullable|string|max:100',
+            'keterangan_bayar' => 'nullable|string|max:255',
         ]);
 
         $file = $request->file('file');
@@ -344,11 +395,6 @@ class RealisasiTppController extends Controller
         $uploadId = $request->input('upload_id', uniqid());
 
         $reader = SimpleExcelReader::create($path, $extension);
-        $totalRows = 0; // SimpleExcelReader doesn't have native row count without iterating, but we'll try our best or just estimate
-        // To be safe with memory, we don't count ahead. We just update progress without total if we can't.
-        // Wait, for Excel we can get total rows by reading it first, but that's slow.
-        // Let's just pass total = 0 (unknown) and let UI show generic loader, OR we iterate once to count.
-        // Iterating once is fast enough for counting.
         $totalRows = 0;
         $reader->getRows()->each(function () use (&$totalRows) {
             $totalRows++;
@@ -357,12 +403,49 @@ class RealisasiTppController extends Controller
         // Re-create reader for actual processing
         $rows = SimpleExcelReader::create($path, $extension)->getRows();
 
-        $periode = $request->input('periode_import');
+        $periodeKas = $request->input('periode_kas');
+        $bulanKinerja = $request->input('bulan_kinerja');
+        $tahapBayar = $request->input('tahap_bayar', 'Reguler');
+        $keteranganBayar = $request->input('keterangan_bayar');
+
+        if ($periodeKas && $bulanKinerja) {
+            if ($tahapBayar && $tahapBayar !== 'Reguler') {
+                $periode = "{$periodeKas} - {$tahapBayar} (Kinerja {$bulanKinerja})";
+            } else {
+                $periode = "{$periodeKas} (Kinerja {$bulanKinerja})";
+            }
+        } else {
+            $periode = $request->input('periode_import');
+        }
 
         // Delete old unmatched NIP logs for this period
-        UnmatchedNip::where('periode', $periode)
-            ->where('jenis_file', 'TPP')
+        UnmatchedNip::where('jenis_file', 'TPP')
+            ->where(function ($q) use ($periode, $periodeKas) {
+                if ($periode) {
+                    $q->where('periode', $periode);
+                }
+                if ($periodeKas) {
+                    $q->orWhere('periode', $periodeKas);
+                }
+            })
             ->delete();
+
+        // If batch already exists, reset records for this specific batch before processing rows
+        // to prevent duplicate accumulation when re-importing the same batch
+        if ($periode) {
+            RealisasiTpp::where(function ($q) use ($periode, $periodeKas, $bulanKinerja, $tahapBayar) {
+                $q->where('periode', $periode);
+                if ($periodeKas && $bulanKinerja) {
+                    $q->orWhere(function ($sub) use ($periodeKas, $bulanKinerja, $tahapBayar) {
+                        $sub->where('periode_kas', $periodeKas)
+                            ->where('bulan_kinerja', $bulanKinerja);
+                        if ($tahapBayar) {
+                            $sub->where('tahap_bayar', $tahapBayar);
+                        }
+                    });
+                }
+            })->delete();
+        }
 
         $importedCount = 0;
         $failedCount = 0;
@@ -381,23 +464,37 @@ class RealisasiTppController extends Controller
                     $failedCount++;
                     $importedCount++;
 
+                    $statusPgw = $row['Status'] ?? $row['status'] ?? $row['STATUS'] ?? $row['Status Pegawai'] ?? $row['status_pegawai'] ?? $row['STATUS PEGAWAI'] ?? null;
+                    if (! $statusPgw) {
+                        if (str_starts_with($nip, 'GUB')) {
+                            $statusPgw = 'Pejabat Negara';
+                        } elseif (strlen($nip) === 18 && substr($nip, 12, 2) === '21') {
+                            $statusPgw = 'PPPK';
+                        } else {
+                            $statusPgw = 'PNS';
+                        }
+                    }
+
                     UnmatchedNip::create([
                         'nip' => $nip,
-                        'nama' => $row['NAMA'] ?? null,
+                        'nama' => $row['NAMA'] ?? $row['Nama'] ?? $row['nama'] ?? null,
+                        'status_pegawai' => $statusPgw,
                         'jenis_file' => 'TPP',
-                        'periode' => $periode,
+                        'periode' => $periode ?: ($row['Periode'] ?? 'Tidak Diketahui'),
                         'keterangan' => 'NIP dari file Excel TPP tidak ditemukan di Master Data Pegawai',
                     ]);
 
-                    // Update cache every 50 rows
                     if ($importedCount % 50 === 0) {
-                        Cache::put('upload_progress_'.$uploadId, ['progress' => $importedCount, 'total' => $totalRows], 120);
+                        Cache::store('file')->put('upload_progress_'.$uploadId, ['progress' => $importedCount, 'total' => $totalRows], 120);
                     }
 
-                    continue; // Skip if employee doesn't exist
+                    continue;
                 }
 
-                $periode = $row['Periode'] ?? 'Tidak Diketahui';
+                $rowPeriode = $periode ?: ($row['Periode'] ?? 'Tidak Diketahui');
+                $rowPeriodeKas = $periodeKas ?: ($row['Periode'] ?? null);
+                $rowBulanKinerja = $bulanKinerja ?: ($row['Bulan Kinerja'] ?? null);
+                $rowTahapBayar = $tahapBayar ?: 'Reguler';
 
                 // Extract known columns
                 $tppBruto = (int) ($row['TPP Bruto'] ?? 0);
@@ -412,11 +509,11 @@ class RealisasiTppController extends Controller
                 $isPlt = str_contains($jabatanExcel, '(PLT)') || str_contains($jabatanExcel, 'PLT.');
 
                 $realisasi = RealisasiTpp::where('pegawai_id', $pegawai->id)
-                    ->where('periode', $periode)
+                    ->where('periode', $rowPeriode)
                     ->first();
 
                 if ($realisasi) {
-                    // Update existing record
+                    // Update existing record within the current import batch (e.g. employee has a PLT row)
                     if ($isPlt) {
                         $realisasi->nominal_plt += $tppBruto;
                         $realisasi->tpp_netto += $tppNetto;
@@ -437,7 +534,11 @@ class RealisasiTppController extends Controller
                     // Create new record
                     RealisasiTpp::create([
                         'pegawai_id' => $pegawai->id,
-                        'periode' => $periode,
+                        'periode' => $rowPeriode,
+                        'periode_kas' => $rowPeriodeKas,
+                        'bulan_kinerja' => $rowBulanKinerja,
+                        'tahap_bayar' => $rowTahapBayar,
+                        'keterangan_bayar' => $keteranganBayar,
                         'tpp_bruto' => $isPlt ? 0 : $tppBruto,
                         'nominal_plt' => $isPlt ? $tppBruto : 0,
                         'tpp_netto' => $tppNetto,
@@ -450,13 +551,12 @@ class RealisasiTppController extends Controller
                 }
 
                 $importedCount++;
-                // Update cache every 50 rows
                 if ($importedCount % 50 === 0) {
-                    Cache::put('upload_progress_'.$uploadId, ['progress' => $importedCount, 'total' => $totalRows], 120);
+                    Cache::store('file')->put('upload_progress_'.$uploadId, ['progress' => $importedCount, 'total' => $totalRows], 120);
                 }
             }
             DB::commit();
-            Cache::forget('upload_progress_'.$uploadId);
+            Cache::store('file')->forget('upload_progress_'.$uploadId);
 
             if ($request->ajax() || $request->wantsJson()) {
                 session()->flash('success', "Berhasil mengimpor data realisasi. $failedCount data gagal (NIP tidak ditemukan).");
@@ -467,7 +567,7 @@ class RealisasiTppController extends Controller
             return redirect()->back()->with('success', "Berhasil mengimpor data realisasi. $failedCount data gagal (NIP tidak ditemukan).");
         } catch (\Exception $e) {
             DB::rollBack();
-            Cache::forget('upload_progress_'.$uploadId);
+            Cache::store('file')->forget('upload_progress_'.$uploadId);
 
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $e->getMessage()]);

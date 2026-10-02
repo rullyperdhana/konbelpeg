@@ -27,4 +27,9 @@ class Pegawai extends Model
     {
         return $this->hasMany(RealisasiGaji::class);
     }
+
+    public function simgajiKeluargas()
+    {
+        return $this->hasMany(SimgajiKeluarga::class, 'nip', 'nip')->orderBy('kdhubkel');
+    }
 }

@@ -72,20 +72,33 @@ Seringkali terjadi diskrepansi yang menyebabkan potensi kelebihan/kekurangan bay
    - Ekspor rekapitulasi ke Excel dan PDF resmi.
 
 ### C. Modul Laporan Analitis & SIKD
-1. **Laporan Gabungan Belanja Pegawai (`/laporan/gabungan`)**:
+1. **Trace Daftar Penggajian Pegawai (`/laporan/trace-gaji`)**:
+   - Penelusuran riwayat penggajian personal komprehensif berdasarkan NIP maupun Nama.
+   - Profil finansial terintegrasi: NIK (KTP), No. Rekening, Bank Penyalur, NPWP, dan No. Karpeg.
+   - **Daftar Anggota Keluarga & Tanggungan (SIMGAJI Taspen)**: Menyajikan data riil tanggungan keluarga (suami/istri, anak ke-1/2/3, dll.), status tertunjang/tidak tertunjang, dan umur.
+   - Rincian histori transaksi bulanan: Gaji Pokok, Tunjangan Keluarga, Tunjangan Jabatan, Bruto, Potongan, dan Netto.
+   - Tampilan adaptif Dark Mode dan Light Mode berpenampilan modern.
+2. **Laporan Gabungan Belanja Pegawai (`/laporan/gabungan`)**:
    - Menggabungkan realisasi Gaji dan TPP per SKPD dalam satu lembar kerja untuk monitoring realisasi total belanja pegawai terhadap pagu APBD.
    - Ekspor format cetak PDF dan Excel terstruktur.
-2. **Laporan SIKD Core (`/laporan/sikd-core`)**:
+3. **Laporan Rekonsiliasi IWP & BPJS Kesehatan (`/laporan/iwp-jamkes`)**:
+   - Rekonsiliasi Iuran Wajib Pegawai (IWP 10%) dan pemotongan Jaminan Kesehatan (BPJS Kesehatan) dari Gaji Reguler (2%) dan TPP (1%).
+   - Menyandingkan IWP 2% Jamkes Gaji (SIMGAJI DBF `piwp2`), IWP 8% Pensiun & THT Taspen (`piwp8`), dan IWP 1% Jamkes TPP.
+   - Tersedia Tab Rekapitulasi per SKPD dan Tab Rincian per Pegawai dengan ekspor Excel dan PDF.
+4. **Laporan Penyelarasan SKPD & UPTD (`/laporan/penyelarasan-unit-kerja`)**:
+   - Memetakan dan menyelaraskan 57 kode SKPD dan 440 satker SIMGAJI terhadap unit kerja master SIMPEG BKD.
+   - Menyajikan rekap SKPD Induk, matriks pemetaan satker/UPTD, serta daftar pegawai dengan selisih penempatan.
+5. **Laporan SIKD Core (`/laporan/sikd-core`)**:
    - Format laporan disesuaikan dengan standar Sistem Informasi Keuangan Daerah (SIKD Core) Kementerian Keuangan.
    - Tersedia tampilan **Rekapitulasi** dan tampilan **Rincian per Pegawai (`/laporan/sikd-core/rinci`)**.
    - Ekspor Excel dan PDF untuk kebutuhan pelaporan audit dan BPK.
-3. **Laporan Khusus PPPK Guru (`/laporan/pppk-guru`)**:
+6. **Laporan Khusus PPPK Guru (`/laporan/pppk-guru`)**:
    - Pemantauan terisolasi belanja gaji dan TPP untuk formasi prioritas PPPK Guru Dinas Pendidikan.
    - Tersedia tampilan **Rekapitulasi** dan **Rincian Pegawai (`/laporan/pppk-guru/rinci`)** beserta ekspor Excel/PDF.
-4. **Laporan Unmatched NIP (`/laporan/unmatched-nip`)**:
+7. **Laporan Unmatched NIP (`/laporan/unmatched-nip`)**:
    - Mencatat transaksi pembayaran yang NIP-nya tidak ditemukan pada master pegawai.
-   - Membantu admin menelusuri NIP salah ketik, mutasi baru, atau honorer yang belum terdaftar.
-   - Tombol pembersihan massal (*Clear Log*).
+   - Dilengkapi identifikasi status kepegawaian (PNS / PPPK / Non-ASN) dan indikator keberadaan NIP di basis data SIMGAJI.
+   - Filter dropdown status pegawai dan tombol pembersihan massal (*Clear Log*).
 
 ### D. Modul Rekonsiliasi SIMGAJI (`/laporan/rekonsiliasi-simgaji`)
 Inti dari sistem KONBELPEG dengan 6 kategori pencocokan otomatis:
@@ -111,22 +124,29 @@ Inti dari sistem KONBELPEG dengan 6 kategori pencocokan otomatis:
    - Daftar pegawai yang telah memasuki usia pensiun atau berhenti kerja berdasarkan data `kdstapeg` dan `tmtstop`.
 
 ### E. Modul Manajemen Database SIMGAJI (DBF) (`/master/simgaji-dbf`)
-- **Dukungan Berkas Ganda**:
-  - `MST_PGW`: Master Pegawai SIMGAJI.
-  - `HIS_GPOK`: Histori SK & Gaji Pokok SIMGAJI.
-- **Pendeteksi Otomatis Cerdas**: Otomatis mengenali jenis berkas berdasarkan keberadaan kolom DBF (`nomorskep`, `tmtgaji`, `gapok`, dsb.).
-- **Kartu Indikator Ganda**: Menampilkan status file aktif untuk masing-masing jenis secara berdampingan.
-- **Aktivasi & Riwayat Berkas**: Unggah berkas baru kapan saja tanpa menimpa berkas lama; pengguna bebas memilih berkas acuan rekonsiliasi yang aktif.
-- **Modal Cepat Unggah**: Tersedia langsung dari halaman laporan rekonsiliasi.
+- **Dukungan Berkas Tiga Serangkai (Triple DBF)**:
+  - `MST_PGW`: Master Pegawai SIMGAJI (NIP, Nama, Pangkat, SKPD, NIK, No. Rekening, NPWP, Bank Penyalur).
+  - `HIS_GPOK`: Histori SK & Gaji Pokok SIMGAJI (Nomor SK, TMT, Keterangan).
+  - `KEL`: Riwayat Anggota Keluarga & Tanggungan (70.000+ data tanggungan, status tunjangan anak/pasangan).
+- **Pendeteksi Otomatis Cerdas**: Otomatis mengenali jenis berkas saat diunggah berdasarkan struktur header kolom DBF.
+- **Tiga Kartu Status Berdampingan**: Menampilkan berkas aktif untuk `MST_PGW`, `HIS_GPOK`, dan `KEL` beserta total baris data.
+- **Sinkronisasi Instan ke Database**: Tombol *Sinkronkan ke Database* dan perintah Artisan `php artisan simgaji:sync` untuk migrasi puluhan ribu data DBF ke tabel SQLite/MySQL berindeks sehingga lookup berjalan < 1 ms.
+- **Aktivasi & Riwayat Berkas**: Unggah berkas baru secara berkala tanpa menimpa berkas lama; bebas beralih berkas aktif kapan saja.
 
 ### F. Modul Master Data Kepegawaian
-- **Master Unit Kerja / SKPD (`/master/skpd`)**: Pengelolaan kode, nama instansi, dan satker.
+- **Master Unit Kerja / SKPD (`/master/skpd`)**:
+  - Sistem 2 Tab: Ringkasan 42 SKPD Induk vs Rincian 1.638 Unit Kerja (UPT/Satker).
+  - Tombol Cetak Dokumen PDF resmi dan Ekspor Excel dinamis.
 - **Master Jabatan (`/master/jabatan`)**: Pengelolaan nomenklatur dan level jabatan.
-- **Data Pegawai (`/pegawai`)**: Pengelolaan data master pegawai (PNS & PPPK), NIP, nama, golongan, tanggal lahir, dan unit kerja.
+- **Data Pegawai (`/pegawai`)**:
+  - Pengelolaan data master pegawai (PNS & PPPK): NIP, nama, NIK, No. Rekening, Bank Penyalur, golongan, unit kerja, tanggal lahir.
+  - Modal interaktif **Detail Pegawai & SIMGAJI** untuk melihat profil BKD, data finansial Taspen, dan daftar tanggungan keluarga.
+  - Pencarian fleksibel berdasarkan NIP, Nama, maupun NIK.
 - **Artisan Command**: `php artisan import:pegawai` untuk mengimpor master pegawai awal dari berkas spreadsheet.
 
-### G. Modul Pengaturan & Reset Data (`/setting/data`)
-- Fasilitas pembersihan transaksi Realisasi Gaji atau Realisasi TPP per periode (bulan & tahun) secara aman tanpa menghapus master pegawai.
+### G. Modul Pengaturan & Manajemen Pengguna
+- **Manajemen Akun Pengguna (`/setting/users`)**: Tambah, ubah, dan kelola peran admin/operator dengan pengamanan autentikasi dan rate-limiting.
+- **Reset & Pembersihan Data Transaksi (`/setting/data`)**: Fasilitas pembersihan transaksi Realisasi Gaji atau TPP per periode secara aman tanpa menghapus master pegawai.
 
 ---
 
@@ -168,11 +188,17 @@ Inti dari sistem KONBELPEG dengan 6 kategori pencocokan otomatis:
 | `GET` | `/laporan/pppk-guru/rinci` | `PppkGuruController@rinci` | Rincian pegawai PPPK Guru |
 | `GET` | `/laporan/pppk-guru/export/pdf` | `PppkGuruController@exportPdf` | Cetak PDF PPPK Guru |
 | `GET` | `/laporan/pppk-guru/export/excel`| `PppkGuruController@exportExcel` | Ekspor Excel PPPK Guru |
+| `GET` | `/laporan/trace-gaji` | `TraceGajiPegawaiController@index` | Penelusuran riwayat gaji personal per NIP/Nama |
+| `GET` | `/laporan/iwp-jamkes` | `LaporanIwpJamkesController@index` | Rekonsiliasi IWP & BPJS Kesehatan (Jamkes) |
+| `GET` | `/laporan/iwp-jamkes/export/excel` | `LaporanIwpJamkesController@exportExcel` | Ekspor Excel IWP & BPJS Kesehatan |
+| `GET` | `/laporan/iwp-jamkes/export/pdf` | `LaporanIwpJamkesController@exportPdf` | Cetak PDF IWP & BPJS Kesehatan |
+| `GET` | `/laporan/penyelarasan-unit-kerja` | `PenyelarasanUnitKerjaController@index` | Penyelarasan SKPD & UPTD SIMGAJI vs SIMPEG |
 | `GET` | `/laporan/unmatched-nip` | `UnmatchedNipController@index` | Daftar NIP tidak cocok |
 | `DELETE`| `/laporan/unmatched-nip/clear` | `UnmatchedNipController@destroyAll` | Bersihkan log unmatched NIP |
 | `GET` | `/master/simgaji-dbf` | `RekonsiliasiSimgajiController@uploadPage` | Kelola file DBF SIMGAJI |
 | `POST` | `/master/simgaji-dbf/upload` | `RekonsiliasiSimgajiController@uploadDbf` | Unggah file DBF SIMGAJI |
 | `POST` | `/master/simgaji-dbf/{id}/activate` | `RekonsiliasiSimgajiController@setActiveDbf` | Set file DBF aktif |
+| `POST` | `/master/simgaji-dbf/sync` | `RekonsiliasiSimgajiController@syncSimgaji` | Sinkronisasi massal DBF ke Database |
 | `DELETE`| `/master/simgaji-dbf/{id}` | `RekonsiliasiSimgajiController@deleteDbf` | Hapus riwayat file DBF |
 | `GET` | `/laporan/rekonsiliasi-simgaji` | `RekonsiliasiSimgajiController@index` | Modul Rekonsiliasi SIMGAJI |
 | `POST` | `/laporan/rekonsiliasi-simgaji/sync-pegawai` | `RekonsiliasiSimgajiController@syncPegawai` | Sinkronisasi pegawai baru |
@@ -182,20 +208,29 @@ Inti dari sistem KONBELPEG dengan 6 kategori pencocokan otomatis:
 | `GET` | `/laporan/rekonsiliasi-simgaji/refresh` | `RekonsiliasiSimgajiController@refreshCache` | Refresh cache perhitungan |
 | `GET` | `/laporan/rekonsiliasi-simgaji/export/excel` | `RekonsiliasiSimgajiController@exportExcel` | Ekspor Excel rekonsiliasi |
 | `GET` | `/laporan/rekonsiliasi-simgaji/export/pdf` | `RekonsiliasiSimgajiController@exportPdf` | Cetak PDF rekonsiliasi |
+| `GET` | `/setting/users` | `UserController@index` | Kelola akun pengguna sistem |
+| `POST` | `/setting/users` | `UserController@store` | Tambah pengguna baru |
+| `PUT` | `/setting/users/{id}` | `UserController@update` | Ubah akun pengguna |
+| `DELETE`| `/setting/users/{id}` | `UserController@destroy` | Hapus akun pengguna |
 | `GET` | `/setting/data` | `SettingDataController@index` | Pengaturan & reset data |
 | `DELETE`| `/setting/data/hapus` | `SettingDataController@destroy` | Eksekusi reset data transaksi |
+| `GET` | `/login` | `AuthController@showLoginForm` | Form login sistem |
+| `POST` | `/login` | `AuthController@login` | Verifikasi kredensial login |
+| `POST` | `/logout` | `AuthController@logout` | Keluar dari sesi aplikasi |
 
 ---
 
 ## 🗄 Skema & Struktur Basis Data
 
 Aplikasi menggunakan tabel relasional:
-1. **`unit_kerjas`**: Menyimpan master SKPD (`kode`, `nama`, `satker`).
-2. **`jabatans`**: Menyimpan master nama jabatan (`nama`).
-3. **`pegawais`**: Menyimpan master pegawai (`nip`, `nama`, `unit_kerja_id`, `jabatan_id`, `golongan`, `tgl_lahir`, `jenis_pegawai`).
-4. **`realisasi_gajis`**: Menyimpan transaksi gaji (`pegawai_id`, `bulan`, `tahun`, `gaji_pokok`, `tunjangan_keluarga`, `tunjangan_jabatan`, `total_bruto`, `total_potongan`, `total_netto`, `raw_data`).
-5. **`realisasi_tpps`**: Menyimpan transaksi TPP (`pegawai_id`, `bulan`, `tahun`, `beban_kerja`, `prestasi_kerja`, `kondisi_kerja`, `nominal_plt`, `total_tpp`).
-6. **`unmatched_nips`**: Mencatat NIP transaksi impor yang belum terdaftar di tabel `pegawais`.
+1. **`users`**: Akun pengguna sistem (`name`, `email`, `password`, `role`).
+2. **`unit_kerjas`**: Menyimpan master SKPD (`kode`, `nama`, `satker`).
+3. **`jabatans`**: Menyimpan master nama jabatan (`nama`).
+4. **`pegawais`**: Menyimpan master pegawai lengkap (`nip`, `nama`, `nik`, `no_rekening`, `nama_bank`, `npwp`, `no_karpeg`, `unit_kerja_id`, `jabatan_id`, `golongan`, `tgl_lahir`, `jenis_pegawai`).
+5. **`simgaji_keluargas`**: Menyimpan riwayat anggota keluarga & tanggungan SIMGAJI (`nip`, `nmkel`, `kdhubkel`, `hubungan`, `kdjenkel`, `jenis_kelamin`, `tgllhr`, `kdtunjang`, `status_tunjangan`, `kdstawin`, `nipsuamiis`, `pekerjaan`, `nosks`, `tglsks`, `tglnikah`, `tglcerai`, `tglwafat`).
+6. **`realisasi_gajis`**: Menyimpan transaksi gaji (`pegawai_id`, `bulan`, `tahun`, `jenis_gaji`, `gaji_pokok`, `tunjangan_keluarga`, `tunjangan_jabatan`, `total_bruto`, `total_potongan`, `total_netto`, `raw_data`).
+7. **`realisasi_tpps`**: Menyimpan transaksi TPP (`pegawai_id`, `bulan`, `tahun`, `bulan_kinerja`, `periode_kas`, `beban_kerja`, `prestasi_kerja`, `kondisi_kerja`, `nominal_plt`, `total_tpp`).
+8. **`unmatched_nips`**: Mencatat NIP transaksi impor yang belum terdaftar di tabel `pegawais` beserta status kepegawaian.
 
 ---
 
@@ -204,14 +239,17 @@ Aplikasi menggunakan tabel relasional:
 Sistem membaca database keluaran SIMGAJI secara native tanpa ketergantungan driver ODBC:
 
 ```
-[File SIMGAJI DBF]
+[Berkas SIMGAJI DBF]
        │
-       ├─── MST_PGW_*.DBF  ──> Dibaca oleh php-xbase ──> Struktur Master (NIP, Nama, KdPangkat, KdSKPD, TglLahir, KdStapeg, TmtStop)
+       ├─── MST_PGW_*.DBF  ──> Master Pegawai (NIP, Nama, Pangkat, SKPD, NIK, No. Rekening, Bank Penyalur, NPWP)
        │
-       └─── HIS_GPOK_*.DBF ──> Dibaca oleh php-xbase ──> Histori SK & Gaji (NIP, NomorSkep, TglSkep, Tmt, TmtGaji, Gapok, Keterangan)
+       ├─── HIS_GPOK_*.DBF ──> Histori SK & Gaji Pokok (NIP, NomorSkep, TglSkep, Tmt, TmtGaji, Gapok, Keterangan)
+       │
+       └─── KEL_*.DBF      ──> Riwayat Anggota Keluarga (NIP, Nama Anggota, Hubungan, Tanggal Lahir, Status Tunjangan)
 ```
 
 - **Penyimpanan Berkas**: Berkas yang diunggah disimpan pada `storage/app/simgaji/` dengan manifest tercatat di `storage/app/simgaji/manifest.json`.
+- **Performa Tinggi**: Data dari berkas DBF dapat disinkronkan ke tabel database terindeks (`pegawais` & `simgaji_keluargas`) melalui fitur sinkronisasi sehingga pembacaan ribuan data personal & keluarga selesai dalam hitungan milidetik.
 - **Keamanan Data**: Seluruh berkas DBF yang memuat data personal dan gaji pegawai dikecualikan dari repositori Git melalui `.gitignore`.
 
 ---
@@ -221,6 +259,10 @@ Sistem membaca database keluaran SIMGAJI secara native tanpa ketergantungan driv
 Seluruh riwayat perkembangan versi aplikasi dari awal inisiasi hingga rilis terkini didokumentasikan secara rinci pada berkas [CHANGELOG.md](CHANGELOG.md).
 
 Ringkasan versi:
+- **v2.8.0 (02 Oktober 2026)**: Integrasi DBF Riwayat Keluarga (`KEL`), atribut finansial master pegawai (NIK, No. Rekening, Bank Penyalur), modul Trace Penggajian Personal (`/laporan/trace-gaji`), penambahan status pegawai pada Unmatched NIP, dan optimasi sinkronisasi database.
+- **v2.7.0 (29 September 2026)**: Modul Rekonsiliasi IWP & BPJS Kesehatan (`/laporan/iwp-jamkes`), sistem 2 Tab Master SKPD Induk vs UPTD, dan cetak PDF resmi.
+- **v2.6.0 (29 September 2026)**: Sistem Autentikasi Pengguna (`/login`, `/setting/users`) dan Containerisasi Docker VPS (PHP 8.4-FPM, Nginx, MySQL 8).
+- **v2.5.0 (09 September 2026)**: Modul Penyelarasan SKPD & UPTD SIMGAJI vs SIMPEG (`/laporan/penyelarasan-unit-kerja`).
 - **v2.4.0 (04 September 2026)**: Integrasi database `HIS_GPOK`, pendeteksi status SK Terjadwal vs Belum Diinput, sub-filter status SK, dan antarmuka manajemen DBF ganda (`/master/simgaji-dbf`) dengan fitur auto-detect.
 - **v2.3.0 (03-04 September 2026)**: Ekuivalensi cerdas angka Romawi PPPK (`IX` == `9`), filter status pensiun (Aktif vs Pensiun BUP/Janda/Duda), dan perbaikan ekspor Excel/PDF.
 - **v2.2.0 (03 September 2026)**: Penyesuaian zona waktu lokal WITA (GMT+8 Makassar), pembersihan layout antarmuka, dan skema warna light palette.

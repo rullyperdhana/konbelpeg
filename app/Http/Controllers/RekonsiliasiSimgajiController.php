@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Jabatan;
 use App\Models\Pegawai;
 use App\Models\RealisasiTpp;
+use App\Models\SimgajiKeluarga;
 use App\Models\UnitKerja;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
@@ -512,11 +514,17 @@ class RekonsiliasiSimgajiController extends Controller
         $files = $this->getDbfManifest();
         $activeMstPgw = $this->getActiveDbfFile('mst_pgw');
         $activeHisGpok = $this->getActiveDbfFile('his_gpok');
+        $activeKel = $this->getActiveDbfFile('kel');
+        $totalKeluargaDb = SimgajiKeluarga::count();
+        $totalPegawaiWithFinancial = Pegawai::whereNotNull('nik')->orWhereNotNull('no_rekening')->count();
 
         return view('master.simgaji_dbf', [
             'files' => $files,
             'activeMstPgw' => $activeMstPgw,
             'activeHisGpok' => $activeHisGpok,
+            'activeKel' => $activeKel,
+            'totalKeluargaDb' => $totalKeluargaDb,
+            'totalPegawaiWithFinancial' => $totalPegawaiWithFinancial,
             'activeFile' => $activeMstPgw,
         ]);
     }
@@ -525,7 +533,7 @@ class RekonsiliasiSimgajiController extends Controller
     {
         $request->validate([
             'file_dbf' => 'required|file',
-            'jenis_dbf' => 'nullable|string|in:auto,mst_pgw,his_gpok',
+            'jenis_dbf' => 'nullable|string|in:auto,mst_pgw,his_gpok,kel',
             'keterangan' => 'nullable|string|max:255',
         ]);
 
@@ -559,17 +567,21 @@ class RekonsiliasiSimgajiController extends Controller
                 $colNames[] = strtolower($col->getName());
             }
 
-            if (in_array('nomorskep', $colNames) || in_array('penerbitsk', $colNames) || in_array('tmtgaji', $colNames) || str_contains(strtoupper($originalName), 'HIS_GPOK')) {
+            if (str_contains(strtoupper($originalName), 'KEL') || in_array('nmkel', $colNames) || in_array('kdhubkel', $colNames)) {
+                $detectedType = 'kel';
+            } elseif (in_array('nomorskep', $colNames) || in_array('penerbitsk', $colNames) || in_array('tmtgaji', $colNames) || str_contains(strtoupper($originalName), 'HIS_GPOK')) {
                 $detectedType = 'his_gpok';
             }
         } catch (\Exception $e) {
-            if (str_contains(strtoupper($originalName), 'HIS_GPOK')) {
+            if (str_contains(strtoupper($originalName), 'KEL')) {
+                $detectedType = 'kel';
+            } elseif (str_contains(strtoupper($originalName), 'HIS_GPOK')) {
                 $detectedType = 'his_gpok';
             }
         }
 
         $reqType = $request->input('jenis_dbf', 'auto');
-        $finalType = in_array($reqType, ['mst_pgw', 'his_gpok']) ? $reqType : $detectedType;
+        $finalType = in_array($reqType, ['mst_pgw', 'his_gpok', 'kel']) ? $reqType : $detectedType;
 
         $files = $this->getDbfManifest();
 
@@ -581,7 +593,12 @@ class RekonsiliasiSimgajiController extends Controller
             }
         }
 
-        $typeLabel = $finalType === 'his_gpok' ? 'Histori Gaji Pokok & SK (HIS_GPOK)' : 'Master Pegawai (MST_PGW)';
+        $typeLabel = match ($finalType) {
+            'his_gpok' => 'Histori Gaji Pokok & SK (HIS_GPOK)',
+            'kel' => 'Riwayat Anggota Keluarga (KEL)',
+            default => 'Master Pegawai (MST_PGW)',
+        };
+
         $newId = uniqid('dbf_');
         $files[] = [
             'id' => $newId,
@@ -637,12 +654,38 @@ class RekonsiliasiSimgajiController extends Controller
             $this->saveDbfManifest($files);
             Cache::forget('rekonsiliasi_simgaji_data');
 
-            $label = $targetType === 'his_gpok' ? 'Histori Gaji Pokok & SK' : 'Master Pegawai';
+            $label = match ($targetType) {
+                'his_gpok' => 'Histori Gaji Pokok & SK',
+                'kel' => 'Riwayat Anggota Keluarga',
+                default => 'Master Pegawai',
+            };
 
             return redirect()->back()->with('success', "Database acuan aktif untuk {$label} berhasil dialihkan ke '{$name}'.");
         }
 
         return redirect()->back()->with('error', 'File database tidak ditemukan.');
+    }
+
+    /**
+     * Jalankan sinkronisasi data SIMGAJI (Master NIK/Rekening atau Data Keluarga).
+     */
+    public function syncSimgaji(Request $request)
+    {
+        $type = $request->input('type', 'all');
+
+        try {
+            Artisan::call('simgaji:sync', ['--type' => $type]);
+
+            $msg = match ($type) {
+                'keluarga' => 'Data Anggota Keluarga & Tanggungan SIMGAJI berhasil disinkronkan ke database.',
+                'master' => 'Data NIK, No. Rekening, Bank, dan NPWP Pegawai berhasil disinkronkan.',
+                default => 'Seluruh data SIMGAJI (Master Pegawai & Anggota Keluarga) berhasil disinkronkan ke database.',
+            };
+
+            return redirect()->back()->with('success', $msg);
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal melakukan sinkronisasi: '.$e->getMessage());
+        }
     }
 
     public function deleteDbf($id)
@@ -699,15 +742,19 @@ class RekonsiliasiSimgajiController extends Controller
             }
         }
 
-        // Cek apakah default MST_PGW sudah terdaftar
+        // Cek apakah default MST_PGW, HIS_GPOK, dan KEL sudah terdaftar
         $hasMst = false;
         $hasHis = false;
+        $hasKel = false;
         foreach ($files as $f) {
             if (($f['type'] ?? '') === 'mst_pgw') {
                 $hasMst = true;
             }
             if (($f['type'] ?? '') === 'his_gpok') {
                 $hasHis = true;
+            }
+            if (($f['type'] ?? '') === 'kel') {
+                $hasKel = true;
             }
         }
 
@@ -747,6 +794,38 @@ class RekonsiliasiSimgajiController extends Controller
                 ];
                 $modified = true;
             }
+        }
+
+        if (! $hasKel) {
+            $defaultKelFile = base_path('KEL_2026-10-011600.DBF');
+            if (file_exists($defaultKelFile)) {
+                $files[] = [
+                    'id' => 'default_kel',
+                    'type' => 'kel',
+                    'filename' => basename($defaultKelFile),
+                    'stored_name' => basename($defaultKelFile),
+                    'path' => $defaultKelFile,
+                    'size' => round(filesize($defaultKelFile) / (1024 * 1024), 2).' MB',
+                    'records' => 70479,
+                    'keterangan' => 'Database Riwayat Keluarga & Tanggungan Awal (Bawaan)',
+                    'uploaded_at' => date('d M Y H:i', filemtime($defaultKelFile)),
+                    'is_active' => true,
+                ];
+                $modified = true;
+            }
+        }
+
+        // Deduplikasi file berdasarkan path atau id agar rapi
+        $uniqueFiles = [];
+        foreach ($files as $fileItem) {
+            $key = $fileItem['id'] ?? ($fileItem['path'] ?? uniqid());
+            if (! isset($uniqueFiles[$key])) {
+                $uniqueFiles[$key] = $fileItem;
+            }
+        }
+        if (count($uniqueFiles) !== count($files)) {
+            $files = array_values($uniqueFiles);
+            $modified = true;
         }
 
         if ($modified || ! file_exists($manifestPath)) {

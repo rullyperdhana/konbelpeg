@@ -11,13 +11,14 @@ class PegawaiController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Pegawai::with(['jabatan', 'unitKerja']);
+        $query = Pegawai::with(['jabatan', 'unitKerja', 'simgajiKeluargas']);
 
         if ($request->has('search') && $request->search != '') {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('nama', 'like', "%{$search}%")
-                    ->orWhere('nip', 'like', "%{$search}%");
+                    ->orWhere('nip', 'like', "%{$search}%")
+                    ->orWhere('nik', 'like', "%{$search}%");
             });
         }
 
@@ -43,6 +44,11 @@ class PegawaiController extends Controller
         $validated = $request->validate([
             'nip' => 'required|string|unique:pegawais',
             'nama' => 'required|string|max:255',
+            'nik' => 'nullable|string|max:30',
+            'no_rekening' => 'nullable|string|max:50',
+            'nama_bank' => 'nullable|string|max:50',
+            'npwp' => 'nullable|string|max:30',
+            'no_karpeg' => 'nullable|string|max:30',
             'tempat_lahir' => 'nullable|string',
             'tgl_lahir' => 'nullable|date',
             'jk' => 'nullable|string',
@@ -68,6 +74,11 @@ class PegawaiController extends Controller
         $validated = $request->validate([
             'nip' => 'required|string|unique:pegawais,nip,'.$pegawai->id,
             'nama' => 'required|string|max:255',
+            'nik' => 'nullable|string|max:30',
+            'no_rekening' => 'nullable|string|max:50',
+            'nama_bank' => 'nullable|string|max:50',
+            'npwp' => 'nullable|string|max:30',
+            'no_karpeg' => 'nullable|string|max:30',
             'tempat_lahir' => 'nullable|string',
             'tgl_lahir' => 'nullable|date',
             'jk' => 'nullable|string',

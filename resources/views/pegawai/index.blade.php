@@ -36,7 +36,7 @@
                 @endforeach
             </select>
         </div>
-        <input type="text" name="search" placeholder="Cari NIP atau Nama..." value="{{ request('search') }}">
+        <input type="text" name="search" placeholder="Cari NIP, Nama, atau NIK..." value="{{ request('search') }}">
         <button type="submit"><i class="ph ph-magnifying-glass"></i> Cari</button>
     </form>
 </div>
@@ -45,8 +45,8 @@
     <table>
         <thead>
             <tr>
-                <th>NIP</th>
-                <th>Nama Pegawai</th>
+                <th>NIP & NIK</th>
+                <th>Nama Pegawai & Rekening</th>
                 <th>Status / Gol</th>
                 <th>Jabatan</th>
                 <th>Unit Kerja / UPTD</th>
@@ -56,10 +56,27 @@
         <tbody>
             @forelse($pegawais as $item)
             <tr>
-                <td style="font-weight: 600; color: #475569;">{{ $item->nip }}</td>
+                <td>
+                    <div style="font-weight: 700; color: #334155; font-family: monospace; font-size: 13.5px;">{{ $item->nip }}</div>
+                    @if($item->nik)
+                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                            <span style="color: #94a3b8; font-weight: 600;">NIK:</span> <span style="font-family: monospace;">{{ $item->nik }}</span>
+                        </div>
+                    @endif
+                </td>
                 <td>
                     <div style="font-weight: 600; font-size: 14px; color: #0f172a;">{{ $item->nama }}</div>
-                    <div style="font-size: 12px; color: #64748b; margin-top: 2px;">{{ $item->tempat_lahir ?? '-' }}, {{ $item->tgl_lahir ? date('d-m-Y', strtotime($item->tgl_lahir)) : '-' }}</div>
+                    <div style="font-size: 11.5px; color: #64748b; margin-top: 2px;">
+                        <span>{{ $item->tempat_lahir ?? '-' }}, {{ $item->tgl_lahir ? date('d-m-Y', strtotime($item->tgl_lahir)) : '-' }}</span>
+                        @if($item->no_rekening)
+                            <span style="margin-left: 6px; color: #0284c7; font-weight: 600;">
+                                <i class="ph ph-credit-card"></i> {{ $item->no_rekening }}
+                                @if($item->nama_bank)
+                                    <small style="color: #64748b; font-weight: normal;">({{ $item->nama_bank }})</small>
+                                @endif
+                            </span>
+                        @endif
+                    </div>
                 </td>
                 <td>
                     <span class="badge {{ str_contains(strtoupper($item->status_pegawai ?? ''), 'PARUH') ? 'badge-paruh' : (strtolower($item->status_pegawai ?? '') == 'pns' ? 'badge-pns' : 'badge-pppk') }}">{{ $item->status_pegawai ?? '-' }}</span>
@@ -74,7 +91,10 @@
                 </td>
                 <td>
                     <div class="action-btns">
-                        <button class="btn-edit" onclick="openEditModal({{ $item->id }}, '{{ $item->nip }}', '{{ addslashes($item->nama) }}', '{{ addslashes($item->tempat_lahir) }}', '{{ $item->tgl_lahir }}', '{{ $item->jk }}', '{{ $item->agama }}', '{{ $item->status_pegawai }}', '{{ $item->golru }}', '{{ $item->jabatan_id }}', '{{ $item->unit_kerja_id }}')">Edit</button>
+                        <button type="button" class="btn-edit" style="color: #059669; border-color: rgba(5, 150, 105, 0.3);" onclick="openDetailModal({{ json_encode($item) }})">
+                            <i class="ph ph-eye"></i> Detail
+                        </button>
+                        <button class="btn-edit" onclick="openEditModal({{ $item->id }}, '{{ $item->nip }}', '{{ addslashes($item->nama) }}', '{{ $item->nik }}', '{{ $item->no_rekening }}', '{{ $item->nama_bank }}', '{{ $item->npwp }}', '{{ addslashes($item->tempat_lahir) }}', '{{ $item->tgl_lahir }}', '{{ $item->jk }}', '{{ $item->agama }}', '{{ $item->status_pegawai }}', '{{ $item->golru }}', '{{ $item->jabatan_id }}', '{{ $item->unit_kerja_id }}')">Edit</button>
                         <form action="/pegawai/{{ $item->id }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus Pegawai ini?');">
                             @csrf
                             @method('DELETE')
@@ -156,6 +176,23 @@
                 <div class="form-group">
                     <label>Golongan Ruang</label>
                     <input type="text" name="golru" placeholder="Misal: IV/e">
+                </div>
+                
+                <div class="form-group">
+                    <label>NIK (No. KTP)</label>
+                    <input type="text" name="nik" placeholder="16 digit NIK">
+                </div>
+                <div class="form-group">
+                    <label>No. Rekening</label>
+                    <input type="text" name="no_rekening" placeholder="Nomor Rekening">
+                </div>
+                <div class="form-group">
+                    <label>Bank Penyalur</label>
+                    <input type="text" name="nama_bank" placeholder="Misal: Bank Kalsel">
+                </div>
+                <div class="form-group">
+                    <label>NPWP</label>
+                    <input type="text" name="npwp" placeholder="Nomor NPWP">
                 </div>
                 
                 <div class="form-group full">
@@ -240,6 +277,23 @@
                     <input type="text" name="golru" id="edit_golru">
                 </div>
                 
+                <div class="form-group">
+                    <label>NIK (No. KTP)</label>
+                    <input type="text" name="nik" id="edit_nik" placeholder="16 digit NIK">
+                </div>
+                <div class="form-group">
+                    <label>No. Rekening</label>
+                    <input type="text" name="no_rekening" id="edit_no_rekening" placeholder="Nomor Rekening">
+                </div>
+                <div class="form-group">
+                    <label>Bank Penyalur</label>
+                    <input type="text" name="nama_bank" id="edit_nama_bank" placeholder="Misal: Bank Kalsel">
+                </div>
+                <div class="form-group">
+                    <label>NPWP</label>
+                    <input type="text" name="npwp" id="edit_npwp" placeholder="Nomor NPWP">
+                </div>
+                
                 <div class="form-group full">
                     <label>Unit Kerja (SKPD)</label>
                     <select name="unit_kerja_id" id="edit_unit_kerja_id">
@@ -269,6 +323,83 @@
     </div>
 </div>
 
+<!-- Modal Detail Pegawai & SIMGAJI -->
+<div class="modal-overlay" id="detailModal">
+    <div class="modal-content" style="max-width: 800px; width: 95%;">
+        <div class="modal-header">
+            <div>
+                <h3 id="dt_nama" style="margin: 0; font-size: 17px; font-weight: 700; color: var(--text-main);">Detail Pegawai</h3>
+                <span id="dt_nip" style="font-family: monospace; font-size: 13px; color: var(--text-muted); font-weight: 600;"></span>
+            </div>
+            <button class="btn-close" onclick="closeModal('detailModal')">&times;</button>
+        </div>
+        <div style="padding: 20px;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                <!-- Kotak Info BKD -->
+                <div style="background: var(--bg-surface-secondary, #f8fafc); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px;">
+                    <div style="font-weight: 700; font-size: 13px; color: #2563eb; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                        <i class="ph ph-identification-badge"></i> Data Kepegawaian (BKD)
+                    </div>
+                    <div style="font-size: 12.5px; line-height: 1.8;">
+                        <div><span style="color: var(--text-muted);">Status / Gol:</span> <strong id="dt_status_gol">-</strong></div>
+                        <div><span style="color: var(--text-muted);">Jabatan:</span> <strong id="dt_jabatan">-</strong></div>
+                        <div><span style="color: var(--text-muted);">Unit Kerja:</span> <strong id="dt_skpd">-</strong></div>
+                        <div><span style="color: var(--text-muted);">TTL:</span> <span id="dt_ttl">-</span></div>
+                        <div><span style="color: var(--text-muted);">Jenis Kelamin / Agama:</span> <span id="dt_jk_agama">-</span></div>
+                    </div>
+                </div>
+
+                <!-- Kotak Info SIMGAJI Taspen -->
+                <div style="background: var(--bg-surface-secondary, #f8fafc); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px;">
+                    <div style="font-weight: 700; font-size: 13px; color: #059669; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                        <i class="ph ph-bank"></i> Identitas Finansial & SIMGAJI Taspen
+                    </div>
+                    <div style="font-size: 12.5px; line-height: 1.8;">
+                        <div><span style="color: var(--text-muted);">NIK (No. KTP):</span> <strong id="dt_nik" style="font-family: monospace;">-</strong></div>
+                        <div><span style="color: var(--text-muted);">No. Rekening:</span> <strong id="dt_norek" style="font-family: monospace; color: #0284c7;">-</strong></div>
+                        <div><span style="color: var(--text-muted);">Bank Penyalur:</span> <span id="dt_bank">-</span></div>
+                        <div><span style="color: var(--text-muted);">NPWP:</span> <span id="dt_npwp" style="font-family: monospace;">-</span></div>
+                        <div><span style="color: var(--text-muted);">No. Karpeg:</span> <span id="dt_karpeg">-</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabel Anggota Keluarga SIMGAJI -->
+            <div style="border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; margin-bottom: 16px;">
+                <div style="background: rgba(5, 150, 105, 0.08); padding: 10px 14px; font-weight: 700; font-size: 13px; color: #059669; display: flex; justify-content: space-between; align-items: center;">
+                    <span><i class="ph ph-users-four"></i> Anggota Keluarga & Tanggungan (SIMGAJI Taspen)</span>
+                    <span id="dt_keluarga_count" class="badge" style="background: #059669; color: #fff; font-size: 11px;">0 Anggota</span>
+                </div>
+                <div style="max-height: 220px; overflow-y: auto;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                        <thead>
+                            <tr style="background: var(--bg-surface-secondary, #f8fafc); border-bottom: 1px solid var(--border-color);">
+                                <th style="padding: 8px 10px; text-align: left;">Nama Anggota</th>
+                                <th style="padding: 8px 10px; text-align: left;">Hubungan</th>
+                                <th style="padding: 8px 10px; text-align: left;">JK</th>
+                                <th style="padding: 8px 10px; text-align: left;">Tgl Lahir / Usia</th>
+                                <th style="padding: 8px 10px; text-align: center;">Tunjangan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dt_keluarga_tbody">
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 16px; color: var(--text-muted);">Tidak ada data keluarga.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 14px;">
+                <a id="dt_trace_link" href="#" class="btn btn-primary" style="font-size: 12.5px; padding: 7px 14px;">
+                    <i class="ph ph-chart-line-up"></i> Buka Lembar Trace Gaji Pegawai Ini
+                </a>
+                <button type="button" class="btn-edit" onclick="closeModal('detailModal')">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
     // Initialize TomSelect for Search Filter
     document.addEventListener("DOMContentLoaded", function() {
@@ -289,10 +420,60 @@
         document.getElementById(id).classList.remove('active');
     }
 
-    function openEditModal(id, nip, nama, tempat_lahir, tgl_lahir, jk, agama, status, golru, jabatan_id, unit_kerja_id) {
+    function openDetailModal(item) {
+        document.getElementById('dt_nama').textContent = item.nama || '-';
+        document.getElementById('dt_nip').textContent = 'NIP: ' + (item.nip || '-');
+        document.getElementById('dt_status_gol').textContent = (item.status_pegawai || '-') + ' / Gol: ' + (item.golru || '-');
+        document.getElementById('dt_jabatan').textContent = (item.jabatan ? item.jabatan.nama : '-');
+        document.getElementById('dt_skpd').textContent = (item.unit_kerja ? item.unit_kerja.skpd : '-');
+        document.getElementById('dt_ttl').textContent = (item.tempat_lahir || '-') + ', ' + (item.tgl_lahir || '-');
+        document.getElementById('dt_jk_agama').textContent = (item.jk || '-') + ' / ' + (item.agama || '-');
+
+        document.getElementById('dt_nik').textContent = item.nik || 'Belum tersinkron';
+        document.getElementById('dt_norek').textContent = item.no_rekening || 'Belum tersinkron';
+        document.getElementById('dt_bank').textContent = item.nama_bank || '-';
+        document.getElementById('dt_npwp').textContent = item.npwp || '-';
+        document.getElementById('dt_karpeg').textContent = item.no_karpeg || '-';
+
+        document.getElementById('dt_trace_link').href = '/laporan/trace-gaji?pegawai_id=' + item.id;
+
+        let tbody = document.getElementById('dt_keluarga_tbody');
+        tbody.innerHTML = '';
+        let families = item.simgaji_keluargas || [];
+        document.getElementById('dt_keluarga_count').textContent = families.length + ' Anggota Terdata';
+
+        if (families.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 16px; color: var(--text-muted);">Tidak ada catatan anggota keluarga pada database SIMGAJI.</td></tr>';
+        } else {
+            families.forEach(function(f) {
+                let isTertunjang = (f.kdtunjang === '2');
+                let badge = isTertunjang 
+                    ? '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; padding: 2px 8px; border-radius: 999px; font-weight: 700; font-size: 10.5px;">Tertunjang</span>'
+                    : '<span class="badge" style="background: rgba(100, 116, 139, 0.1); color: #64748b; padding: 2px 8px; border-radius: 999px; font-size: 10.5px;">Tidak</span>';
+
+                let row = document.createElement('tr');
+                row.style.borderBottom = '1px solid var(--border-color)';
+                row.innerHTML = 
+                    '<td style="padding: 8px 10px; font-weight: 600;">' + (f.nmkel || '-') + '</td>' +
+                    '<td style="padding: 8px 10px; color: var(--text-muted);">' + (f.hubungan || '-') + '</td>' +
+                    '<td style="padding: 8px 10px;">' + (f.jenis_kelamin || '-') + '</td>' +
+                    '<td style="padding: 8px 10px;">' + (f.tgllhr ? f.tgllhr.substring(0, 10) : '-') + '</td>' +
+                    '<td style="padding: 8px 10px; text-align: center;">' + badge + '</td>';
+                tbody.appendChild(row);
+            });
+        }
+
+        openModal('detailModal');
+    }
+
+    function openEditModal(id, nip, nama, nik, no_rekening, nama_bank, npwp, tempat_lahir, tgl_lahir, jk, agama, status, golru, jabatan_id, unit_kerja_id) {
         document.getElementById('editForm').action = '/pegawai/' + id;
         document.getElementById('edit_nip').value = nip;
         document.getElementById('edit_nama').value = nama;
+        document.getElementById('edit_nik').value = (nik && nik !== 'null') ? nik : '';
+        document.getElementById('edit_no_rekening').value = (no_rekening && no_rekening !== 'null') ? no_rekening : '';
+        document.getElementById('edit_nama_bank').value = (nama_bank && nama_bank !== 'null') ? nama_bank : '';
+        document.getElementById('edit_npwp').value = (npwp && npwp !== 'null') ? npwp : '';
         document.getElementById('edit_tempat_lahir').value = tempat_lahir !== '-' ? tempat_lahir : '';
         document.getElementById('edit_tgl_lahir').value = tgl_lahir !== '-' ? tgl_lahir : '';
         document.getElementById('edit_jk').value = jk;

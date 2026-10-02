@@ -10,18 +10,24 @@
         <p>Konsolidasi jumlah pegawai, status pembayaran, dan total realisasi pengeluaran per SKPD.</p>
     </div>
     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <form action="" method="GET" style="display: flex; gap: 8px; align-items: center;">
+        <form action="" method="GET" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
             <select name="periode" onchange="this.form.submit()" style="width: auto; min-width: 160px;">
                 <option value="Semua Periode" {{ $periode == 'Semua Periode' ? 'selected' : '' }}>Semua Periode</option>
                 @foreach($allPeriodes as $p)
                     <option value="{{ $p }}" {{ $periode == $p ? 'selected' : '' }}>{{ $p }}</option>
                 @endforeach
             </select>
+            <select name="jenis_gaji" onchange="this.form.submit()" style="width: auto; min-width: 160px;">
+                <option value="Semua" {{ ($jenisGaji ?? 'Semua') == 'Semua' ? 'selected' : '' }}>Semua Kriteria Gaji</option>
+                @foreach($daftarJenisGaji as $jg)
+                    <option value="{{ $jg }}" {{ ($jenisGaji ?? '') == $jg ? 'selected' : '' }}>{{ $jg }}</option>
+                @endforeach
+            </select>
         </form>
-        <a href="/laporan/gabungan/export/pdf?periode={{ urlencode($periode) }}" class="btn btn-export" style="color: var(--danger-text);">
+        <a href="/laporan/gabungan/export/pdf?periode={{ urlencode($periode) }}&jenis_gaji={{ urlencode($jenisGaji ?? 'Semua') }}" class="btn btn-export" style="color: var(--danger-text);">
             <i class="ph ph-file-pdf"></i> Export PDF
         </a>
-        <a href="/laporan/gabungan/export/excel?periode={{ urlencode($periode) }}" class="btn btn-export" style="color: var(--success-text);">
+        <a href="/laporan/gabungan/export/excel?periode={{ urlencode($periode) }}&jenis_gaji={{ urlencode($jenisGaji ?? 'Semua') }}" class="btn btn-export" style="color: var(--success-text);">
             <i class="ph ph-file-xls"></i> Export Excel
         </a>
     </div>

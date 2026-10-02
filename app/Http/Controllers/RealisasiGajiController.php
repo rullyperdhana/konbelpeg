@@ -21,43 +21,55 @@ use XBase\TableReader;
 
 class RealisasiGajiController extends Controller
 {
-    private function getRekapData($periode, $skpdFilter = null)
+    private function getRekapData($periode, $skpdFilter = null, $jenisGajiFilter = null)
     {
         $kesehatanCond = "pegawais.jenis_pegawai = 'KESEHATAN'";
         $guruCond = "pegawais.jenis_pegawai IN ('GURU', 'TENDIK')";
 
+        $gajiSub = DB::table('realisasi_gajis')
+            ->select('pegawai_id')
+            ->selectRaw('COUNT(id) as count_rec')
+            ->selectRaw('SUM(gaji_pokok) as gaji_pokok')
+            ->selectRaw('SUM(pajak) as pajak')
+            ->selectRaw('SUM(iwp) as iwp')
+            ->selectRaw('SUM(potongan_lain) as potongan_lain')
+            ->selectRaw('SUM(gaji_bersih) as gaji_bersih');
+
+        if ($periode) {
+            $gajiSub->where('periode', $periode);
+        }
+        if ($jenisGajiFilter && $jenisGajiFilter !== 'Semua') {
+            $gajiSub->where('jenis_gaji', $jenisGajiFilter);
+        }
+        $gajiSub->groupBy('pegawai_id');
+
         $query = DB::table('pegawais')
             ->join('unit_kerjas', 'pegawais.unit_kerja_id', '=', 'unit_kerjas.id')
-            ->leftJoin('realisasi_gajis', function ($join) use ($periode) {
-                $join->on('pegawais.id', '=', 'realisasi_gajis.pegawai_id');
-                if ($periode) {
-                    $join->where('realisasi_gajis.periode', '=', $periode);
-                }
-            })
+            ->leftJoinSub($gajiSub, 'gaji_summary', 'pegawais.id', '=', 'gaji_summary.pegawai_id')
             ->select(
                 'unit_kerjas.skpd',
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PNS' AND realisasi_gajis.id IS NOT NULL THEN 1 ELSE 0 END) as count_pns"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND ($guruCond) AND realisasi_gajis.id IS NOT NULL THEN 1 ELSE 0 END) as count_pppk_guru"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND NOT ($guruCond) AND ($kesehatanCond) AND realisasi_gajis.id IS NOT NULL THEN 1 ELSE 0 END) as count_pppk_kes"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND NOT ($guruCond) AND NOT ($kesehatanCond) AND realisasi_gajis.id IS NOT NULL THEN 1 ELSE 0 END) as count_pppk_teknis"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND ($guruCond) AND realisasi_gajis.id IS NOT NULL THEN 1 ELSE 0 END) as count_paruh_guru"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND ($kesehatanCond) AND realisasi_gajis.id IS NOT NULL THEN 1 ELSE 0 END) as count_paruh_kes"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND NOT ($kesehatanCond) AND realisasi_gajis.id IS NOT NULL THEN 1 ELSE 0 END) as count_paruh_teknis"),
-                DB::raw('SUM(CASE WHEN realisasi_gajis.id IS NOT NULL THEN 1 ELSE 0 END) as count_total'),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PNS' AND gaji_summary.pegawai_id IS NOT NULL THEN 1 ELSE 0 END) as count_pns"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND ($guruCond) AND gaji_summary.pegawai_id IS NOT NULL THEN 1 ELSE 0 END) as count_pppk_guru"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND NOT ($guruCond) AND ($kesehatanCond) AND gaji_summary.pegawai_id IS NOT NULL THEN 1 ELSE 0 END) as count_pppk_kes"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND NOT ($guruCond) AND NOT ($kesehatanCond) AND gaji_summary.pegawai_id IS NOT NULL THEN 1 ELSE 0 END) as count_pppk_teknis"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND ($guruCond) AND gaji_summary.pegawai_id IS NOT NULL THEN 1 ELSE 0 END) as count_paruh_guru"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND ($kesehatanCond) AND gaji_summary.pegawai_id IS NOT NULL THEN 1 ELSE 0 END) as count_paruh_kes"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND NOT ($kesehatanCond) AND gaji_summary.pegawai_id IS NOT NULL THEN 1 ELSE 0 END) as count_paruh_teknis"),
+                DB::raw('SUM(CASE WHEN gaji_summary.pegawai_id IS NOT NULL THEN 1 ELSE 0 END) as count_total'),
 
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PNS' AND realisasi_gajis.id IS NULL THEN 1 ELSE 0 END) as count_belum_dibayar_pns"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND realisasi_gajis.id IS NULL THEN 1 ELSE 0 END) as count_belum_dibayar_pppk"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND realisasi_gajis.id IS NULL THEN 1 ELSE 0 END) as count_belum_dibayar_paruh"),
-                DB::raw('SUM(CASE WHEN realisasi_gajis.id IS NULL THEN 1 ELSE 0 END) as count_belum_dibayar_total'),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PNS' AND gaji_summary.pegawai_id IS NULL THEN 1 ELSE 0 END) as count_belum_dibayar_pns"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND gaji_summary.pegawai_id IS NULL THEN 1 ELSE 0 END) as count_belum_dibayar_pppk"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND gaji_summary.pegawai_id IS NULL THEN 1 ELSE 0 END) as count_belum_dibayar_paruh"),
+                DB::raw('SUM(CASE WHEN gaji_summary.pegawai_id IS NULL THEN 1 ELSE 0 END) as count_belum_dibayar_total'),
 
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PNS' THEN realisasi_gajis.gaji_bersih ELSE 0 END) as nominal_pns"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND ($guruCond) THEN realisasi_gajis.gaji_bersih ELSE 0 END) as nominal_pppk_guru"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND NOT ($guruCond) AND ($kesehatanCond) THEN realisasi_gajis.gaji_bersih ELSE 0 END) as nominal_pppk_kes"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND NOT ($guruCond) AND NOT ($kesehatanCond) THEN realisasi_gajis.gaji_bersih ELSE 0 END) as nominal_pppk_teknis"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND ($guruCond) THEN realisasi_gajis.gaji_bersih ELSE 0 END) as nominal_paruh_guru"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND ($kesehatanCond) THEN realisasi_gajis.gaji_bersih ELSE 0 END) as nominal_paruh_kes"),
-                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND NOT ($kesehatanCond) THEN realisasi_gajis.gaji_bersih ELSE 0 END) as nominal_paruh_teknis"),
-                DB::raw('SUM(realisasi_gajis.gaji_bersih) as nominal_total')
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PNS' THEN COALESCE(gaji_summary.gaji_bersih, 0) ELSE 0 END) as nominal_pns"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND ($guruCond) THEN COALESCE(gaji_summary.gaji_bersih, 0) ELSE 0 END) as nominal_pppk_guru"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND NOT ($guruCond) AND ($kesehatanCond) THEN COALESCE(gaji_summary.gaji_bersih, 0) ELSE 0 END) as nominal_pppk_kes"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK' AND NOT ($guruCond) AND NOT ($kesehatanCond) THEN COALESCE(gaji_summary.gaji_bersih, 0) ELSE 0 END) as nominal_pppk_teknis"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND ($guruCond) THEN COALESCE(gaji_summary.gaji_bersih, 0) ELSE 0 END) as nominal_paruh_guru"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND ($kesehatanCond) THEN COALESCE(gaji_summary.gaji_bersih, 0) ELSE 0 END) as nominal_paruh_kes"),
+                DB::raw("SUM(CASE WHEN pegawais.status_pegawai = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND NOT ($kesehatanCond) THEN COALESCE(gaji_summary.gaji_bersih, 0) ELSE 0 END) as nominal_paruh_teknis"),
+                DB::raw('SUM(COALESCE(gaji_summary.gaji_bersih, 0)) as nominal_total')
             );
 
         if ($skpdFilter) {
@@ -72,14 +84,19 @@ class RealisasiGajiController extends Controller
         $tipeLaporan = $request->get('tipe_laporan', 'rekap');
         $periode = $request->get('periode_filter');
         $skpdFilter = $request->get('skpd_filter');
+        $jenisGajiFilter = $request->get('jenis_gaji_filter');
 
         $periodes = RealisasiGaji::select('periode')->distinct()->orderBy('periode', 'desc')->pluck('periode');
         $filterUnitKerjas = UnitKerja::whereNotNull('skpd')->pluck('skpd')->unique()->sort()->values();
+        $daftarJenisGaji = RealisasiGaji::DAFTAR_JENIS_GAJI;
 
         // Calculate Grand Totals across all filtered data
         $gajiQuery = RealisasiGaji::query();
         if ($periode) {
             $gajiQuery->where('periode', $periode);
+        }
+        if ($jenisGajiFilter && $jenisGajiFilter !== 'Semua') {
+            $gajiQuery->where('jenis_gaji', $jenisGajiFilter);
         }
         if ($skpdFilter) {
             $gajiQuery->whereHas('pegawai.unitKerja', fn ($q) => $q->where('skpd', $skpdFilter));
@@ -88,13 +105,27 @@ class RealisasiGajiController extends Controller
         $totalGajiBersih = $gajiQuery->sum('gaji_bersih');
 
         if ($tipeLaporan == 'rekap') {
-            $rekaps = $this->getRekapData($periode, $skpdFilter);
+            $rekaps = $this->getRekapData($periode, $skpdFilter, $jenisGajiFilter);
 
-            return view('realisasi.gaji.index', compact('tipeLaporan', 'rekaps', 'periodes', 'filterUnitKerjas', 'totalGajiPokok', 'totalGajiBersih'));
+            return view('realisasi.gaji.index', compact(
+                'tipeLaporan',
+                'rekaps',
+                'periodes',
+                'filterUnitKerjas',
+                'totalGajiPokok',
+                'totalGajiBersih',
+                'daftarJenisGaji',
+                'jenisGajiFilter',
+                'periode',
+                'skpdFilter'
+            ));
         } else {
-            $query = Pegawai::with(['unitKerja', 'jabatan', 'realisasiGajis' => function ($q) use ($periode) {
+            $query = Pegawai::with(['unitKerja', 'jabatan', 'realisasiGajis' => function ($q) use ($periode, $jenisGajiFilter) {
                 if ($periode) {
                     $q->where('periode', $periode);
+                }
+                if ($jenisGajiFilter && $jenisGajiFilter !== 'Semua') {
+                    $q->where('jenis_gaji', $jenisGajiFilter);
                 }
             }]);
 
@@ -106,7 +137,18 @@ class RealisasiGajiController extends Controller
 
             $realisasis = $query->paginate(50);
 
-            return view('realisasi.gaji.index', compact('tipeLaporan', 'realisasis', 'periodes', 'filterUnitKerjas', 'totalGajiPokok', 'totalGajiBersih', 'periode'));
+            return view('realisasi.gaji.index', compact(
+                'tipeLaporan',
+                'realisasis',
+                'periodes',
+                'filterUnitKerjas',
+                'totalGajiPokok',
+                'totalGajiBersih',
+                'daftarJenisGaji',
+                'jenisGajiFilter',
+                'periode',
+                'skpdFilter'
+            ));
         }
     }
 
@@ -115,15 +157,19 @@ class RealisasiGajiController extends Controller
         $tipeLaporan = $request->get('tipe_laporan', 'rekap');
         $periode = $request->get('periode_filter');
         $skpdFilter = $request->get('skpd_filter');
+        $jenisGajiFilter = $request->get('jenis_gaji_filter');
 
         if ($tipeLaporan == 'rekap') {
-            $rekaps = $this->getRekapData($periode, $skpdFilter);
-            $pdf = Pdf::loadView('realisasi.gaji.pdf', compact('tipeLaporan', 'rekaps', 'periode', 'skpdFilter'))
+            $rekaps = $this->getRekapData($periode, $skpdFilter, $jenisGajiFilter);
+            $pdf = Pdf::loadView('realisasi.gaji.pdf', compact('tipeLaporan', 'rekaps', 'periode', 'skpdFilter', 'jenisGajiFilter'))
                 ->setPaper('a4', 'landscape');
         } else {
-            $query = Pegawai::with(['unitKerja', 'jabatan', 'realisasiGajis' => function ($q) use ($periode) {
+            $query = Pegawai::with(['unitKerja', 'jabatan', 'realisasiGajis' => function ($q) use ($periode, $jenisGajiFilter) {
                 if ($periode) {
                     $q->where('periode', $periode);
+                }
+                if ($jenisGajiFilter && $jenisGajiFilter !== 'Semua') {
+                    $q->where('jenis_gaji', $jenisGajiFilter);
                 }
             }]);
 
@@ -131,7 +177,7 @@ class RealisasiGajiController extends Controller
                 $query->whereHas('unitKerja', fn ($q) => $q->where('skpd', $skpdFilter));
             }
             $realisasis = $query->get();
-            $pdf = Pdf::loadView('realisasi.gaji.pdf', compact('tipeLaporan', 'realisasis', 'periode', 'skpdFilter'))
+            $pdf = Pdf::loadView('realisasi.gaji.pdf', compact('tipeLaporan', 'realisasis', 'periode', 'skpdFilter', 'jenisGajiFilter'))
                 ->setPaper('a4', 'landscape');
         }
 
@@ -143,12 +189,13 @@ class RealisasiGajiController extends Controller
         $tipeLaporan = $request->get('tipe_laporan', 'rekap');
         $periode = $request->get('periode_filter', 'Semua Periode');
         $skpdFilter = $request->get('skpd_filter');
+        $jenisGajiFilter = $request->get('jenis_gaji_filter');
 
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
 
         if ($tipeLaporan == 'rekap') {
-            $rekaps = $this->getRekapData($periode == 'Semua Periode' ? null : $periode, $skpdFilter);
+            $rekaps = $this->getRekapData($periode == 'Semua Periode' ? null : $periode, $skpdFilter, $jenisGajiFilter);
 
             // Title
             $sheet->mergeCells('A1:J1');
@@ -157,7 +204,8 @@ class RealisasiGajiController extends Controller
             $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
             $sheet->mergeCells('A2:J2');
-            $sheet->setCellValue('A2', 'PERIODE: '.$periode);
+            $subTitle = 'PERIODE: '.$periode.($jenisGajiFilter && $jenisGajiFilter !== 'Semua' ? ' | KRITERIA: '.$jenisGajiFilter : '');
+            $sheet->setCellValue('A2', $subTitle);
             $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
             // Headers
@@ -283,9 +331,12 @@ class RealisasiGajiController extends Controller
 
         } else {
             // Rinci
-            $query = Pegawai::with(['unitKerja', 'jabatan', 'realisasiGajis' => function ($q) use ($periode) {
-                if ($periode != 'Semua Periode') {
+            $query = Pegawai::with(['unitKerja', 'jabatan', 'realisasiGajis' => function ($q) use ($periode, $jenisGajiFilter) {
+                if ($periode != 'Semua Periode' && $periode) {
                     $q->where('periode', $periode);
+                }
+                if ($jenisGajiFilter && $jenisGajiFilter !== 'Semua') {
+                    $q->where('jenis_gaji', $jenisGajiFilter);
                 }
             }]);
             if ($skpdFilter) {
@@ -299,25 +350,48 @@ class RealisasiGajiController extends Controller
             $sheet->setCellValue('D1', 'NAMA');
             $sheet->setCellValue('E1', 'STATUS');
             $sheet->setCellValue('F1', 'UNIT KERJA');
-            $sheet->setCellValue('G1', 'GAJI POKOK');
-            $sheet->setCellValue('H1', 'TOTAL DIBAYARKAN (BERSIH)');
+            $sheet->setCellValue('G1', 'KRITERIA GAJI');
+            $sheet->setCellValue('H1', 'GAJI POKOK');
+            $sheet->setCellValue('I1', 'TOTAL DIBAYARKAN (BERSIH)');
 
-            $sheet->getStyle('A1:H1')->getFont()->setBold(true);
+            $sheet->getStyle('A1:I1')->getFont()->setBold(true);
+            $sheet->getStyle('A1:I1')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFE2E8F0');
 
             $row = 2;
             $no = 1;
             foreach ($pegawais as $pegawai) {
-                $gaji = $pegawai->realisasiGajis->first();
-                $sheet->setCellValue('A'.$row, $no++);
-                $sheet->setCellValue('B'.$row, $periode);
-                $sheet->setCellValueExplicit('C'.$row, $pegawai->nip ?? '-', DataType::TYPE_STRING);
-                $sheet->setCellValue('D'.$row, $pegawai->nama ?? '-');
-                $sheet->setCellValue('E'.$row, $pegawai->status_pegawai ?? '-');
-                $sheet->setCellValue('F'.$row, $pegawai->unitKerja?->skpd ?? '-');
-                $sheet->setCellValue('G'.$row, $gaji ? $gaji->gaji_pokok : 0);
-                $sheet->setCellValue('H'.$row, $gaji ? $gaji->gaji_bersih : 0);
-                $row++;
+                if ($pegawai->realisasiGajis->isEmpty()) {
+                    $sheet->setCellValue('A'.$row, $no++);
+                    $sheet->setCellValue('B'.$row, $periode);
+                    $sheet->setCellValueExplicit('C'.$row, $pegawai->nip ?? '-', DataType::TYPE_STRING);
+                    $sheet->setCellValue('D'.$row, $pegawai->nama ?? '-');
+                    $sheet->setCellValue('E'.$row, $pegawai->status_pegawai ?? '-');
+                    $sheet->setCellValue('F'.$row, $pegawai->unitKerja?->skpd ?? '-');
+                    $sheet->setCellValue('G'.$row, '-');
+                    $sheet->setCellValue('H'.$row, 0);
+                    $sheet->setCellValue('I'.$row, 0);
+                    $row++;
+                } else {
+                    foreach ($pegawai->realisasiGajis as $gaji) {
+                        $sheet->setCellValue('A'.$row, $no++);
+                        $sheet->setCellValue('B'.$row, $gaji->periode ?? $periode);
+                        $sheet->setCellValueExplicit('C'.$row, $pegawai->nip ?? '-', DataType::TYPE_STRING);
+                        $sheet->setCellValue('D'.$row, $pegawai->nama ?? '-');
+                        $sheet->setCellValue('E'.$row, $pegawai->status_pegawai ?? '-');
+                        $sheet->setCellValue('F'.$row, $pegawai->unitKerja?->skpd ?? '-');
+                        $sheet->setCellValue('G'.$row, $gaji->jenis_gaji ?? 'Gaji Induk');
+                        $sheet->setCellValue('H'.$row, $gaji->gaji_pokok);
+                        $sheet->setCellValue('I'.$row, $gaji->gaji_bersih);
+                        $row++;
+                    }
+                }
             }
+
+            foreach (range('A', 'I') as $col) {
+                $sheet->getColumnDimension($col)->setAutoSize(true);
+            }
+            $sheet->getStyle('H2:I'.($row - 1))->getNumberFormat()->setFormatCode('#,##0');
+            $sheet->getStyle('A1:I'.($row - 1))->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
         }
 
         $writer = new Xlsx($spreadsheet);
@@ -334,6 +408,8 @@ class RealisasiGajiController extends Controller
         $request->validate([
             'file' => 'required|file|max:20480',
             'periode_import' => 'required|string|max:50',
+            'jenis_gaji' => 'nullable|string|max:50',
+            'kelompok_pegawai' => 'nullable|string|max:50',
         ]);
 
         $file = $request->file('file');
@@ -342,174 +418,344 @@ class RealisasiGajiController extends Controller
         $uploadId = $request->input('upload_id', uniqid());
 
         if (! in_array($extension, ['xlsx', 'csv', 'xls', 'dbf'])) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Format file tidak didukung. Harap unggah file .xlsx, .csv, atau .dbf']);
+            }
+
             return redirect()->back()->with('error', 'Format file tidak didukung. Harap unggah file .xlsx, .csv, atau .dbf');
         }
 
         $periode = $request->input('periode_import');
+        $jenisGaji = $request->input('jenis_gaji', RealisasiGaji::JENIS_GAJI_INDUK) ?: RealisasiGaji::JENIS_GAJI_INDUK;
+        $kelompokPegawai = $request->input('kelompok_pegawai');
 
-        // Delete old unmatched NIP logs for this period
-        UnmatchedNip::where('periode', $periode)
-            ->where('jenis_file', 'Gaji')
-            ->delete();
+        $processImport = function ($sendProgress = null) use ($path, $extension, $periode, $jenisGaji, $kelompokPegawai, $uploadId) {
+            // Delete old unmatched NIP logs for this period & criteria
+            UnmatchedNip::where('periode', $periode)
+                ->where('jenis_file', 'Gaji')
+                ->where(function ($q) use ($jenisGaji) {
+                    $q->where('keterangan', 'LIKE', "%{$jenisGaji}%")
+                        ->orWhereNull('keterangan');
+                })
+                ->delete();
 
-        $importedCount = 0;
-        $failedCount = 0;
+            $importedCount = 0;
+            $failedCount = 0;
 
-        DB::beginTransaction();
-        try {
-            if ($extension === 'dbf') {
-                $table = new TableReader($path);
-                $totalRows = $table->getRecordCount();
-                while ($record = $table->nextRecord()) {
-                    $nip = trim($record->get('NIP'));
-                    if (! $nip) {
-                        continue;
+            DB::beginTransaction();
+            try {
+                if ($extension === 'dbf') {
+                    $table = new TableReader($path);
+                    $totalRows = $table->getRecordCount();
+
+                    if ($sendProgress) {
+                        $sendProgress('start', ['total' => $totalRows, 'message' => "Membaca file DBF: {$totalRows} baris ditemukan..."]);
                     }
+                    Cache::store('file')->put('upload_progress_'.$uploadId, [
+                        'progress' => 0,
+                        'total' => $totalRows,
+                        'percent' => 0,
+                        'success' => 0,
+                        'failed' => 0,
+                    ], 120);
 
-                    $pegawai = Pegawai::where('nip', $nip)->first();
-                    if (! $pegawai) {
-                        $failedCount++;
-                        $importedCount++;
+                    $updateInterval = $totalRows > 1000 ? 25 : ($totalRows > 100 ? 10 : 2);
 
-                        UnmatchedNip::create([
-                            'nip' => $nip,
-                            'nama' => null,
-                            'jenis_file' => 'Gaji',
-                            'periode' => $periode,
-                            'keterangan' => 'NIP dari file Gaji DBF tidak ditemukan di Master Data Pegawai',
-                        ]);
-
-                        if ($importedCount % 50 === 0) {
-                            Cache::put('upload_progress_'.$uploadId, ['progress' => $importedCount, 'total' => $totalRows], 120);
+                    while ($record = $table->nextRecord()) {
+                        $nip = trim($record->get('NIP'));
+                        if (! $nip) {
+                            continue;
                         }
 
-                        continue;
-                    }
+                        $pegawai = Pegawai::where('nip', $nip)->first();
+                        if (! $pegawai) {
+                            $failedCount++;
+                            $importedCount++;
 
-                    $gajiPokok = (float) $record->get('GAPOK');
-                    $pajak = (float) ($record->get('PPAJAK') ?? $record->get('TJPAJAK') ?? 0);
-                    $iwp = (float) $record->get('PIWP');
-                    $potonganLain = (float) $record->get('POTONGAN') - ($pajak + $iwp);
-                    if ($potonganLain < 0) {
-                        $potonganLain = 0;
-                    } // fallback if negative
-                    $gajiBersih = (float) $record->get('BERSIH');
+                            $namaPgw = trim((string) ($record->get('NAMA') ?? ''));
+                            $kdstapeg = trim((string) ($record->get('KDSTAPEG') ?? $record->get('kdstapeg') ?? ''));
+                            $statusPgw = null;
+                            if ($kdstapeg === '12') {
+                                $statusPgw = 'PPPK';
+                            } elseif ($kdstapeg === '13') {
+                                $statusPgw = 'PPPK PARUH WAKTU';
+                            } elseif ($kdstapeg === '1') {
+                                $statusPgw = 'Pejabat Negara';
+                            } elseif (in_array($kdstapeg, ['4', '2', '3', '23', '24'])) {
+                                $statusPgw = 'PNS';
+                            }
 
-                    // Extract all columns for raw_data
-                    $rawData = [];
-                    foreach ($table->getColumns() as $column) {
-                        $colName = $column->getName();
-                        $rawData[$colName] = $record->get($colName);
-                    }
+                            if (! $statusPgw) {
+                                if ($kelompokPegawai) {
+                                    $statusPgw = $kelompokPegawai;
+                                } elseif (str_starts_with($nip, 'GUB')) {
+                                    $statusPgw = 'Pejabat Negara';
+                                } elseif (strlen($nip) === 18 && substr($nip, 12, 2) === '21') {
+                                    $statusPgw = 'PPPK';
+                                } else {
+                                    $statusPgw = 'PNS';
+                                }
+                            }
 
-                    $kelompokPegawai = $request->input('kelompok_pegawai');
+                            UnmatchedNip::create([
+                                'nip' => $nip,
+                                'nama' => $namaPgw ?: null,
+                                'status_pegawai' => $statusPgw,
+                                'jenis_file' => 'Gaji',
+                                'periode' => $periode,
+                                'keterangan' => "NIP dari file {$jenisGaji} DBF tidak ditemukan di Master Data Pegawai",
+                            ]);
 
-                    RealisasiGaji::updateOrCreate(
-                        [
-                            'pegawai_id' => $pegawai->id,
-                            'periode' => $periode,
-                        ],
-                        [
-                            'gaji_pokok' => $gajiPokok,
-                            'pajak' => $pajak,
-                            'iwp' => $iwp,
-                            'potongan_lain' => $potonganLain,
-                            'gaji_bersih' => $gajiBersih,
-                            'sub_kegiatan' => null,
-                            'raw_data' => array_merge($rawData, ['kelompok_upload' => $kelompokPegawai]),
-                        ]
-                    );
-                    $importedCount++;
-                    if ($importedCount % 50 === 0) {
-                        Cache::put('upload_progress_'.$uploadId, ['progress' => $importedCount, 'total' => $totalRows], 120);
-                    }
-                }
-                $table->close();
-            } else {
-                // Excel / CSV fallback
-                $totalRows = 0;
-                $reader = SimpleExcelReader::create($path, $extension);
-                $reader->getRows()->each(function () use (&$totalRows) {
-                    $totalRows++;
-                });
+                            if ($importedCount % $updateInterval === 0 || $importedCount === $totalRows) {
+                                $percent = $totalRows > 0 ? min(100, round(($importedCount / $totalRows) * 100)) : 0;
+                                $pData = [
+                                    'progress' => $importedCount,
+                                    'total' => $totalRows,
+                                    'percent' => $percent,
+                                    'success' => $importedCount - $failedCount,
+                                    'failed' => $failedCount,
+                                ];
+                                if ($sendProgress) {
+                                    $sendProgress('progress', $pData);
+                                }
+                                Cache::store('file')->put('upload_progress_'.$uploadId, $pData, 120);
+                            }
 
-                $rows = SimpleExcelReader::create($path, $extension)->getRows();
-                foreach ($rows as $row) {
-                    $nip = trim($row['NIP'] ?? '');
-                    if (! $nip) {
-                        continue;
-                    }
-
-                    $pegawai = Pegawai::where('nip', $nip)->first();
-                    if (! $pegawai) {
-                        $failedCount++;
-                        $importedCount++;
-
-                        UnmatchedNip::create([
-                            'nip' => $nip,
-                            'nama' => $row['Nama'] ?? $row['nama'] ?? $row['NAMA'] ?? null,
-                            'jenis_file' => 'Gaji',
-                            'periode' => $periode,
-                            'keterangan' => 'NIP dari file Gaji Excel tidak ditemukan di Master Data Pegawai',
-                        ]);
-
-                        if ($importedCount % 50 === 0) {
-                            Cache::put('upload_progress_'.$uploadId, ['progress' => $importedCount, 'total' => $totalRows], 120);
+                            continue;
                         }
 
-                        continue;
+                        $gajiPokok = (float) $record->get('GAPOK');
+                        $pajak = (float) ($record->get('PPAJAK') ?? $record->get('TJPAJAK') ?? 0);
+                        $iwp = (float) $record->get('PIWP');
+                        $potonganLain = (float) $record->get('POTONGAN') - ($pajak + $iwp);
+                        if ($potonganLain < 0) {
+                            $potonganLain = 0;
+                        } // fallback if negative
+                        $gajiBersih = (float) $record->get('BERSIH');
+
+                        // Extract all columns for raw_data
+                        $rawData = [];
+                        foreach ($table->getColumns() as $column) {
+                            $colName = $column->getName();
+                            $rawData[$colName] = $record->get($colName);
+                        }
+
+                        RealisasiGaji::updateOrCreate(
+                            [
+                                'pegawai_id' => $pegawai->id,
+                                'periode' => $periode,
+                                'jenis_gaji' => $jenisGaji,
+                            ],
+                            [
+                                'gaji_pokok' => $gajiPokok,
+                                'pajak' => $pajak,
+                                'iwp' => $iwp,
+                                'potongan_lain' => $potonganLain,
+                                'gaji_bersih' => $gajiBersih,
+                                'sub_kegiatan' => null,
+                                'raw_data' => array_merge($rawData, [
+                                    'kelompok_upload' => $kelompokPegawai,
+                                    'jenis_gaji' => $jenisGaji,
+                                ]),
+                            ]
+                        );
+                        $importedCount++;
+
+                        if ($importedCount % $updateInterval === 0 || $importedCount === $totalRows) {
+                            $percent = $totalRows > 0 ? min(100, round(($importedCount / $totalRows) * 100)) : 0;
+                            $pData = [
+                                'progress' => $importedCount,
+                                'total' => $totalRows,
+                                'percent' => $percent,
+                                'success' => $importedCount - $failedCount,
+                                'failed' => $failedCount,
+                            ];
+                            if ($sendProgress) {
+                                $sendProgress('progress', $pData);
+                            }
+                            Cache::store('file')->put('upload_progress_'.$uploadId, $pData, 120);
+                        }
                     }
+                    $table->close();
+                } else {
+                    // Excel / CSV fallback
+                    $totalRows = 0;
+                    $reader = SimpleExcelReader::create($path, $extension);
+                    $reader->getRows()->each(function () use (&$totalRows) {
+                        $totalRows++;
+                    });
 
-                    $gajiPokok = (float) str_replace(',', '', $row['Gaji Pokok'] ?? 0);
-                    $pajak = (float) str_replace(',', '', $row['Pajak'] ?? 0);
-                    $iwp = (float) str_replace(',', '', $row['IWP'] ?? 0);
-                    $potonganLain = (float) str_replace(',', '', $row['Potongan Lain'] ?? 0);
-                    $gajiBersih = (float) str_replace(',', '', $row['Bersih'] ?? 0);
-                    $subKegiatan = $row['Sub Kegiatan'] ?? null;
+                    if ($sendProgress) {
+                        $sendProgress('start', ['total' => $totalRows, 'message' => "Membaca file Excel: {$totalRows} baris ditemukan..."]);
+                    }
+                    Cache::store('file')->put('upload_progress_'.$uploadId, [
+                        'progress' => 0,
+                        'total' => $totalRows,
+                        'percent' => 0,
+                        'success' => 0,
+                        'failed' => 0,
+                    ], 120);
 
-                    $kelompokPegawai = $request->input('kelompok_pegawai');
+                    $updateInterval = $totalRows > 1000 ? 25 : ($totalRows > 100 ? 10 : 2);
 
-                    RealisasiGaji::updateOrCreate(
-                        [
-                            'pegawai_id' => $pegawai->id,
-                            'periode' => $periode,
-                        ],
-                        [
-                            'gaji_pokok' => $gajiPokok,
-                            'pajak' => $pajak,
-                            'iwp' => $iwp,
-                            'potongan_lain' => $potonganLain,
-                            'gaji_bersih' => $gajiBersih,
-                            'sub_kegiatan' => $subKegiatan,
-                            'raw_data' => array_merge($row, ['kelompok_upload' => $kelompokPegawai]),
-                        ]
-                    );
-                    $importedCount++;
-                    if ($importedCount % 50 === 0) {
-                        Cache::put('upload_progress_'.$uploadId, ['progress' => $importedCount, 'total' => $totalRows], 120);
+                    $rows = SimpleExcelReader::create($path, $extension)->getRows();
+                    foreach ($rows as $row) {
+                        $nip = trim($row['NIP'] ?? '');
+                        if (! $nip) {
+                            continue;
+                        }
+
+                        $pegawai = Pegawai::where('nip', $nip)->first();
+                        if (! $pegawai) {
+                            $failedCount++;
+                            $importedCount++;
+
+                            $statusPgw = $row['Status'] ?? $row['status'] ?? $row['STATUS'] ?? $row['Status Pegawai'] ?? $row['status_pegawai'] ?? $row['STATUS PEGAWAI'] ?? $row['Kelompok Pegawai'] ?? $row['kelompok_pegawai'] ?? null;
+                            if (! $statusPgw) {
+                                if ($kelompokPegawai) {
+                                    $statusPgw = $kelompokPegawai;
+                                } elseif (str_starts_with($nip, 'GUB')) {
+                                    $statusPgw = 'Pejabat Negara';
+                                } elseif (strlen($nip) === 18 && substr($nip, 12, 2) === '21') {
+                                    $statusPgw = 'PPPK';
+                                } else {
+                                    $statusPgw = 'PNS';
+                                }
+                            }
+
+                            UnmatchedNip::create([
+                                'nip' => $nip,
+                                'nama' => $row['Nama'] ?? $row['nama'] ?? $row['NAMA'] ?? null,
+                                'status_pegawai' => $statusPgw,
+                                'jenis_file' => 'Gaji',
+                                'periode' => $periode,
+                                'keterangan' => "NIP dari file {$jenisGaji} Excel tidak ditemukan di Master Data Pegawai",
+                            ]);
+
+                            if ($importedCount % $updateInterval === 0 || $importedCount === $totalRows) {
+                                $percent = $totalRows > 0 ? min(100, round(($importedCount / $totalRows) * 100)) : 0;
+                                $pData = [
+                                    'progress' => $importedCount,
+                                    'total' => $totalRows,
+                                    'percent' => $percent,
+                                    'success' => $importedCount - $failedCount,
+                                    'failed' => $failedCount,
+                                ];
+                                if ($sendProgress) {
+                                    $sendProgress('progress', $pData);
+                                }
+                                Cache::store('file')->put('upload_progress_'.$uploadId, $pData, 120);
+                            }
+
+                            continue;
+                        }
+
+                        $gajiPokok = (float) str_replace(',', '', $row['Gaji Pokok'] ?? 0);
+                        $pajak = (float) str_replace(',', '', $row['Pajak'] ?? 0);
+                        $iwp = (float) str_replace(',', '', $row['IWP'] ?? 0);
+                        $potonganLain = (float) str_replace(',', '', $row['Potongan Lain'] ?? 0);
+                        $gajiBersih = (float) str_replace(',', '', $row['Bersih'] ?? 0);
+                        $subKegiatan = $row['Sub Kegiatan'] ?? null;
+
+                        RealisasiGaji::updateOrCreate(
+                            [
+                                'pegawai_id' => $pegawai->id,
+                                'periode' => $periode,
+                                'jenis_gaji' => $jenisGaji,
+                            ],
+                            [
+                                'gaji_pokok' => $gajiPokok,
+                                'pajak' => $pajak,
+                                'iwp' => $iwp,
+                                'potongan_lain' => $potonganLain,
+                                'gaji_bersih' => $gajiBersih,
+                                'sub_kegiatan' => $subKegiatan,
+                                'raw_data' => array_merge($row, [
+                                    'kelompok_upload' => $kelompokPegawai,
+                                    'jenis_gaji' => $jenisGaji,
+                                ]),
+                            ]
+                        );
+                        $importedCount++;
+
+                        if ($importedCount % $updateInterval === 0 || $importedCount === $totalRows) {
+                            $percent = $totalRows > 0 ? min(100, round(($importedCount / $totalRows) * 100)) : 0;
+                            $pData = [
+                                'progress' => $importedCount,
+                                'total' => $totalRows,
+                                'percent' => $percent,
+                                'success' => $importedCount - $failedCount,
+                                'failed' => $failedCount,
+                            ];
+                            if ($sendProgress) {
+                                $sendProgress('progress', $pData);
+                            }
+                            Cache::store('file')->put('upload_progress_'.$uploadId, $pData, 120);
+                        }
                     }
                 }
+
+                DB::commit();
+                Cache::store('file')->forget('upload_progress_'.$uploadId);
+
+                $berhasilCount = $importedCount - $failedCount;
+                $successMsg = "Berhasil mengimpor {$berhasilCount} data realisasi {$jenisGaji} (Periode: {$periode}).".($failedCount > 0 ? " {$failedCount} data gagal (NIP tidak ditemukan)." : '');
+                session()->flash('success', $successMsg);
+
+                if ($sendProgress) {
+                    $sendProgress('done', [
+                        'success' => true,
+                        'imported' => $importedCount,
+                        'berhasil' => $berhasilCount,
+                        'failed' => $failedCount,
+                        'message' => $successMsg,
+                    ]);
+                }
+
+                return ['success' => true, 'message' => $successMsg];
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Cache::store('file')->forget('upload_progress_'.$uploadId);
+
+                if ($sendProgress) {
+                    $sendProgress('error', [
+                        'success' => false,
+                        'message' => $e->getMessage(),
+                    ]);
+                }
+
+                return ['success' => false, 'message' => $e->getMessage()];
             }
+        };
 
-            DB::commit();
-            Cache::forget('upload_progress_'.$uploadId);
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->stream(function () use ($processImport) {
+                if (session()->isStarted()) {
+                    session()->save();
+                }
 
-            if ($request->ajax() || $request->wantsJson()) {
-                session()->flash('success', "Berhasil mengimpor $importedCount data realisasi Gaji. $failedCount data gagal (NIP tidak ditemukan).");
+                $sendProgress = function ($type, $data) {
+                    echo 'data: '.json_encode(array_merge(['type' => $type], $data))."\n\n";
+                    if (ob_get_level() > 0) {
+                        ob_flush();
+                    }
+                    flush();
+                };
 
-                return response()->json(['success' => true]);
-            }
-
-            return redirect()->back()->with('success', "Berhasil mengimpor $importedCount data realisasi Gaji. $failedCount data gagal (NIP tidak ditemukan).");
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Cache::forget('upload_progress_'.$uploadId);
-
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['success' => false, 'message' => $e->getMessage()]);
-            }
-
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat mengimpor data: '.$e->getMessage());
+                $processImport($sendProgress);
+            }, 200, [
+                'Content-Type' => 'text/event-stream',
+                'Cache-Control' => 'no-cache, no-transform',
+                'Connection' => 'keep-alive',
+                'X-Accel-Buffering' => 'no',
+            ]);
         }
+
+        $result = $processImport();
+        if ($result['success']) {
+            return redirect()->back()->with('success', $result['message']);
+        }
+
+        return redirect()->back()->with('error', 'Terjadi kesalahan saat mengimpor data: '.$result['message']);
     }
 }

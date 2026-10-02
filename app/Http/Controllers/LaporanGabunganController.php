@@ -16,25 +16,41 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class LaporanGabunganController extends Controller
 {
-    private function getRekapData($periode)
+    private function getRekapData($periode, $jenisGaji = null)
     {
         $kesehatanCond = "pegawais.jenis_pegawai = 'KESEHATAN'";
         $guruCond = "pegawais.jenis_pegawai IN ('GURU', 'TENDIK')";
 
+        $gajiSub = DB::table('realisasi_gajis')
+            ->select('pegawai_id')
+            ->selectRaw('COUNT(id) as count_gaji')
+            ->selectRaw('SUM(gaji_bersih) as gaji_bersih');
+
+        if ($periode != 'Semua Periode' && $periode) {
+            $gajiSub->where('periode', $periode);
+        }
+        if ($jenisGaji && $jenisGaji !== 'Semua') {
+            $gajiSub->where('jenis_gaji', $jenisGaji);
+        }
+        $gajiSub->groupBy('pegawai_id');
+
+        $tppSub = DB::table('realisasi_tpps')
+            ->select('pegawai_id')
+            ->selectRaw('COUNT(id) as count_tpp')
+            ->selectRaw('SUM(total_dibayarkan) as total_dibayarkan');
+
+        if ($periode != 'Semua Periode') {
+            $tppSub->where(function ($q) use ($periode) {
+                $q->where('periode_kas', $periode)
+                    ->orWhere('periode', $periode);
+            });
+        }
+        $tppSub->groupBy('pegawai_id');
+
         return DB::table('unit_kerjas')
             ->leftJoin('pegawais', 'unit_kerjas.id', '=', 'pegawais.unit_kerja_id')
-            ->leftJoin('realisasi_tpps', function ($join) use ($periode) {
-                $join->on('pegawais.id', '=', 'realisasi_tpps.pegawai_id');
-                if ($periode != 'Semua Periode') {
-                    $join->where('realisasi_tpps.periode', $periode);
-                }
-            })
-            ->leftJoin('realisasi_gajis', function ($join) use ($periode) {
-                $join->on('pegawais.id', '=', 'realisasi_gajis.pegawai_id');
-                if ($periode != 'Semua Periode') {
-                    $join->where('realisasi_gajis.periode', $periode);
-                }
-            })
+            ->leftJoinSub($gajiSub, 'gaji_summary', 'pegawais.id', '=', 'gaji_summary.pegawai_id')
+            ->leftJoinSub($tppSub, 'tpp_summary', 'pegawais.id', '=', 'tpp_summary.pegawai_id')
             ->select([
                 'unit_kerjas.skpd',
 
@@ -45,36 +61,36 @@ class LaporanGabunganController extends Controller
                 DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK PARUH WAKTU' THEN 1 ELSE 0 END) as count_paruh"),
 
                 // BELUM DIBAYAR GAJI
-                DB::raw('SUM(CASE WHEN realisasi_gajis.id IS NULL THEN 1 ELSE 0 END) as blm_gaji_total'),
-                DB::raw("SUM(CASE WHEN realisasi_gajis.id IS NULL AND UPPER(pegawais.status_pegawai) = 'PNS' THEN 1 ELSE 0 END) as blm_gaji_pns"),
-                DB::raw("SUM(CASE WHEN realisasi_gajis.id IS NULL AND UPPER(pegawais.status_pegawai) = 'PPPK' THEN 1 ELSE 0 END) as blm_gaji_pppk"),
-                DB::raw("SUM(CASE WHEN realisasi_gajis.id IS NULL AND UPPER(pegawais.status_pegawai) = 'PPPK PARUH WAKTU' THEN 1 ELSE 0 END) as blm_gaji_paruh"),
+                DB::raw('SUM(CASE WHEN gaji_summary.pegawai_id IS NULL THEN 1 ELSE 0 END) as blm_gaji_total'),
+                DB::raw("SUM(CASE WHEN gaji_summary.pegawai_id IS NULL AND UPPER(pegawais.status_pegawai) = 'PNS' THEN 1 ELSE 0 END) as blm_gaji_pns"),
+                DB::raw("SUM(CASE WHEN gaji_summary.pegawai_id IS NULL AND UPPER(pegawais.status_pegawai) = 'PPPK' THEN 1 ELSE 0 END) as blm_gaji_pppk"),
+                DB::raw("SUM(CASE WHEN gaji_summary.pegawai_id IS NULL AND UPPER(pegawais.status_pegawai) = 'PPPK PARUH WAKTU' THEN 1 ELSE 0 END) as blm_gaji_paruh"),
 
                 // BELUM DIBAYAR TPP
-                DB::raw('SUM(CASE WHEN realisasi_tpps.id IS NULL THEN 1 ELSE 0 END) as blm_tpp_total'),
-                DB::raw("SUM(CASE WHEN realisasi_tpps.id IS NULL AND UPPER(pegawais.status_pegawai) = 'PNS' THEN 1 ELSE 0 END) as blm_tpp_pns"),
-                DB::raw("SUM(CASE WHEN realisasi_tpps.id IS NULL AND UPPER(pegawais.status_pegawai) = 'PPPK' THEN 1 ELSE 0 END) as blm_tpp_pppk"),
-                DB::raw("SUM(CASE WHEN realisasi_tpps.id IS NULL AND UPPER(pegawais.status_pegawai) = 'PPPK PARUH WAKTU' THEN 1 ELSE 0 END) as blm_tpp_paruh"),
+                DB::raw('SUM(CASE WHEN tpp_summary.pegawai_id IS NULL THEN 1 ELSE 0 END) as blm_tpp_total'),
+                DB::raw("SUM(CASE WHEN tpp_summary.pegawai_id IS NULL AND UPPER(pegawais.status_pegawai) = 'PNS' THEN 1 ELSE 0 END) as blm_tpp_pns"),
+                DB::raw("SUM(CASE WHEN tpp_summary.pegawai_id IS NULL AND UPPER(pegawais.status_pegawai) = 'PPPK' THEN 1 ELSE 0 END) as blm_tpp_pppk"),
+                DB::raw("SUM(CASE WHEN tpp_summary.pegawai_id IS NULL AND UPPER(pegawais.status_pegawai) = 'PPPK PARUH WAKTU' THEN 1 ELSE 0 END) as blm_tpp_paruh"),
 
                 // NOMINAL GAJI
-                DB::raw('SUM(IFNULL(realisasi_gajis.gaji_bersih, 0)) as nom_gaji_total'),
-                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PNS' THEN IFNULL(realisasi_gajis.gaji_bersih, 0) ELSE 0 END) as nom_gaji_pns"),
-                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK' AND ($guruCond) THEN IFNULL(realisasi_gajis.gaji_bersih, 0) ELSE 0 END) as nom_gaji_pppk_guru"),
-                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK' AND NOT ($guruCond) AND ($kesehatanCond) THEN IFNULL(realisasi_gajis.gaji_bersih, 0) ELSE 0 END) as nom_gaji_pppk_kes"),
-                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK' AND NOT ($guruCond) AND NOT ($kesehatanCond) THEN IFNULL(realisasi_gajis.gaji_bersih, 0) ELSE 0 END) as nom_gaji_pppk_teknis"),
-                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK PARUH WAKTU' AND ($guruCond) THEN IFNULL(realisasi_gajis.gaji_bersih, 0) ELSE 0 END) as nom_gaji_paruh_guru"),
-                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND ($kesehatanCond) THEN IFNULL(realisasi_gajis.gaji_bersih, 0) ELSE 0 END) as nom_gaji_paruh_kes"),
-                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND NOT ($kesehatanCond) THEN IFNULL(realisasi_gajis.gaji_bersih, 0) ELSE 0 END) as nom_gaji_paruh_teknis"),
+                DB::raw('SUM(IFNULL(gaji_summary.gaji_bersih, 0)) as nom_gaji_total'),
+                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PNS' THEN IFNULL(gaji_summary.gaji_bersih, 0) ELSE 0 END) as nom_gaji_pns"),
+                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK' AND ($guruCond) THEN IFNULL(gaji_summary.gaji_bersih, 0) ELSE 0 END) as nom_gaji_pppk_guru"),
+                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK' AND NOT ($guruCond) AND ($kesehatanCond) THEN IFNULL(gaji_summary.gaji_bersih, 0) ELSE 0 END) as nom_gaji_pppk_kes"),
+                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK' AND NOT ($guruCond) AND NOT ($kesehatanCond) THEN IFNULL(gaji_summary.gaji_bersih, 0) ELSE 0 END) as nom_gaji_pppk_teknis"),
+                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK PARUH WAKTU' AND ($guruCond) THEN IFNULL(gaji_summary.gaji_bersih, 0) ELSE 0 END) as nom_gaji_paruh_guru"),
+                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND ($kesehatanCond) THEN IFNULL(gaji_summary.gaji_bersih, 0) ELSE 0 END) as nom_gaji_paruh_kes"),
+                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND NOT ($kesehatanCond) THEN IFNULL(gaji_summary.gaji_bersih, 0) ELSE 0 END) as nom_gaji_paruh_teknis"),
 
                 // NOMINAL TPP
-                DB::raw('SUM(IFNULL(realisasi_tpps.total_dibayarkan, 0)) as nom_tpp_total'),
-                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PNS' THEN IFNULL(realisasi_tpps.total_dibayarkan, 0) ELSE 0 END) as nom_tpp_pns"),
-                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK' AND ($guruCond) THEN IFNULL(realisasi_tpps.total_dibayarkan, 0) ELSE 0 END) as nom_tpp_pppk_guru"),
-                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK' AND NOT ($guruCond) AND ($kesehatanCond) THEN IFNULL(realisasi_tpps.total_dibayarkan, 0) ELSE 0 END) as nom_tpp_pppk_kes"),
-                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK' AND NOT ($guruCond) AND NOT ($kesehatanCond) THEN IFNULL(realisasi_tpps.total_dibayarkan, 0) ELSE 0 END) as nom_tpp_pppk_teknis"),
-                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK PARUH WAKTU' AND ($guruCond) THEN IFNULL(realisasi_tpps.total_dibayarkan, 0) ELSE 0 END) as nom_tpp_paruh_guru"),
-                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND ($kesehatanCond) THEN IFNULL(realisasi_tpps.total_dibayarkan, 0) ELSE 0 END) as nom_tpp_paruh_kes"),
-                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND NOT ($kesehatanCond) THEN IFNULL(realisasi_tpps.total_dibayarkan, 0) ELSE 0 END) as nom_tpp_paruh_teknis"),
+                DB::raw('SUM(IFNULL(tpp_summary.total_dibayarkan, 0)) as nom_tpp_total'),
+                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PNS' THEN IFNULL(tpp_summary.total_dibayarkan, 0) ELSE 0 END) as nom_tpp_pns"),
+                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK' AND ($guruCond) THEN IFNULL(tpp_summary.total_dibayarkan, 0) ELSE 0 END) as nom_tpp_pppk_guru"),
+                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK' AND NOT ($guruCond) AND ($kesehatanCond) THEN IFNULL(tpp_summary.total_dibayarkan, 0) ELSE 0 END) as nom_tpp_pppk_kes"),
+                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK' AND NOT ($guruCond) AND NOT ($kesehatanCond) THEN IFNULL(tpp_summary.total_dibayarkan, 0) ELSE 0 END) as nom_tpp_pppk_teknis"),
+                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK PARUH WAKTU' AND ($guruCond) THEN IFNULL(tpp_summary.total_dibayarkan, 0) ELSE 0 END) as nom_tpp_paruh_guru"),
+                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND ($kesehatanCond) THEN IFNULL(tpp_summary.total_dibayarkan, 0) ELSE 0 END) as nom_tpp_paruh_kes"),
+                DB::raw("SUM(CASE WHEN UPPER(pegawais.status_pegawai) = 'PPPK PARUH WAKTU' AND NOT ($guruCond) AND NOT ($kesehatanCond) THEN IFNULL(tpp_summary.total_dibayarkan, 0) ELSE 0 END) as nom_tpp_paruh_teknis"),
             ])
             ->groupBy('unit_kerjas.skpd')
             ->orderBy('unit_kerjas.skpd')
@@ -84,28 +100,33 @@ class LaporanGabunganController extends Controller
     public function index(Request $request)
     {
         $periodeDataGaji = RealisasiGaji::select('periode')->distinct()->pluck('periode')->toArray();
-        $periodeDataTpp = RealisasiTpp::select('periode')->distinct()->pluck('periode')->toArray();
-        $allPeriodes = array_unique(array_merge($periodeDataGaji, $periodeDataTpp));
+        $periodeDataTppKas = RealisasiTpp::whereNotNull('periode_kas')->select('periode_kas as p')->distinct()->pluck('p')->toArray();
+        $periodeDataTppLegacy = RealisasiTpp::whereNull('periode_kas')->select('periode as p')->distinct()->pluck('p')->toArray();
+        $allPeriodes = array_values(array_unique(array_merge($periodeDataGaji, $periodeDataTppKas, $periodeDataTppLegacy)));
         sort($allPeriodes);
 
         $periode = $request->input('periode', 'Semua Periode');
+        $jenisGaji = $request->input('jenis_gaji', 'Semua');
+        $daftarJenisGaji = RealisasiGaji::DAFTAR_JENIS_GAJI;
 
-        $rekaps = $this->getRekapData($periode);
+        $rekaps = $this->getRekapData($periode, $jenisGaji);
 
-        return view('laporan.gabungan.index', compact('rekaps', 'periode', 'allPeriodes'));
+        return view('laporan.gabungan.index', compact('rekaps', 'periode', 'allPeriodes', 'jenisGaji', 'daftarJenisGaji'));
     }
 
     public function exportExcel(Request $request)
     {
         $periode = $request->input('periode', 'Semua Periode');
-        $rekaps = $this->getRekapData($periode);
+        $jenisGaji = $request->input('jenis_gaji', 'Semua');
+        $rekaps = $this->getRekapData($periode, $jenisGaji);
 
         $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
 
         // Title
         $sheet->setCellValue('A1', 'LAPORAN GABUNGAN REALISASI GAJI DAN TPP');
-        $sheet->setCellValue('A2', 'PERIODE: '.strtoupper($periode));
+        $subTitle = 'PERIODE: '.strtoupper($periode).($jenisGaji && $jenisGaji !== 'Semua' ? ' | KRITERIA GAJI: '.strtoupper($jenisGaji) : '');
+        $sheet->setCellValue('A2', $subTitle);
         $sheet->getStyle('A1:A2')->getFont()->setBold(true)->setSize(14);
 
         // Header Rows
@@ -287,9 +308,10 @@ class LaporanGabunganController extends Controller
     public function exportPdf(Request $request)
     {
         $periode = $request->input('periode', 'Semua Periode');
-        $rekaps = $this->getRekapData($periode);
+        $jenisGaji = $request->input('jenis_gaji', 'Semua');
+        $rekaps = $this->getRekapData($periode, $jenisGaji);
 
-        $pdf = Pdf::loadView('laporan.gabungan.pdf', compact('rekaps', 'periode'));
+        $pdf = Pdf::loadView('laporan.gabungan.pdf', compact('rekaps', 'periode', 'jenisGaji'));
         $pdf->setPaper('a3', 'landscape');
 
         return $pdf->download('Export_Laporan_Gabungan_'.date('Ymd_His').'.pdf');

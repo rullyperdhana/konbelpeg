@@ -50,6 +50,13 @@
         @endforeach
     </select>
 
+    <select name="jenis_gaji_filter">
+        <option value="">Semua Kriteria Gaji</option>
+        @foreach($daftarJenisGaji as $jg)
+            <option value="{{ $jg }}" {{ ($jenisGajiFilter ?? '') == $jg ? 'selected' : '' }}>{{ $jg }}</option>
+        @endforeach
+    </select>
+
     <div style="flex-grow: 1; min-width: 250px;">
         <select name="skpd_filter" id="skpd-filter">
             <option value="">Semua SKPD</option>
@@ -70,6 +77,9 @@
     </a>
     <a href="javascript:void(0)" onclick="exportData('excel')" class="btn-export" style="color: #16a34a; border-color: #bbf7d0; background: #f0fdf4;">
         <i class="ph ph-file-xls"></i> Export Excel
+    </a>
+    <a href="/laporan/trace-gaji" class="btn-export" style="color: #4C35DE; border-color: #c7d2fe; background: #eef2ff; font-weight: 600;">
+        <i class="ph ph-user-focus"></i> Trace Penggajian Per Orang
     </a>
 </form>
 
@@ -192,6 +202,7 @@ function exportData(type) {
                     <th>Periode</th>
                     <th style="text-align: left;">Pegawai</th>
                     <th style="text-align: left;">SKPD / Jabatan</th>
+                    <th style="text-align: center;">Kriteria Gaji</th>
                     <th style="text-align: right;">Gaji Pokok</th>
                     <th style="text-align: right;">Potongan</th>
                     <th style="text-align: right;">Gaji Bersih</th>
@@ -200,33 +211,50 @@ function exportData(type) {
             <tbody>
                 @forelse($realisasis as $index => $pegawai)
                 @php 
-                    $tpp = $pegawai->realisasiGajis->first();
-                    $totalPotongan = $tpp ? ($tpp->pph_21 + $tpp->potongan_lainnya + $tpp->iuran_iwp) : 0;
+                    $hasGaji = $pegawai->realisasiGajis->isNotEmpty();
+                    $totalGajiPokok = $hasGaji ? $pegawai->realisasiGajis->sum('gaji_pokok') : 0;
+                    $totalPotongan = $hasGaji ? $pegawai->realisasiGajis->sum(fn ($g) => $g->pajak + $g->potongan_lain + $g->iwp) : 0;
+                    $totalGajiBersih = $hasGaji ? $pegawai->realisasiGajis->sum('gaji_bersih') : 0;
                 @endphp
-                <tr style="{{ !$tpp ? 'background-color: #fef2f2;' : '' }}">
+                <tr style="{{ ! $hasGaji ? 'background-color: #fef2f2;' : '' }}">
                     <td class="center">{{ $realisasis->firstItem() + $index }}</td>
                     <td class="center" style="font-weight: 600;">{{ $periode ?: 'Semua Periode' }}</td>
                     <td>
                         <div style="font-weight: 600; color: #0f172a;">{{ $pegawai->nama ?? 'Tidak Diketahui' }}</div>
-                        <div style="font-size: 11px; color: #64748b;">NIP: {{ $pegawai->nip ?? '-' }} <span style="display:inline-block; margin-left: 6px; padding: 2px 6px; background: #e2e8f0; border-radius: 4px; font-size: 10px;">{{ $pegawai->status_pegawai ?? '-' }}</span></div>
+                        <div style="font-size: 11px; color: #64748b;">
+                            NIP: {{ $pegawai->nip ?? '-' }} 
+                            <span style="display:inline-block; margin-left: 6px; padding: 2px 6px; background: #e2e8f0; border-radius: 4px; font-size: 10px;">{{ $pegawai->status_pegawai ?? '-' }}</span>
+                            <a href="/laporan/trace-gaji/{{ $pegawai->id }}" style="margin-left: 6px; color: #4C35DE; text-decoration: none; font-weight: 600;" title="Trace riwayat penggajian pegawai ini">
+                                <i class="ph ph-user-focus"></i> Trace Gaji
+                            </a>
+                        </div>
                     </td>
                     <td>
                         <div style="font-weight: 500; font-size: 11px;">{{ $pegawai->unitKerja?->skpd ?? '-' }}</div>
                         <div style="font-size: 10px; color: #64748b;">{{ $pegawai->jabatan?->nama ?? '-' }}</div>
                     </td>
-                    @if($tpp)
-                        <td class="money">Rp {{ number_format($tpp->gaji_pokok, 0, ',', '.') }}</td>
+                    @if($hasGaji)
+                        <td class="center">
+                            <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+                                @foreach($pegawai->realisasiGajis as $g)
+                                    <span style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 10.5px; font-weight: 600; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;">
+                                        {{ $g->jenis_gaji ?? 'Gaji Induk' }}
+                                    </span>
+                                @endforeach
+                            </div>
+                        </td>
+                        <td class="money">Rp {{ number_format($totalGajiPokok, 0, ',', '.') }}</td>
                         <td class="money" style="color: #ef4444;">Rp {{ number_format($totalPotongan, 0, ',', '.') }}</td>
-                        <td class="money" style="color: #16a34a;">Rp {{ number_format($tpp->gaji_bersih, 0, ',', '.') }}</td>
+                        <td class="money" style="color: #16a34a; font-weight: 600;">Rp {{ number_format($totalGajiBersih, 0, ',', '.') }}</td>
                     @else
-                        <td class="center" colspan="3">
+                        <td class="center" colspan="4">
                             <span style="background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">Rp 0 (Belum Dibayarkan)</span>
                         </td>
                     @endif
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="center" style="padding: 40px; color: #64748b;">Data belum ada atau tidak ditemukan.</td>
+                    <td colspan="8" class="center" style="padding: 40px; color: #64748b;">Data belum ada atau tidak ditemukan.</td>
                 </tr>
                 @endforelse
             </tbody>
@@ -277,6 +305,17 @@ function exportData(type) {
                     </select>
                 </div>
                 <div class="mb-4">
+                    <label style="font-size: 14px; font-weight: 600; color: #475569; display: block; margin-bottom: 8px;">Kriteria Gaji (SIMGAJI DBF / Excel):</label>
+                    <select name="jenis_gaji" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; margin-bottom: 6px; outline: none; background: white;">
+                        @foreach(\App\Models\RealisasiGaji::DAFTAR_JENIS_GAJI as $jg)
+                            <option value="{{ $jg }}" {{ $jg == 'Gaji Induk' ? 'selected' : '' }}>{{ $jg }}</option>
+                        @endforeach
+                    </select>
+                    <small style="display: block; color: #64748b; font-size: 11.5px; margin-bottom: 16px;">
+                        Pilih kriteria yang sesuai dengan file DBF/Excel yang diunggah. Data dengan kriteria berbeda pada bulan yang sama tidak akan saling menimpa.
+                    </small>
+                </div>
+                <div class="mb-4">
                     <label style="font-size: 14px; font-weight: 600; color: #475569; display: block; margin-bottom: 8px;">Kelompok Pegawai (Opsional - Penanda File):</label>
                     <select name="kelompok_pegawai" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; margin-bottom: 16px; outline: none; background: white;">
                         <option value="">-- Semua / Gabungan --</option>
@@ -302,10 +341,22 @@ function exportData(type) {
 <!-- Script for Progress Bar -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    document.getElementById('importGajiForm').addEventListener('submit', function(e) {
+    document.getElementById('importGajiForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
         const form = this;
+        const fileInput = form.querySelector('input[name="file"]');
+        if (!fileInput.files || fileInput.files.length === 0) {
+            Swal.fire('Peringatan', 'Silakan pilih file terlebih dahulu.', 'warning');
+            return;
+        }
+
+        const fileName = fileInput.files[0].name;
+        const periodeSelect = form.querySelector('select[name="periode_import"]');
+        const periodeVal = periodeSelect ? (periodeSelect.options[periodeSelect.selectedIndex]?.text || periodeSelect.value) : '';
+        const jenisGajiSelect = form.querySelector('select[name="jenis_gaji"]');
+        const jenisGajiVal = jenisGajiSelect ? (jenisGajiSelect.options[jenisGajiSelect.selectedIndex]?.text || jenisGajiSelect.value) : 'Gaji Induk';
+
         const formData = new FormData(form);
         const uploadId = Date.now().toString() + Math.random().toString(36).substring(2, 7);
         formData.append('upload_id', uploadId);
@@ -315,80 +366,238 @@ function exportData(type) {
         btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> Memproses...';
         closeModal('uploadModal');
         
-        // Tampilkan SweetAlert Progress
+        // Tampilkan SweetAlert Progress yang Informatif & Elegan
         Swal.fire({
-            title: 'Mengunggah & Memproses Data',
+            title: 'Memproses Data Realisasi Gaji',
             html: `
-                <div style="margin-top: 15px; margin-bottom: 10px; text-align: left; font-size: 13px; color: #64748b;" id="progress-text">Menyiapkan file...</div>
-                <div style="width: 100%; background-color: #e2e8f0; border-radius: 999px; height: 12px; overflow: hidden;">
-                    <div id="progress-bar" style="width: 0%; height: 100%; background-color: #3b82f6; transition: width 0.3s ease;"></div>
+                <div style="text-align: left; font-family: inherit;">
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; font-size: 11.5px;">
+                        <span style="background: #eff6ff; color: #1d4ed8; padding: 3px 8px; border-radius: 6px; font-weight: 600; border: 1px solid #bfdbfe;">
+                            <i class="ph ph-calendar"></i> ${periodeVal}
+                        </span>
+                        <span style="background: #f0fdf4; color: #15803d; padding: 3px 8px; border-radius: 6px; font-weight: 600; border: 1px solid #bbf7d0;">
+                            <i class="ph ph-tag"></i> ${jenisGajiVal}
+                        </span>
+                        <span style="background: #f8fafc; color: #475569; padding: 3px 8px; border-radius: 6px; border: 1px solid #e2e8f0; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${fileName}">
+                            <i class="ph ph-file"></i> ${fileName}
+                        </span>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+                        <div id="progress-status" style="font-size: 13px; font-weight: 600; color: #334155; max-width: 75%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            Menyiapkan dan membaca file...
+                        </div>
+                        <div id="progress-percent" style="font-size: 16px; font-weight: 800; color: #2563eb;">
+                            0%
+                        </div>
+                    </div>
+
+                    <div style="width: 100%; background-color: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 999px; height: 14px; overflow: hidden; padding: 2px; margin-bottom: 14px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.06);">
+                        <div id="progress-bar" style="width: 0%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #3b82f6, #06b6d4, #10b981); transition: width 0.25s ease;"></div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; text-align: center;">
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 4px;">
+                            <div style="font-size: 11px; color: #64748b; font-weight: 500;">Diproses</div>
+                            <div id="progress-count" style="font-size: 13.5px; font-weight: 700; color: #1e293b; margin-top: 2px;">0 / 0</div>
+                        </div>
+                        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 8px 4px;">
+                            <div style="font-size: 11px; color: #166534; font-weight: 500;">Berhasil</div>
+                            <div id="progress-success" style="font-size: 13.5px; font-weight: 700; color: #15803d; margin-top: 2px;">0</div>
+                        </div>
+                        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 8px 4px;">
+                            <div style="font-size: 11px; color: #92400e; font-weight: 500;">NIP Gagal</div>
+                            <div id="progress-failed" style="font-size: 13.5px; font-weight: 700; color: #b45309; margin-top: 2px;">0</div>
+                        </div>
+                    </div>
                 </div>
             `,
             allowOutsideClick: false,
             allowEscapeKey: false,
             showConfirmButton: false,
             didOpen: () => {
-                Swal.showLoading();
+                // UI ready
             }
         });
-        
-        // Mulai polling
-        const pollInterval = setInterval(() => {
-            fetch('/upload/progress?id=' + uploadId)
-                .then(res => res.json())
-                .then(data => {
-                    if (data && data.progress > 0) {
-                        let percent = data.total > 0 ? Math.round((data.progress / data.total) * 100) : 0;
-                        if (percent > 100) percent = 100;
-                        
-                        const text = data.total > 0 
-                            ? \`Memproses baris ke-\${data.progress.toLocaleString()} dari \${data.total.toLocaleString()} (\${percent}%)\`
-                            : \`Memproses baris ke-\${data.progress.toLocaleString()}...\`;
-                            
-                        document.getElementById('progress-text').innerText = text;
-                        if (data.total > 0) {
-                            document.getElementById('progress-bar').style.width = percent + '%';
-                        } else {
-                            let currWidth = parseInt(document.getElementById('progress-bar').style.width) || 0;
-                            let newWidth = (currWidth + 5) % 100;
-                            document.getElementById('progress-bar').style.width = newWidth + '%';
-                        }
-                    }
-                }).catch(err => console.error(err));
-        }, 1000);
-        
-        // Lakukan upload via AJAX
-        fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
+
+        let finished = false;
+        let maxProgress = 0;
+
+        function updateUI(data) {
+            if (!data || finished) return;
+            const total = Number(data.total) || 0;
+            const progress = Number(data.progress) || 0;
+            if (progress > maxProgress) {
+                maxProgress = progress;
             }
-        })
-        .then(res => res.json())
-        .then(data => {
+            const currentProgress = Math.max(progress, maxProgress);
+            const percent = total > 0 ? Math.min(100, Math.round((currentProgress / total) * 100)) : (Number(data.percent) || 0);
+            const failed = Number(data.failed) || 0;
+            const success = data.success !== undefined ? Number(data.success) : Math.max(0, currentProgress - failed);
+
+            const barEl = document.getElementById('progress-bar');
+            const percentEl = document.getElementById('progress-percent');
+            const countEl = document.getElementById('progress-count');
+            const statusEl = document.getElementById('progress-status');
+            const successEl = document.getElementById('progress-success');
+            const failedEl = document.getElementById('progress-failed');
+
+            if (barEl) barEl.style.width = percent + '%';
+            if (percentEl) percentEl.innerText = percent + '%';
+            if (countEl) countEl.innerText = total > 0 ? `${currentProgress.toLocaleString()} / ${total.toLocaleString()}` : `${currentProgress.toLocaleString()}`;
+            if (successEl) successEl.innerText = success.toLocaleString();
+            if (failedEl) failedEl.innerText = failed.toLocaleString();
+
+            if (statusEl) {
+                if (total > 0 && currentProgress >= total) {
+                    statusEl.innerText = 'Menyimpan perubahan ke database...';
+                } else if (total > 0) {
+                    statusEl.innerText = `Memproses data (${currentProgress.toLocaleString()} / ${total.toLocaleString()})...`;
+                } else if (data.message) {
+                    statusEl.innerText = data.message;
+                }
+            }
+        }
+
+        function showSuccessModal(data) {
+            finished = true;
             clearInterval(pollInterval);
-            if (data.success) {
+            const barEl = document.getElementById('progress-bar');
+            const percentEl = document.getElementById('progress-percent');
+            if (barEl) barEl.style.width = '100%';
+            if (percentEl) percentEl.innerText = '100%';
+
+            let detailHtml = `
+                <div style="font-size: 14px; color: #475569; margin-top: 8px; line-height: 1.5;">
+                    ${data.message || 'Data realisasi gaji berhasil diimpor.'}
+                </div>
+            `;
+
+            if (data.failed && data.failed > 0) {
+                detailHtml += `
+                    <div style="margin-top: 14px; padding: 10px 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; font-size: 12.5px; color: #92400e; text-align: left; line-height: 1.4;">
+                        <strong>Perhatian:</strong> Terdapat <strong>${data.failed} data</strong> yang NIP-nya belum terdaftar di Data Pegawai. Rincian telah otomatis dicatat di menu <strong>Laporan &gt; NIP Belum Terdaftar</strong>.
+                    </div>
+                `;
+            }
+
+            setTimeout(() => {
                 Swal.fire({
                     icon: 'success',
-                    title: 'Selesai!',
-                    text: 'Data berhasil diimpor.',
-                    timer: 2000,
-                    showConfirmButton: false
+                    title: 'Impor Selesai!',
+                    html: detailHtml,
+                    confirmButtonText: 'Tutup & Lihat Data',
+                    confirmButtonColor: '#2563eb',
+                    allowOutsideClick: false,
                 }).then(() => {
                     window.location.reload();
                 });
-            } else {
-                Swal.fire('Gagal!', data.message || 'Terjadi kesalahan saat mengimpor data.', 'error');
-                btn.disabled = false;
-                btn.innerHTML = 'Mulai Impor Data';
-            }
-        })
-        .catch(error => {
+            }, 300);
+        }
+
+        function showErrorModal(message) {
+            finished = true;
             clearInterval(pollInterval);
-            console.error(error);
-            window.location.reload(); 
-        });
+            btn.disabled = false;
+            btn.innerHTML = 'Mulai Impor Data';
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal Mengimpor Data',
+                text: message || 'Terjadi kesalahan saat memproses data.',
+                confirmButtonText: 'Tutup',
+                confirmButtonColor: '#ef4444'
+            });
+        }
+
+        // Concurrent fallback polling interval
+        const pollInterval = setInterval(() => {
+            if (finished) {
+                clearInterval(pollInterval);
+                return;
+            }
+            fetch('/upload/progress?id=' + uploadId)
+                .then(res => res.json())
+                .then(data => {
+                    if (!finished && data && (data.total > 0 || data.progress > 0)) {
+                        updateUI(data);
+                    }
+                })
+                .catch(err => console.debug('Progress poll error:', err));
+        }, 500);
+
+        // Upload Request via Fetch
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const contentType = response.headers.get('content-type') || '';
+
+            if (!response.ok) {
+                let errMsg = 'Terjadi kesalahan pada server (Status: ' + response.status + ')';
+                try {
+                    const errJson = await response.json();
+                    if (errJson.message) errMsg = errJson.message;
+                } catch(e) {}
+                showErrorModal(errMsg);
+                return;
+            }
+
+            if (contentType.includes('text/event-stream') && response.body && response.body.getReader) {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    const lines = buffer.split('\n\n');
+                    buffer = lines.pop(); // simpan chunk sisa yang belum lengkap
+                    
+                    for (const line of lines) {
+                        const trimmed = line.trim();
+                        if (trimmed.startsWith('data: ')) {
+                            try {
+                                const payload = JSON.parse(trimmed.substring(6));
+                                if (payload.type === 'start') {
+                                    updateUI({ total: payload.total, progress: 0, percent: 0, message: payload.message });
+                                } else if (payload.type === 'progress') {
+                                    updateUI(payload);
+                                } else if (payload.type === 'done') {
+                                    showSuccessModal(payload);
+                                    return;
+                                } else if (payload.type === 'error') {
+                                    showErrorModal(payload.message);
+                                    return;
+                                }
+                            } catch(err) {
+                                console.debug('SSE parse error:', err);
+                            }
+                        }
+                    }
+                }
+
+                if (!finished) {
+                    showSuccessModal({ message: 'Proses impor data telah selesai.' });
+                }
+            } else {
+                const data = await response.json();
+                if (data.success) {
+                    showSuccessModal(data);
+                } else {
+                    showErrorModal(data.message || 'Gagal memproses file.');
+                }
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            showErrorModal('Koneksi terputus atau terjadi kesalahan saat mengunggah file.');
+        }
     });
 </script>
 

@@ -15,9 +15,9 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
-    'version' => env('APP_VERSION', 'v2.4.2'),
-    'version_date' => '04 September 2026',
-    'version_title' => 'Klasifikasi Pangkat SIMGAJI Lebih Tinggi vs Belum Diinput',
+    'version' => env('APP_VERSION', 'v2.7.0'),
+    'version_date' => '29 September 2026',
+    'version_title' => 'Modul Laporan IWP & Jaminan Kesehatan (Jamkes BPJS)',
 
     /*
     |--------------------------------------------------------------------------

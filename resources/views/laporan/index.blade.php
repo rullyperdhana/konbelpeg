@@ -107,5 +107,23 @@
         <p>Laporan rekapan Gaji, TPP, JKK/JKM, dan komponen belanja pegawai lainnya.</p>
         <a href="/realisasi/tpp" class="btn-report">Buka Laporan</a>
     </div>
+
+    <div class="report-card">
+        <div class="report-icon" style="background: rgba(76, 53, 222, 0.1); color: #4C35DE;">
+            <i class="ph ph-git-branch"></i>
+        </div>
+        <h3>Penyelarasan SKPD & UPTD</h3>
+        <p>Matriks perbandingan dan penyelarasan hierarki SKPD, UPTD, dan Satker antara data SIMGAJI (Taspen) dengan SIMPEG (Master BKD).</p>
+        <a href="/laporan/penyelarasan-unit-kerja" class="btn-report" style="background: #4C35DE;">Buka Laporan</a>
+    </div>
+
+    <div class="report-card">
+        <div class="report-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
+            <i class="ph ph-heartbeat"></i>
+        </div>
+        <h3>Laporan IWP & Jamkes BPJS</h3>
+        <p>Rekonsiliasi Iuran Wajib Pegawai (IWP 10%) dan pemotongan Jaminan Kesehatan BPJS dari Gaji Reguler (2%) dan TPP (1%) per SKPD & Pegawai.</p>
+        <a href="/laporan/iwp-jamkes" class="btn-report" style="background: #10b981;">Buka Laporan</a>
+    </div>
 </div>
 @endsection

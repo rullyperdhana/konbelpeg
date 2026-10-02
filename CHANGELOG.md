@@ -4,6 +4,93 @@ Dokumen ini mencatat seluruh riwayat pembaruan, evolusi fitur, perbaikan bug, da
 
 ---
 
+## 📌 [v2.8.0] - 2026-10-02
+### 👨‍👩‍👧‍👦 Integrasi Riwayat Keluarga SIMGAJI (KEL), Atribut Finansial Pegawai, Trace Gaji & Peningkatan Unmatched NIP
+- **Dukungan Berkas DBF Riwayat Anggota Keluarga & Tanggungan (`KEL_*.DBF`)**:
+  - Dukungan berkas DBF ke-3 SIMGAJI: `KEL` (Riwayat Anggota Keluarga & Tanggungan dari SIMGAJI Taspen, 70.000+ data).
+  - Migrasi skema basis data terindeks `simgaji_keluargas` (`nip`, `nmkel`, `kdhubkel`, `hubungan`, `kdjenkel`, `jenis_kelamin`, `tgllhr`, `kdtunjang`, `status_tunjangan`, `kdstawin`, `nipsuamiis`, `pekerjaan`, `nosks`, `tglsks`, `tglnikah`, `tglcerai`, `tglwafat`).
+  - Pemetaan relasi keluarga otomatis: Suami/Istri (10/20), Anak (11/12/13/21/22...), dan status tunjangan (`kdtunjang` 2 = Tertunjang, 1 = Tidak Tertunjang).
+  - Performa query relasional ultra-cepat (<1 ms) untuk lookup keluarga per NIP.
+  - Perintah konsol Artisan `php artisan simgaji:sync {--type=all|master|keluarga}` untuk sinkronisasi massal berkas DBF langsung ke basis data.
+  - Pembaruan antarmuka Manajemen DBF (`/master/simgaji-dbf`): Kartu status ke-3 untuk berkas KEL, pendeteksi otomatis tipe berkas KEL saat diunggah, tombol *Sinkronkan ke Database*, serta riwayat aktivasi berkas.
+- **Atribut Finansial & Identitas Master Pegawai (`pegawais`)**:
+  - Penambahan kolom identitas finansial: `nik` (No. KTP), `no_rekening`, `nama_bank`, `npwp`, dan `no_karpeg` pada master pegawai.
+  - Sinkronisasi otomatis data perbankan dan kependudukan dari berkas `MST_PGW.DBF` (`noktp`, `norek`, `induk_bank`, `npwp`, `nokarpeg`).
+  - Tampilan kolom NIK dan Rekening/Bank pada tabel daftar pegawai (`/pegawai`).
+  - Modal interaktif "Detail Pegawai & SIMGAJI" di `/pegawai`: menampilkan data identitas BKD, informasi perbankan SIMGAJI, serta daftar anggota keluarga/tanggungan.
+  - Pencarian cerdas di tabel pegawai berdasarkan NIK selain NIP dan Nama.
+- **Modul Trace Riwayat Penggajian Pegawai (`/laporan/trace-gaji`)**:
+  - Penelusuran riwayat penggajian personal interaktif berdasarkan NIP maupun Nama.
+  - Kartu profil finansial lengkap dengan NIK, No. Rekening, Bank Penyalur, NPWP, dan No. Karpeg.
+  - Bagian khusus "Daftar Anggota Keluarga & Tanggungan (SIMGAJI Taspen)" yang menyajikan status tertunjang/tidak tertunjang dan usia anggota keluarga.
+  - Tabel riwayat transaksi penggajian bulanan (Gaji Pokok, Tunjangan Keluarga, Tunjangan Jabatan, Bruto, Potongan, Netto).
+  - Penyempurnaan tampilan responsif serta dukungan Dark Mode & Light Mode dengan kontras optimal.
+- **Peningkatan Laporan Unmatched NIP (`/laporan/unmatched-nip`)**:
+  - Penambahan kolom status kepegawaian (PNS / PPPK / Non-ASN) dan indikator keberadaan NIP di basis data SIMGAJI.
+  - Dropdown filter status pegawai untuk mempermudah identifikasi dan audit transaksi penggajian tak bertuan.
+- **Kriteria Transaksi Gaji & Periode Ganda TPP**:
+  - Penambahan kolom `jenis_gaji` pada tabel `realisasi_gajis` (Gaji Induk, Gaji Terusan, Gaji Susulan, Kekurangan Gaji, Gaji-13, THR).
+  - Penanganan periode ganda TPP: `bulan_kinerja` dan `periode_kas` pada tabel `realisasi_tpps`.
+- **Pengujian Otomatis**:
+  - Penambahan unit & feature tests: `SimgajiKeluargaTest`, `TraceGajiPegawaiTest`, `UnmatchedNipTest`, `RealisasiGajiKriteriaTest`, `RealisasiTppDualFieldTest`.
+
+---
+
+## 📌 [v2.7.0] - 2026-09-29
+### 🩺 Modul Laporan Rekonsiliasi IWP & BPJS Kesehatan (Jamkes)
+- **Modul Baru Laporan IWP & Jamkes (`/laporan/iwp-jamkes`)**:
+  - Rekonsiliasi komprehensif Iuran Wajib Pegawai (IWP 10%) dan pemotongan Jaminan Kesehatan (BPJS Kesehatan) dari Gaji Reguler (2%) dan TPP (1%).
+  - Menyandingkan nilai **IWP 2% Jamkes Gaji (SIMGAJI DBF `piwp2`)**, **IWP 8% Pensiun & THT Taspen (`piwp8`)**, dan **IWP 1% Jamkes TPP (`realisasi_tpps.iuran_iwp`)**.
+  - Dilengkapi 5 KPI Eksekutif: Total Iuran Jamkes Gabungan (Gaji 2% + TPP 1%), IWP 2% Jamkes Gaji, IWP 1% Jamkes TPP, IWP 8% Taspen, dan Total Seluruh IWP.
+  - Dua mode/tab analitis:
+    1. 📊 **Tab Rekapitulasi per SKPD**: Rincian pemotongan per unit kerja/SKPD beserta total pegawai bergaji & penerima TPP.
+    2. 👥 **Tab Rincian per Pegawai**: Menampilkan data presisi per pegawai dengan fitur pencarian NIP/Nama, filter SKPD, dan paginasi.
+- **Ekspor Dokumen Resmi**:
+  - Ekspor ke **Microsoft Excel (.xlsx)** dengan format angka ribuan, styling resmi, dan kalkulasi total otomatis.
+  - Ekspor ke **Dokumen PDF Resmi** (A4 Landscape) siap cetak dan arsip rekonsiliasi ke BPJS Kesehatan.
+- **Fitur Dua Tab & Cetak Master Data Unit Kerja (SKPD - `/master/skpd`)**:
+  - **Sistem 2 Tab Navigasi**:
+    1. 🏢 **Tab 1: Ringkasan 42 SKPD Induk**: Menyajikan daftar bersih 42 dinas/badan induk murni, jumlah UPT di bawahnya, jumlah Satker, total pegawai, dan tombol *Lihat UPT*.
+    2. 🌿 **Tab 2: Rincian 1.638 Unit Kerja (UPT / Satker)**: Menampilkan data detail UPT/sekolah/satker dengan **Dropdown Filter SKPD Induk** sehingga tidak tertumpuk ratusan sekolah Dinas Pendidikan.
+  - Penambahan tombol **Cetak PDF** resmi dan **Ekspor Excel (.xlsx)** yang dinamis menyesuaikan tab yang sedang aktif.
+  - Template PDF resmi (`master/skpd_pdf.blade.php`) lengkap dengan kop instansi, rekap jumlah pegawai per unit kerja (`pegawais_count`), serta total pegawai keseluruhan.
+  - Pengujian otomatis (*Feature Tests*): `tests/Feature/MasterSkpdPrintTest.php` (4 pengujian lolos).
+
+---
+
+## 📌 [v2.6.0] - 2026-09-29
+### 🔐 Sistem Autentikasi Pengguna & Containerisasi Docker untuk VPS
+- **Sistem Autentikasi & Keamanan (Login / Logout)**:
+  - Implementasi `AuthController` dengan validasi ketat dan proteksi *Rate Limiting* (anti brute-force).
+  - Halaman login modern (`/login`) dengan palet LUNO Admin, dukungan Dark/Light mode, Phosphor icons, toggle lihat kata sandi, dan tombol *Isi Otomatis* untuk kemudahan development.
+  - Pengamanan seluruh rute aplikasi (`/dashboard`, `/master/*`, `/pegawai`, `/realisasi/*`, `/laporan/*`, `/setting/*`) menggunakan middleware `auth`.
+  - Profil pengguna dinamis pada topbar layout dengan menu dropdown dan tombol *Logout* terproteksi CSRF.
+  - Seeder akun default (`UserSeeder`): `admin@pemda.go.id` / `password`.
+  - Pengujian otomatis (*Feature Tests*): `tests/Feature/AuthTest.php` (8 pengujian lolos, 22 assertions).
+- **Infrastruktur Docker & Deployment VPS**:
+  - `Dockerfile` multi-stage berbasis PHP 8.4-FPM Bookworm lengkap dengan ekstensi `gd`, `zip`, `pdo_mysql`, `mbstring`, `opcache`, dan `pcntl`.
+  - `docker-compose.yml` terintegrasi dengan 3 layanan: PHP-FPM (`app`), Web Server Nginx (`webserver`), dan MySQL 8.0 (`db`) dengan volume persisten.
+  - Konfigurasi Nginx (`docker/nginx/default.conf`) dan PHP (`docker/php/local.ini`) dioptimalkan untuk berkas besar: batas upload 100MB (aman untuk DBF SIMGAJI besar seperti `HIS_GPOK.DBF` 42MB) dan timeout 300 detik.
+  - Skrip inisialisasi otomatis (`docker/entrypoint.sh`): cek koneksi database, symbolic link storage, auto-migrate, auto-seed admin, dan optimasi cache production.
+  - Template konfigurasi `.env.docker.example` dan panduan lengkap `DOCKER_DEPLOYMENT_GUIDE.md`.
+
+---
+
+## 📌 [v2.5.0] - 2026-09-09
+### 🏢 Modul Laporan Penyelarasan SKPD — UPTD — SATKER (SIMGAJI vs SIMPEG)
+- **Modul Baru Penyelarasan Unit Kerja (`/laporan/penyelarasan-unit-kerja`)**:
+  - Menyandingkan dan merekonsiliasi seluruh struktur unit kerja antara database penggajian SIMGAJI (Taspen) dengan master SIMPEG (BKD).
+  - Dilengkapi 3 tab analitis terintegrasi:
+    1. 🏢 **Rekapitulasi SKPD Induk (Level SKPD)**: Komparasi 57 kode SKPD SIMGAJI vs 42 SKPD SIMPEG beserta perbandingan jumlah pegawai aktif, selisih, dan deteksi 13 kode cabang Dinas Pendidikan (`070` s/d `082`).
+    2. 🌿 **Pemetaan UPTD & SATKER (Level Satker)**: Matriks pemetaan 440 kode Satker SIMGAJI (`kdsatker` & `inputer`) terhadap UPTD/Sekolah/Balai di SIMPEG, serta deteksi 25 satker yang menampung multi-UPTD di SIMPEG.
+    3. 👥 **Daftar Pegawai Beda Penempatan**: Identifikasi presisi 117 pegawai dengan selisih penempatan (3 pegawai beda SKPD Induk dan 114 pegawai beda UPTD/Sekolah).
+- **Fitur Ekspor & Integrasi Cerdas**:
+  - Ekspor multi-tab ke **Microsoft Excel (.xlsx)** dan **Dokumen Cetak / PDF resmi**.
+  - Sistem caching performa tinggi (< 0.05 detik waktu muat) dan tombol *Refresh Cache*.
+  - Integrasi navigasi pada sidebar menu *11. Penyelarasan SKPD & UPTD* dan kartu baru di *Pusat Laporan*.
+
+---
+
 ## 📌 [v2.4.2] - 2026-09-04
 ### 🎯 Klasifikasi Presisi: "Pangkat di SIMGAJI Lebih Tinggi" vs "Belum Diinput di SIMGAJI"
 - **Penyesuaian Status & Skoring Hierarki Kepangkatan**:

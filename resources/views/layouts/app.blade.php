@@ -655,15 +655,26 @@
             background: var(--luno-primary-light);
         }
 
+        .user-dropdown-container {
+            position: relative;
+        }
+
         .user-profile {
             display: flex;
             align-items: center;
             gap: 9px;
-            padding: 4px 8px 4px 4px;
+            padding: 4px 10px 4px 4px;
             border-radius: 999px;
             background: var(--bg-surface);
             border: 1px solid var(--border-color);
-            cursor: default;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+        }
+
+        .user-profile:hover {
+            border-color: var(--luno-primary-border);
+            box-shadow: 0 2px 8px rgba(76, 53, 222, 0.08);
         }
 
         .user-profile-info {
@@ -681,6 +692,68 @@
         .user-role {
             font-size: 10.5px;
             color: var(--text-muted);
+        }
+
+        .user-dropdown-menu {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 8px);
+            width: 220px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            display: none;
+            flex-direction: column;
+            padding: 6px;
+            z-index: 100;
+        }
+
+        .user-dropdown-menu.show {
+            display: flex;
+        }
+
+        .user-dropdown-header {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 4px;
+        }
+
+        .user-dropdown-header .dropdown-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-dropdown-header .dropdown-email {
+            font-size: 11px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .dropdown-item-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            padding: 8px 10px;
+            border: none;
+            background: none;
+            border-radius: 8px;
+            font-size: 13px;
+            color: var(--danger);
+            cursor: pointer;
+            text-align: left;
+            transition: background-color 0.15s;
+        }
+
+        .dropdown-item-btn:hover {
+            background-color: var(--danger-light);
         }
 
         /* ===== CONTENT AREA ===== */
@@ -1319,13 +1392,16 @@
                 <a href="/realisasi/gaji" class="submenu-item {{ Request::is('realisasi/gaji*') ? 'active' : '' }}">1. Realisasi Gaji</a>
                 <a href="/realisasi/tpp" class="submenu-item {{ Request::is('realisasi/tpp*') ? 'active' : '' }}">2. Realisasi TPP</a>
                 <a href="/laporan/gabungan" class="submenu-item {{ Request::is('laporan/gabungan*') ? 'active' : '' }}">3. Laporan Gabungan</a>
-                <a href="/laporan/pegawai" class="submenu-item {{ Request::is('laporan/pegawai') ? 'active' : '' }}">4. Cetak Data Pegawai</a>
+                <a href="/laporan/pegawai" class="submenu-item {{ Request::is('laporan/pegawai*') ? 'active' : '' }}">4. Pegawai per SKPD/UPT/Satker</a>
                 <a href="/laporan/sikd-core" class="submenu-item {{ Request::is('laporan/sikd-core') ? 'active' : '' }}">5. SIKD Core</a>
                 <a href="/laporan/unmatched-nip" class="submenu-item {{ Request::is('laporan/unmatched-nip*') ? 'active' : '' }}">6. Log Gagal Upload (NIP)</a>
                 <a href="/laporan/sikd-core/rinci" class="submenu-item {{ Request::is('laporan/sikd-core/rinci') ? 'active' : '' }}">7. SIKD Core (Rinci)</a>
                 <a href="/laporan/pppk-guru" class="submenu-item {{ Request::is('laporan/pppk-guru') ? 'active' : '' }}">8. Laporan PPPK Guru</a>
                 <a href="/laporan/pppk-guru/rinci" class="submenu-item {{ Request::is('laporan/pppk-guru/rinci') ? 'active' : '' }}">9. PPPK Guru (Rinci)</a>
                 <a href="/laporan/rekonsiliasi-simgaji" class="submenu-item {{ Request::is('laporan/rekonsiliasi-simgaji*') ? 'active' : '' }}">10. Rekonsiliasi SIMGAJI</a>
+                <a href="/laporan/penyelarasan-unit-kerja" class="submenu-item {{ Request::is('laporan/penyelarasan-unit-kerja*') ? 'active' : '' }}">11. Penyelarasan SKPD & UPTD</a>
+                <a href="/laporan/iwp-jamkes" class="submenu-item {{ Request::is('laporan/iwp-jamkes*') ? 'active' : '' }}">12. IWP & Jamkes BPJS</a>
+                <a href="/laporan/trace-gaji" class="submenu-item {{ Request::is('*trace-gaji*') ? 'active' : '' }}" style="{{ Request::is('*trace-gaji*') ? 'font-weight: 700;' : '' }}">13. Trace Penggajian Per Orang</a>
             </div>
             
             <div class="menu-label">Sistem & Pengaturan</div>
@@ -1388,11 +1464,27 @@
                 <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Dark Mode" title="Ganti Mode Gelap / Terang">
                     <i class="ph ph-moon"></i>
                 </button>
-                <div class="user-profile">
-                    <div class="avatar">A</div>
-                    <div class="user-profile-info">
-                        <div class="user-name">Admin Keuangan</div>
-                        <div class="user-role">Administrator</div>
+                <div class="user-dropdown-container">
+                    <div class="user-profile" id="userProfileBtn" title="Klik untuk menu akun">
+                        <div class="avatar">{{ strtoupper(substr(Auth::user()->name ?? 'A', 0, 1)) }}</div>
+                        <div class="user-profile-info">
+                            <div class="user-name">{{ Auth::user()->name ?? 'Admin Keuangan' }}</div>
+                            <div class="user-role">{{ Auth::user()->email ?? 'Administrator' }}</div>
+                        </div>
+                        <i class="ph ph-caret-down" style="font-size: 12px; color: var(--text-muted);"></i>
+                    </div>
+                    <div class="user-dropdown-menu" id="userDropdownMenu">
+                        <div class="user-dropdown-header">
+                            <div class="dropdown-name">{{ Auth::user()->name ?? 'Administrator' }}</div>
+                            <div class="dropdown-email">{{ Auth::user()->email ?? 'admin@pemda.go.id' }}</div>
+                        </div>
+                        <form action="{{ route('logout') }}" method="POST" style="margin: 0;">
+                            @csrf
+                            <button type="submit" class="dropdown-item-btn">
+                                <i class="ph ph-sign-out" style="font-size: 16px;"></i>
+                                <span>Keluar / Logout</span>
+                            </button>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -1472,6 +1564,21 @@
         function closeAppVersionModal() {
             const modal = document.getElementById('appVersionModal');
             if (modal) modal.classList.remove('active');
+        }
+
+        // User Dropdown Menu
+        const userProfileBtn = document.getElementById('userProfileBtn');
+        const userDropdownMenu = document.getElementById('userDropdownMenu');
+        if (userProfileBtn && userDropdownMenu) {
+            userProfileBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                userDropdownMenu.classList.toggle('show');
+            });
+            document.addEventListener('click', function(e) {
+                if (!userProfileBtn.contains(e.target) && !userDropdownMenu.contains(e.target)) {
+                    userDropdownMenu.classList.remove('show');
+                }
+            });
         }
     </script>
 

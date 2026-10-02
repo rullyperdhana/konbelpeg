@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class RealisasiTpp extends Model
 {
     protected $fillable = [
-        'pegawai_id', 'periode', 'tpp_bruto', 'nominal_plt', 'tpp_netto',
+        'pegawai_id', 'periode', 'periode_kas', 'bulan_kinerja', 'tahap_bayar', 'keterangan_bayar',
+        'tpp_bruto', 'nominal_plt', 'tpp_netto',
         'pph_21', 'potongan_lainnya', 'iuran_iwp', 'total_dibayarkan', 'raw_data',
     ];
 

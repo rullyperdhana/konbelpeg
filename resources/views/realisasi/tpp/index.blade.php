@@ -201,12 +201,37 @@ function exportData(type) {
             <tbody>
                 @forelse($realisasis as $index => $pegawai)
                 @php 
-                    $tpp = $pegawai->realisasiTpps->first();
-                    $totalPotongan = $tpp ? ($tpp->pph_21 + $tpp->potongan_lainnya + $tpp->iuran_iwp) : 0;
+                    $tppRecords = $pegawai->realisasiTpps;
+                    $hasTpp = $tppRecords->isNotEmpty();
+                    $tppBrutoTotal = $tppRecords->sum('tpp_bruto');
+                    $nominalPltTotal = $tppRecords->sum('nominal_plt');
+                    $totalPotongan = $tppRecords->sum(fn ($t) => $t->pph_21 + $t->potongan_lainnya + $t->iuran_iwp);
+                    $totalDibayarkan = $tppRecords->sum('total_dibayarkan');
                 @endphp
-                <tr style="{{ !$tpp ? 'background-color: #fef2f2;' : '' }}">
+                <tr style="{{ !$hasTpp ? 'background-color: #fef2f2;' : '' }}">
                     <td class="center">{{ $realisasis->firstItem() + $index }}</td>
-                    <td class="center" style="font-weight: 600;">{{ $periode ?: 'Semua Periode' }}</td>
+                    <td class="center" style="font-size: 11px;">
+                        @if(!$hasTpp)
+                            <span style="font-weight: 600; color: #64748b;">{{ $periode ?: 'Semua Periode' }}</span>
+                        @elseif($tppRecords->count() === 1)
+                            <div style="font-weight: 700; color: #1e293b;">{{ $tppRecords[0]->periode_kas ?: $tppRecords[0]->periode }}</div>
+                            @if($tppRecords[0]->bulan_kinerja)
+                                <div style="font-size: 10px; color: #0284c7; margin-top: 2px;">
+                                    <i class="ph ph-briefcase"></i> {{ $tppRecords[0]->bulan_kinerja }} ({{ $tppRecords[0]->tahap_bayar ?: 'Reguler' }})
+                                </div>
+                            @endif
+                        @else
+                            <div style="font-weight: 700; color: #1e293b;">{{ $tppRecords[0]->periode_kas ?: $periode }}</div>
+                            <span style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-top: 2px;">
+                                {{ $tppRecords->count() }}x Pencairan Kas
+                            </span>
+                            <div style="font-size: 9.5px; color: #64748b; margin-top: 2px;">
+                                @foreach($tppRecords as $t)
+                                    <div>&bull; {{ $t->tahap_bayar ?: 'Tahap' }}: {{ $t->bulan_kinerja }} (Rp {{ number_format($t->total_dibayarkan, 0, ',', '.') }})</div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </td>
                     <td>
                         <div style="font-weight: 600; color: #0f172a;">{{ $pegawai->nama ?? 'Tidak Diketahui' }}</div>
                         <div style="font-size: 11px; color: #64748b;">NIP: {{ $pegawai->nip ?? '-' }} <span style="display:inline-block; margin-left: 6px; padding: 2px 6px; background: #e2e8f0; border-radius: 4px; font-size: 10px;">{{ $pegawai->status_pegawai ?? '-' }}</span></div>
@@ -215,20 +240,20 @@ function exportData(type) {
                         <div style="font-weight: 500; font-size: 11px;">{{ $pegawai->unitKerja?->skpd ?? '-' }}</div>
                         <div style="font-size: 10px; color: #64748b;">{{ $pegawai->jabatan?->nama ?? '-' }}</div>
                     </td>
-                    @if($tpp)
-                        <td class="money">Rp {{ number_format($tpp->tpp_bruto, 0, ',', '.') }}</td>
-                        <td class="money" style="color: #0284c7;">Rp {{ number_format($tpp->nominal_plt, 0, ',', '.') }}</td>
+                    @if($hasTpp)
+                        <td class="money">Rp {{ number_format($tppBrutoTotal, 0, ',', '.') }}</td>
+                        <td class="money" style="color: #0284c7;">Rp {{ number_format($nominalPltTotal, 0, ',', '.') }}</td>
                         <td class="money" style="color: #ef4444;">Rp {{ number_format($totalPotongan, 0, ',', '.') }}</td>
-                        <td class="money" style="color: #16a34a;">Rp {{ number_format($tpp->total_dibayarkan, 0, ',', '.') }}</td>
+                        <td class="money" style="color: #16a34a; font-weight: 700;">Rp {{ number_format($totalDibayarkan, 0, ',', '.') }}</td>
                     @else
-                        <td class="center" colspan="3">
+                        <td class="center" colspan="4">
                             <span style="background: #fee2e2; color: #991b1b; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">Rp 0 (Belum Dibayarkan)</span>
                         </td>
                     @endif
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="center" style="padding: 40px; color: #64748b;">Data belum ada atau tidak ditemukan.</td>
+                    <td colspan="8" class="center" style="padding: 40px; color: #64748b;">Data belum ada atau tidak ditemukan.</td>
                 </tr>
                 @endforelse
             </tbody>
@@ -252,32 +277,182 @@ function exportData(type) {
 
 <!-- Modal Upload -->
 <div class="modal-overlay" id="uploadModal">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 680px; width: 95%;">
         <div class="modal-header">
-            <h3>Upload Data Realisasi TPP</h3>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <i class="ph ph-file-arrow-up" style="font-size: 20px; color: var(--luno-primary);"></i>
+                <h3 style="margin: 0; font-size: 17px; font-weight: 700;">Upload & Pencatatan Realisasi TPP</h3>
+            </div>
             <button class="btn-close" onclick="closeModal('uploadModal')">&times;</button>
         </div>
-        <div class="card" style="padding: 20px;">
-            <h2 style="margin-top: 0; font-size: 16px; margin-bottom: 16px;">Import Data Realisasi TPP (Excel)</h2>
+        <div class="card" style="padding: 24px; border: none; box-shadow: none;">
+            <div style="margin-bottom: 20px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px;">
+                <div style="display: flex; gap: 10px; align-items: flex-start;">
+                    <i class="ph ph-info" style="font-size: 20px; color: #3b82f6; margin-top: 2px;"></i>
+                    <div style="font-size: 12.5px; color: #475569; line-height: 1.5;">
+                        <strong style="color: #0f172a;">Pencatatan Kas Berbasis Dual-Field:</strong><br>
+                        Realisasi kas dicatat berdasarkan <strong>Bulan Realisasi Kas (SP2D)</strong> untuk kepatuhan laporan kas daerah/BPKAD, dan dipadukan dengan <strong>Bulan Hak Kinerja</strong> ASN. Untuk bulan Desember yang memiliki 2x pencairan (Kinerja Nov & Kinerja Des), silakan unggah bertahap tanpa saling menimpa.
+                    </div>
+                </div>
+            </div>
+
             <form id="importTppForm" action="/realisasi/tpp/import" method="POST" enctype="multipart/form-data">
                 @csrf
-                <div style="display: flex; gap: 10px; align-items: flex-end;">
-                    <div style="flex: 1;">
-                        <label style="display: block; margin-bottom: 8px; font-size: 12px; color: #64748b;">Pilih File Excel / CSV / DBF</label>
-                        <input type="file" name="file" class="form-control" accept=".xlsx,.csv,.xls,.dbf" required>
+
+                <!-- File Input -->
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: #334155;">Pilih File Excel / CSV (.xlsx, .csv, .xls)</label>
+                    <input type="file" name="file" class="form-control" accept=".xlsx,.csv,.xls" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    <p style="margin: 6px 0 0 0; font-size: 11px; color: #94a3b8;">Format kolom yang didukung: NIP, Periode, Jabatan, TPP Bruto, TPP Netto, PPh 21, Potongan TPP (Lainnya), Iuran IWP, Yang Dibayarkan (Transfer).</p>
+                </div>
+
+                <!-- Dual Field Grid -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: #334155;">
+                            <i class="ph ph-calendar-check" style="color: #2563eb;"></i> Bulan Realisasi Kas (SP2D)
+                        </label>
+                        <select name="periode_kas" id="modal_periode_kas" class="form-control" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                            @php
+                                $months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+                                $currentYear = date('Y');
+                            @endphp
+                            @foreach($months as $m)
+                                <option value="{{ $m }} {{ $currentYear }}" {{ $m == 'Februari' ? 'selected' : '' }}>{{ $m }} {{ $currentYear }}</option>
+                            @endforeach
+                            @foreach($months as $m)
+                                <option value="{{ $m }} {{ $currentYear - 1 }}">{{ $m }} {{ $currentYear - 1 }}</option>
+                            @endforeach
+                        </select>
+                        <small style="display: block; margin-top: 4px; font-size: 11px; color: #64748b;">Bulan terbitnya SP2D / uang keluar dari kas daerah.</small>
                     </div>
+
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: #334155;">
+                            <i class="ph ph-briefcase" style="color: #059669;"></i> Bulan Hak Kinerja Pegawai
+                        </label>
+                        <select name="bulan_kinerja" id="modal_bulan_kinerja" class="form-control" required style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                            @foreach($months as $m)
+                                <option value="{{ $m }} {{ $currentYear }}" {{ $m == 'Januari' ? 'selected' : '' }}>{{ $m }} {{ $currentYear }}</option>
+                            @endforeach
+                            <option value="THR {{ $currentYear }}">THR {{ $currentYear }}</option>
+                            <option value="Gaji 13 {{ $currentYear }}">Gaji 13 {{ $currentYear }}</option>
+                            @foreach($months as $m)
+                                <option value="{{ $m }} {{ $currentYear - 1 }}">{{ $m }} {{ $currentYear - 1 }}</option>
+                            @endforeach
+                        </select>
+                        <small style="display: block; margin-top: 4px; font-size: 11px; color: #64748b;">Bulan capaian kerja / hak kinerja ASN yang dibayar.</small>
+                    </div>
+                </div>
+
+                <!-- Tahap Pencairan & Keterangan -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: #334155;">
+                            <i class="ph ph-steps" style="color: #d97706;"></i> Tahap Pencairan
+                        </label>
+                        <select name="tahap_bayar" id="modal_tahap_bayar" class="form-control" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                            <option value="Reguler" selected>Reguler (Pencairan Bulanan Biasa)</option>
+                            <option value="Tahap 1">Tahap 1 (Awal Desember - Kinerja Nov)</option>
+                            <option value="Tahap 2">Tahap 2 (Akhir Desember - Kinerja Des)</option>
+                            <option value="Susulan">Susulan</option>
+                            <option value="THR">THR</option>
+                            <option value="Gaji 13">Gaji Ke-13</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label style="display: block; margin-bottom: 6px; font-size: 12px; font-weight: 600; color: #334155;">
+                            Catatan / No. SP2D (Opsional)
+                        </label>
+                        <input type="text" name="keterangan_bayar" id="modal_keterangan_bayar" class="form-control" placeholder="Contoh: SP2D No. 012/TPP/2026" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px;">
+                    </div>
+                </div>
+
+                <!-- Alert Khusus Desember -->
+                <div id="desemberNotice" style="display: none; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 12px; color: #1e40af;">
+                    <div style="display: flex; gap: 8px; align-items: flex-start;">
+                        <i class="ph ph-info" style="font-size: 18px; color: #2563eb; margin-top: 1px;"></i>
+                        <div>
+                            <strong>Pencairan Bulan Desember (2 Tahap):</strong><br>
+                            Bulan Desember memiliki 2 pencairan terpisah:<br>
+                            &bull; <strong>Tahap 1</strong>: Pembayaran Kinerja November (dicairkan awal Desember)<br>
+                            &bull; <strong>Tahap 2</strong>: Pembayaran Kinerja Desember (dicairkan akhir Desember)<br>
+                            Keduanya tersimpan terpisah dan aman dari saling menimpa.
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px;">
+                    <button type="button" class="btn" onclick="closeModal('uploadModal')" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;">Batal</button>
                     <button type="submit" class="btn btn-primary" id="btnUploadTpp">
-                        <i class="ph ph-upload"></i>
-                        Upload & Proses Data
+                        <i class="ph ph-upload"></i> Upload & Proses Data
                     </button>
                 </div>
-                <p style="margin-top: 8px; font-size: 12px; color: #94a3b8;">Format kolom yang didukung: NIP, Periode, Jabatan, TPP Bruto, TPP Netto, PPh 21, Potongan TPP (Lainnya), Iuran IWP, Yang Dibayarkan (Transfer).</p>
             </form>
         </div>
 
-        <!-- Script for Progress Bar -->
+        <!-- Script for Progress Bar & Auto-Sync -->
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script>
+            // Dual-field Auto Sync
+            const selKas = document.getElementById('modal_periode_kas');
+            const selKinerja = document.getElementById('modal_bulan_kinerja');
+            const selTahap = document.getElementById('modal_tahap_bayar');
+            const desNotice = document.getElementById('desemberNotice');
+
+            const monthsOrder = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+
+            function handleKasChange() {
+                if (!selKas || !selKinerja || !selTahap) return;
+                const val = selKas.value;
+                const parts = val.split(' ');
+                const m = parts[0];
+                const y = parts[1] || new Date().getFullYear();
+
+                if (m === 'Desember') {
+                    if (desNotice) desNotice.style.display = 'block';
+                    if (selTahap.value === 'Reguler') {
+                        selTahap.value = 'Tahap 1';
+                    }
+                    if (selTahap.value === 'Tahap 1') {
+                        selKinerja.value = 'November ' + y;
+                    } else if (selTahap.value === 'Tahap 2') {
+                        selKinerja.value = 'Desember ' + y;
+                    }
+                } else {
+                    if (desNotice) desNotice.style.display = 'none';
+                    selTahap.value = 'Reguler';
+                    const idx = monthsOrder.indexOf(m);
+                    if (idx > 0) {
+                        selKinerja.value = monthsOrder[idx - 1] + ' ' + y;
+                    } else if (idx === 0) {
+                        selKinerja.value = 'Desember ' + (parseInt(y) - 1);
+                    }
+                }
+            }
+
+            function handleTahapChange() {
+                if (!selKas || !selKinerja || !selTahap) return;
+                const tahap = selTahap.value;
+                const val = selKas.value;
+                const parts = val.split(' ');
+                const y = parts[1] || new Date().getFullYear();
+
+                if (tahap === 'Tahap 1') {
+                    selKas.value = 'Desember ' + y;
+                    selKinerja.value = 'November ' + y;
+                    if (desNotice) desNotice.style.display = 'block';
+                } else if (tahap === 'Tahap 2') {
+                    selKas.value = 'Desember ' + y;
+                    selKinerja.value = 'Desember ' + y;
+                    if (desNotice) desNotice.style.display = 'block';
+                }
+            }
+
+            if (selKas) selKas.addEventListener('change', handleKasChange);
+            if (selTahap) selTahap.addEventListener('change', handleTahapChange);
+
             document.getElementById('importTppForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 
@@ -292,7 +467,7 @@ function exportData(type) {
                 
                 // Tampilkan SweetAlert Progress
                 Swal.fire({
-                    title: 'Mengunggah & Memproses Data',
+                    title: 'Mengunggah & Memproses Data Realisasi TPP',
                     html: `
                         <div style="margin-top: 15px; margin-bottom: 10px; text-align: left; font-size: 13px; color: #64748b;" id="progress-text">Menyiapkan file...</div>
                         <div style="width: 100%; background-color: #e2e8f0; border-radius: 999px; height: 12px; overflow: hidden;">
@@ -324,7 +499,6 @@ function exportData(type) {
                                 if (data.total > 0) {
                                     document.getElementById('progress-bar').style.width = percent + '%';
                                 } else {
-                                    // Indeterminate width behavior
                                     let currWidth = parseInt(document.getElementById('progress-bar').style.width) || 0;
                                     let newWidth = (currWidth + 5) % 100;
                                     document.getElementById('progress-bar').style.width = newWidth + '%';
@@ -348,7 +522,7 @@ function exportData(type) {
                         Swal.fire({
                             icon: 'success',
                             title: 'Selesai!',
-                            text: 'Data berhasil diimpor.',
+                            text: 'Data Realisasi TPP berhasil diimpor.',
                             timer: 2000,
                             showConfirmButton: false
                         }).then(() => {
@@ -363,7 +537,6 @@ function exportData(type) {
                 .catch(error => {
                     clearInterval(pollInterval);
                     console.error(error);
-                    // Jika server tidak membalas JSON tapi redirect (fallback HTML)
                     window.location.reload(); 
                 });
             });
