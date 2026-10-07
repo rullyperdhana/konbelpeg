@@ -13,6 +13,11 @@
     <!-- Phosphor Icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
 
+    @if(config('services.turnstile.site_key'))
+        <!-- Cloudflare Turnstile Script -->
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    @endif
+
     <style>
         :root {
             --primary: #1e40af;
@@ -616,6 +621,13 @@
 
             <form action="{{ route('login') }}" method="POST" id="loginForm">
                 @csrf
+
+                {{-- Honeypot Anti-Bot Field (Tak terlihat oleh manusia, menjebak bot otomatis) --}}
+                <div style="position: absolute; left: -9999px; top: -9999px; opacity: 0; pointer-events: none;" aria-hidden="true" tabindex="-1">
+                    <label for="system_verify_token">Bidang Keamanan Sistem</label>
+                    <input type="text" name="system_verify_token" id="system_verify_token" value="" autocomplete="off" tabindex="-1">
+                </div>
+
                 <div class="form-group">
                     <label class="form-label" for="email">Alamat Email Pengguna</label>
                     <div class="input-wrapper">
@@ -659,6 +671,12 @@
                         <span>Ingat sesi masuk saya</span>
                     </label>
                 </div>
+
+                @if(config('services.turnstile.site_key'))
+                    <div style="display: flex; justify-content: center; margin-bottom: 1.25rem;">
+                        <div class="cf-turnstile" data-sitekey="{{ config('services.turnstile.site_key') }}" data-theme="auto"></div>
+                    </div>
+                @endif
 
                 <button type="submit" class="btn-submit" id="submitBtn">
                     <span>Masuk ke Dasbor</span>

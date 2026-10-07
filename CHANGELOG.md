@@ -2,6 +2,23 @@
 
 Dokumen ini mencatat seluruh riwayat pembaruan, evolusi fitur, perbaikan bug, dan progres pengembangan sistem **KONBELPEG (Rekonsiliasi Realisasi Belanja Pegawai & SIMGAJI)**.
 
+## 📌 [v2.11.0] - 2026-10-07
+### 🛡️ Keamanan Sistem, Proteksi Anti-Bot, Mitigasi Serangan & Hardening Halaman Login
+- **Proteksi Anti-Bot Cerdas (Honeypot & Cloudflare Turnstile)**:
+  - **Honeypot Trap**: Memasang bidang verifikasi tersembunyi (`system_verify_token`) pada formulir masuk. Bot otomatis yang memindai formulir dan mengisinya akan langsung ditolak dan diblokir sementara tanpa mengganggu kenyamanan pegawai ASN (100% transparan tanpa teka-teki gambar).
+  - **Dukungan Cloudflare Turnstile**: Integrasi verifikasi captcha modern berbasis Cloudflare Turnstile secara *plug-and-play* melalui `.env` (`TURNSTILE_SITE_KEY` & `TURNSTILE_SECRET_KEY`) sebagai alternatif reCAPTCHA yang ringan dan privasi terjamin.
+- **Lapisan Keamanan Autentikasi & Brute-Force Protection**:
+  - **Rate Limiting Ganda pada Auth**: Penguncian otomatis (*lockout*) 60 detik setelah 5 kali gagal memasukkan kata sandi per kombinasi akun & IP, serta pembatasan global maksimal 15 kali percobaan per menit per alamat IP di `AuthController.php`.
+  - **Route Throttling**: Pembatasan frekuensi akses formulir login (`throttle:20,1` pada rute `POST /login` dan `throttle:60,1` pada rute `GET /login`) untuk meredam serangan bot credential stuffing.
+  - **Security Headers Middleware**: Menambahkan middleware global `SecurityHeaders` yang menyuntikkan header keamanan standar industri: `X-Frame-Options: SAMEORIGIN` (anti-clickjacking), `X-Content-Type-Options: nosniff` (anti-MIME sniffing), `X-XSS-Protection: 1; mode=block`, `Referrer-Policy: strict-origin-when-cross-origin`, dan `Permissions-Policy`.
+- **Pembaruan Visual Institusional Halaman Login (`/login`)**:
+  - Tampilan visual formal dan profesional berstandar korporat/pemerintahan: menghapus elemen orbs warna-warni dan kartu kredensial bawaan/default yang sebelumnya tampil di halaman masuk.
+  - Menyelaraskan teks identitas menjadi netral institusional Pemerintah Daerah (Badan Keuangan & Aset Daerah).
+- **Pengujian Otomatis (*Feature Tests*)**:
+  - Penambahan skenario uji pada `tests/Feature/AuthTest.php` untuk memvalidasi keberadaan field honeypot serta penolakan bot secara otomatis (70 tests lulus, 298 asersi).
+
+---
+
 ## 📌 [v2.10.0] - 2026-10-07
 ### 📤 Modul Upload & Sinkronisasi Master Pegawai SIMPEG via Web Spreadsheet
 - **Manajemen & Unggah Berkas SIMPEG (`/master/pegawai-simpeg`)**:

@@ -28,10 +28,11 @@
 3. [Daftar Endpoint & Rute Lengkap](#-daftar-endpoint--rute-lengkap)
 4. [Skema & Struktur Basis Data](#-skema--struktur-basis-data)
 5. [Spesifikasi Database DBF SIMGAJI](#-spesifikasi-database-dbf-simgaji)
-6. [Riwayat Pembaruan & Progres Update](#-riwayat-pembaruan--progres-update)
-7. [Panduan Instalasi & Menjalankan](#-panduan-instalasi--menjalankan)
-8. [Standar Kode & Pengujian](#-standar-kode--pengujian)
-9. [Lisensi](#-lisensi)
+6. [Keamanan, Proteksi Anti-Bot & Mitigasi DDoS](#-keamanan-proteksi-anti-bot--mitigasi-ddos)
+7. [Riwayat Pembaruan & Progres Update](#-riwayat-pembaruan--progres-update)
+8. [Panduan Instalasi & Menjalankan](#-panduan-instalasi--menjalankan)
+9. [Standar Kode & Pengujian](#-standar-kode--pengujian)
+10. [Lisensi](#-lisensi)
 
 ---
 
@@ -275,11 +276,63 @@ Sistem membaca database keluaran SIMGAJI secara native tanpa ketergantungan driv
 
 ---
 
+## 🛡️ Keamanan, Proteksi Anti-Bot & Mitigasi DDoS
+
+Dengan sistem yang telah daring (*online*) pada VPS produksi (`https://konbelpeg.bkadtapinkab.online`), diterapkan proteksi keamanan berlapis (*defense-in-depth*) baik di tingkat aplikasi maupun infrastruktur:
+
+### 1. Proteksi Tingkat Aplikasi (Laravel)
+- **Honeypot Anti-Bot Trap (Zero User Friction)**:
+  Formulir autentikasi dilengkapi field jebakan tersembunyi (`system_verify_token`). Bot otomatis / web crawler yang mengisi bidang ini akan langsung diblokir secara transparan tanpa mengganggu atau membebani pegawai ASN dengan teka-teki gambar.
+- **Proteksi Brute-Force & Credential Stuffing**:
+  - *Akun Lockout*: Akun dikunci selama 60 detik jika terjadi 5 kali kegagalan kata sandi berturut-turut.
+  - *IP Rate Limiting*: Batas maksimal 15 kali percobaan per menit per alamat IP pada `AuthController`.
+  - *Route Throttling*: Akses rute dibatasi oleh middleware (`throttle:20,1` untuk POST login dan `throttle:60,1` untuk GET login).
+- **Security Headers Middleware**:
+  Menyisipkan header perlindungan peramban standar:
+  - `X-Frame-Options: SAMEORIGIN` (Mencegah serangan *Clickjacking*).
+  - `X-Content-Type-Options: nosniff` (Mencegah *MIME sniffing*).
+  - `X-XSS-Protection: 1; mode=block` (Proteksi *Cross-Site Scripting*).
+  - `Referrer-Policy: strict-origin-when-cross-origin` (Melindungi privasi data rujukan).
+  - `Permissions-Policy: geolocation=(), microphone=(), camera=()` (Menutup akses sensor berbahaya).
+- **Dukungan Cloudflare Turnstile (Opsional)**:
+  Sistem telah mendukung widget anti-bot modern Cloudflare Turnstile secara *plug-and-play*. Cukup tambahkan ke `.env`:
+  ```env
+  TURNSTILE_SITE_KEY=your_site_key_here
+  TURNSTILE_SECRET_KEY=your_secret_key_here
+  ```
+
+### 2. Rekomendasi Hardening Tingkat Server (VPS / aaPanel / Cloudflare)
+1. **Cloudflare Proxy (Awan Oranye) - Mitigasi DDoS Mutlak**:
+   - Aktifkan fitur *Proxy (Orange Cloud)* pada DNS domain di dashboard Cloudflare untuk menyembunyikan IP asli VPS dan meredam serangan Layer 3/4 SYN/UDP Flood serta Layer 7 HTTP Flood di tingkat jaringan global edge Cloudflare (kapasitas mitigasi >200 Tbps).
+   - Aktifkan *Bot Fight Mode* atau *Under Attack Mode* bila terjadi lonjakan trafik botnet yang tidak biasa.
+2. **Environment Produksi**:
+   - Pastikan pada file `.env` di server VPS:
+     ```env
+     APP_ENV=production
+     APP_DEBUG=false
+     ```
+3. **Nginx Connection & Rate Limiting (aaPanel)**:
+   - Tambahkan batas koneksi per IP pada blok `http` Nginx:
+     ```nginx
+     limit_conn_zone $binary_remote_addr zone=addr:10m;
+     limit_req_zone $binary_remote_addr zone=req_limit:10m rate=10r/s;
+     ```
+   - Dan di dalam blok `server`:
+     ```nginx
+     limit_conn addr 20;
+     limit_req zone=req_limit burst=20 nodelay;
+     ```
+4. **Firewall & Fail2ban**:
+   - Aktifkan modul *Syssafe / Fail2ban* di aaPanel untuk otomatis memblokir IP penyerang SSH dan web scan otomatis.
+
+---
+
 ## 📈 Riwayat Pembaruan & Progres Update
 
 Seluruh riwayat perkembangan versi aplikasi dari awal inisiasi hingga rilis terkini didokumentasikan secara rinci pada berkas [CHANGELOG.md](CHANGELOG.md).
 
 Ringkasan versi:
+- **v2.11.0 (07 Oktober 2026)**: Peningkatan Keamanan & Hardening VPS: Proteksi Honeypot Anti-Bot otomatis pada login, integrasi opsional Cloudflare Turnstile, Rate Limiting ganda (Lockout 5x & IP limit 15x/menit), Security Headers Middleware (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy), Route throttling, pembersihan visual institusional login page, dan panduan mitigasi DDoS level VPS/Cloudflare.
 - **v2.10.0 (07 Oktober 2026)**: Modul Upload & Sinkronisasi Master Pegawai SIMPEG via Web Spreadsheet (`/master/pegawai-simpeg`), tombol pintas di halaman pegawai, template Excel resmi, dukungan Cloudflare reverse proxy (`trustProxies`), dan feature tests.
 - **v2.9.0 (03 Oktober 2026)**: Modul Audit Tunjangan Keluarga SIMGAJI (`/laporan/audit-tunjangan-keluarga`), uji silang dobel tunjangan anak (2%+2%), pasangan saling menunjang (10%+10%), kelebihan kuota anak (>2 anak), fitur tindak lanjut pencatatan bukti STS Kasda, dan paginasi modern.
 - **v2.8.0 (02 Oktober 2026)**: Integrasi DBF Riwayat Keluarga (`KEL`), atribut finansial master pegawai (NIK, No. Rekening, Bank Penyalur), modul Trace Penggajian Personal (`/laporan/trace-gaji`), penambahan status pegawai pada Unmatched NIP, dan optimasi sinkronisasi database.

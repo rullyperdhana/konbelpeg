@@ -69,4 +69,29 @@ class AuthTest extends TestCase
         $this->assertGuest();
         $response->assertRedirect('/login');
     }
+
+    public function test_login_screen_contains_honeypot_field(): void
+    {
+        $response = $this->get('/login');
+
+        $response->assertStatus(200);
+        $response->assertSee('name="system_verify_token"', false);
+    }
+
+    public function test_bot_submitting_honeypot_field_is_rejected(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'admin@pemda.go.id',
+            'password' => bcrypt('password'),
+        ]);
+
+        $response = $this->from('/login')->post('/login', [
+            'email' => 'admin@pemda.go.id',
+            'password' => 'password',
+            'system_verify_token' => 'spambot-payload',
+        ]);
+
+        $this->assertGuest();
+        $response->assertSessionHasErrors('email');
+    }
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -29,6 +30,45 @@ class AuthController extends Controller
      */
     public function login(Request $request): RedirectResponse
     {
+        // 1. Anti-Bot Honeypot Trap
+        // Field ini tersembunyi dari pandangan manusia dan hanya diisi oleh robot/crawler otomatis.
+        if ($request->filled('system_verify_token')) {
+            RateLimiter::hit('login_ip:'.$request->ip(), 300);
+
+            throw ValidationException::withMessages([
+                'email' => 'Permintaan tidak valid atau terdeteksi bot otomatis.',
+            ]);
+        }
+
+        // 2. Cloudflare Turnstile Verification (Opsional jika kredensial diatur di .env)
+        $turnstileSecret = config('services.turnstile.secret_key');
+        if (! empty($turnstileSecret)) {
+            $turnstileToken = $request->input('cf-turnstile-response');
+
+            if (empty($turnstileToken)) {
+                throw ValidationException::withMessages([
+                    'email' => 'Verifikasi keamanan captcha Turnstile diperlukan. Silakan centang atau muat ulang halaman.',
+                ]);
+            }
+
+            try {
+                $response = Http::asForm()->timeout(5)->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
+                    'secret' => $turnstileSecret,
+                    'response' => $turnstileToken,
+                    'remoteip' => $request->ip(),
+                ]);
+
+                if (! $response->successful() || ! $response->json('success')) {
+                    throw ValidationException::withMessages([
+                        'email' => 'Verifikasi captcha gagal atau kedaluwarsa. Silakan coba kembali.',
+                    ]);
+                }
+            } catch (\Exception $e) {
+                // Jangan blokir jika terjadi gangguan jaringan sementara ke Cloudflare API
+                report($e);
+            }
+        }
+
         $credentials = $request->validate([
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
