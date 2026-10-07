@@ -518,6 +518,17 @@ class RekonsiliasiSimgajiController extends Controller
         $totalKeluargaDb = SimgajiKeluarga::count();
         $totalPegawaiWithFinancial = Pegawai::whereNotNull('nik')->orWhereNotNull('no_rekening')->count();
 
+        $hasKelInFiles = false;
+        foreach ($files as $f) {
+            if (($f['type'] ?? '') === 'kel') {
+                $hasKelInFiles = true;
+                break;
+            }
+        }
+        if (! $hasKelInFiles && $activeKel !== null) {
+            $files[] = $activeKel;
+        }
+
         return view('master.simgaji_dbf', [
             'files' => $files,
             'activeMstPgw' => $activeMstPgw,
@@ -591,10 +602,10 @@ class RekonsiliasiSimgajiController extends Controller
         $files = $this->getDbfManifest();
 
         // Nonaktifkan file lain yang memiliki tipe yang sama
-        foreach ($files as &$f) {
+        foreach ($files as $idx => $f) {
             $fType = $f['type'] ?? 'mst_pgw';
             if ($fType === $finalType) {
-                $f['is_active'] = false;
+                $files[$idx]['is_active'] = false;
             }
         }
 
@@ -695,15 +706,15 @@ class RekonsiliasiSimgajiController extends Controller
         $activated = false;
         $name = '';
 
-        foreach ($files as &$f) {
+        foreach ($files as $idx => $f) {
             $fType = $f['type'] ?? 'mst_pgw';
             if ($fType === $targetType) {
                 if ($f['id'] === $id) {
-                    $f['is_active'] = true;
+                    $files[$idx]['is_active'] = true;
                     $activated = true;
                     $name = $f['filename'];
                 } else {
-                    $f['is_active'] = false;
+                    $files[$idx]['is_active'] = false;
                 }
             }
         }
@@ -856,9 +867,9 @@ class RekonsiliasiSimgajiController extends Controller
         }
 
         if ($wasActive && ! empty($newFiles)) {
-            foreach ($newFiles as &$nf) {
+            foreach ($newFiles as $nIdx => $nf) {
                 if (($nf['type'] ?? 'mst_pgw') === $deletedType) {
-                    $nf['is_active'] = true;
+                    $newFiles[$nIdx]['is_active'] = true;
                     break;
                 }
             }
@@ -870,7 +881,115 @@ class RekonsiliasiSimgajiController extends Controller
         return redirect()->back()->with('success', "File database '{$deletedName}' berhasil dihapus.");
     }
 
-    private function getDbfManifest(): array
+    public function scanDirectoryForDbfs(string $directory): array
+    {
+        $results = [];
+        if (! is_dir($directory)) {
+            return $results;
+        }
+
+        $items = @scandir($directory) ?: [];
+        foreach ($items as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+            $fullPath = $directory.DIRECTORY_SEPARATOR.$item;
+            if (is_file($fullPath) && strcasecmp((string) pathinfo($item, PATHINFO_EXTENSION), 'dbf') === 0) {
+                $results[] = $fullPath;
+            }
+        }
+
+        return $results;
+    }
+
+    public function detectDbfType(string $filename, string $filePath = ''): string
+    {
+        $upper = strtoupper($filename.' '.basename($filePath));
+        if (str_contains($upper, 'KEL')) {
+            return 'kel';
+        }
+        if (str_contains($upper, 'HIS_GPOK') || str_contains($upper, 'GPOK')) {
+            return 'his_gpok';
+        }
+        if (str_contains($upper, 'MST') || str_contains($upper, 'PGW')) {
+            return 'mst_pgw';
+        }
+
+        if (! empty($filePath) && file_exists($filePath)) {
+            try {
+                $table = new TableReader($filePath, ['encoding' => 'cp850']);
+                $cols = array_map(fn ($c) => strtolower($c->getName()), $table->getColumns());
+                if (in_array('nmkel', $cols) || in_array('kdhubkel', $cols)) {
+                    return 'kel';
+                }
+                if (in_array('nomorskep', $cols) || in_array('penerbitsk', $cols) || in_array('tmtgaji', $cols)) {
+                    return 'his_gpok';
+                }
+            } catch (\Exception $e) {
+                // Abaikan kesalahan inspeksi
+            }
+        }
+
+        return 'mst_pgw';
+    }
+
+    public function resolveActualPath(array|string $fileOrPath): ?string
+    {
+        $path = is_array($fileOrPath) ? ($fileOrPath['path'] ?? '') : $fileOrPath;
+        $storedName = is_array($fileOrPath) ? ($fileOrPath['stored_name'] ?? '') : '';
+        $filename = is_array($fileOrPath) ? ($fileOrPath['filename'] ?? '') : '';
+
+        // 1. Cek path langsung jika ada
+        if (! empty($path) && file_exists($path)) {
+            return $path;
+        }
+
+        // 2. Cek di storage/app/simgaji
+        if (! empty($storedName) && file_exists(storage_path('app/simgaji/'.$storedName))) {
+            return storage_path('app/simgaji/'.$storedName);
+        }
+        if (! empty($filename) && file_exists(storage_path('app/simgaji/'.$filename))) {
+            return storage_path('app/simgaji/'.$filename);
+        }
+        if (! empty($path) && file_exists(storage_path('app/simgaji/'.basename($path)))) {
+            return storage_path('app/simgaji/'.basename($path));
+        }
+
+        // 3. Cek di root aplikasi
+        if (! empty($filename) && file_exists(base_path($filename))) {
+            return base_path($filename);
+        }
+        if (! empty($path) && file_exists(base_path(basename($path)))) {
+            return base_path(basename($path));
+        }
+
+        // 4. Pencocokan case-insensitive / prefix stripping di storage dan base_path
+        $allStorage = $this->scanDirectoryForDbfs(storage_path('app/simgaji'));
+        $allBase = $this->scanDirectoryForDbfs(base_path());
+        $allCandidates = array_merge($allStorage, $allBase);
+
+        $targetNames = array_values(array_filter([
+            strtolower($storedName),
+            strtolower($filename),
+            strtolower(basename($path)),
+            strtolower((string) preg_replace('/^\d+_/', '', $storedName)),
+            strtolower((string) preg_replace('/^\d+_/', '', basename($path))),
+        ]));
+
+        foreach ($allCandidates as $cand) {
+            $candLower = strtolower(basename($cand));
+            $candClean = strtolower((string) preg_replace('/^\d+_/', '', basename($cand)));
+            foreach ($targetNames as $tName) {
+                if (! empty($tName) && ($candLower === $tName || $candClean === $tName)) {
+                    return $cand;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public function getDbfManifest(): array
     {
         $manifestPath = storage_path('app/simgaji/manifest.json');
         $files = [];
@@ -879,92 +998,112 @@ class RekonsiliasiSimgajiController extends Controller
             $files = json_decode(file_get_contents($manifestPath), true) ?: [];
         }
 
-        // Pastikan setiap file memiliki atribut 'type'
         $modified = false;
-        foreach ($files as &$f) {
-            if (empty($f['type'])) {
-                $f['type'] = str_contains(strtoupper($f['filename'] ?? ''), 'HIS_GPOK') ? 'his_gpok' : 'mst_pgw';
+
+        // 1. Validasi & koreksi path untuk setiap file yang terdaftar (tanpa referensi &)
+        foreach ($files as $idx => $f) {
+            $actual = $this->resolveActualPath($f);
+            if ($actual) {
+                if (($files[$idx]['path'] ?? '') !== $actual) {
+                    $files[$idx]['path'] = $actual;
+                    $modified = true;
+                }
+                if (empty($files[$idx]['size']) && file_exists($actual)) {
+                    $files[$idx]['size'] = round(filesize($actual) / (1024 * 1024), 2).' MB';
+                    $modified = true;
+                }
+            }
+            if (empty($files[$idx]['type'])) {
+                $files[$idx]['type'] = $this->detectDbfType($files[$idx]['filename'] ?? '', $actual ?: ($files[$idx]['path'] ?? ''));
                 $modified = true;
             }
         }
 
-        // Cek apakah default MST_PGW, HIS_GPOK, dan KEL sudah terdaftar
-        $hasMst = false;
-        $hasHis = false;
-        $hasKel = false;
-        foreach ($files as $f) {
-            if (($f['type'] ?? '') === 'mst_pgw') {
-                $hasMst = true;
+        // 2. Auto-discovery berkas di folder storage/app/simgaji dan root project
+        $storageDbfs = $this->scanDirectoryForDbfs(storage_path('app/simgaji'));
+        $baseDbfs = $this->scanDirectoryForDbfs(base_path());
+        $scannedCandidates = array_merge($storageDbfs, $baseDbfs);
+
+        $registeredPaths = array_map(fn ($item) => $item['path'] ?? '', $files);
+        $registeredStored = array_map(fn ($item) => $item['stored_name'] ?? '', $files);
+        $registeredFiles = array_map(fn ($item) => $item['filename'] ?? '', $files);
+
+        foreach ($scannedCandidates as $candidatePath) {
+            $candidateBasename = basename($candidatePath);
+            $cleanName = preg_replace('/^\d+_/', '', $candidateBasename);
+
+            if (in_array($candidatePath, $registeredPaths)
+                || in_array($candidateBasename, $registeredStored)
+                || in_array($candidateBasename, $registeredFiles)
+                || in_array($cleanName, $registeredFiles)) {
+                continue;
             }
-            if (($f['type'] ?? '') === 'his_gpok') {
-                $hasHis = true;
+
+            $type = $this->detectDbfType($candidateBasename, $candidatePath);
+
+            $recs = 0;
+            try {
+                $reader = new TableReader($candidatePath, ['encoding' => 'cp850']);
+                $recs = $reader->getRecordCount();
+            } catch (\Exception $e) {
+                $recs = ($type === 'kel') ? SimgajiKeluarga::count() : 0;
             }
-            if (($f['type'] ?? '') === 'kel') {
-                $hasKel = true;
-            }
+
+            $files[] = [
+                'id' => 'discovered_'.md5($candidatePath),
+                'type' => $type,
+                'filename' => $cleanName,
+                'stored_name' => $candidateBasename,
+                'path' => $candidatePath,
+                'size' => round(filesize($candidatePath) / (1024 * 1024), 2).' MB',
+                'records' => $recs,
+                'keterangan' => 'Berkas terdeteksi di '.(str_contains($candidatePath, 'storage') ? 'storage server' : 'direktori aplikasi'),
+                'uploaded_at' => date('d M Y H:i', filemtime($candidatePath)),
+                'is_active' => false,
+            ];
+            $modified = true;
         }
 
-        if (! $hasMst) {
-            $defaultFile = base_path('MST_PGW_2026-9-011600.DBF');
-            if (file_exists($defaultFile)) {
-                $files[] = [
-                    'id' => 'default_mst_pgw',
-                    'type' => 'mst_pgw',
-                    'filename' => basename($defaultFile),
-                    'stored_name' => basename($defaultFile),
-                    'path' => $defaultFile,
-                    'size' => round(filesize($defaultFile) / (1024 * 1024), 2).' MB',
-                    'records' => 20097,
-                    'keterangan' => 'Database Master Pegawai Awal (Bawaan)',
-                    'uploaded_at' => date('d M Y H:i', filemtime($defaultFile)),
-                    'is_active' => true,
-                ];
+        // 3. Pastikan setiap kategori (mst_pgw, his_gpok, kel) memiliki satu file aktif
+        foreach (['mst_pgw', 'his_gpok', 'kel'] as $catType) {
+            $activeIdx = null;
+            $catIndices = [];
+            foreach ($files as $idx => $f) {
+                if (($f['type'] ?? '') === $catType) {
+                    $catIndices[] = $idx;
+                    $actual = $this->resolveActualPath($f);
+                    if (! empty($f['is_active']) && $actual && file_exists($actual)) {
+                        if ($activeIdx === null) {
+                            $activeIdx = $idx;
+                        } else {
+                            $files[$idx]['is_active'] = false;
+                            $modified = true;
+                        }
+                    }
+                }
+            }
+
+            if ($activeIdx === null && ! empty($catIndices)) {
+                $chosenIdx = null;
+                foreach (array_reverse($catIndices) as $idx) {
+                    $actual = $this->resolveActualPath($files[$idx]);
+                    if ($actual && file_exists($actual)) {
+                        $chosenIdx = $idx;
+                        break;
+                    }
+                }
+                if ($chosenIdx === null) {
+                    $chosenIdx = end($catIndices);
+                }
+                $files[$chosenIdx]['is_active'] = true;
                 $modified = true;
             }
         }
 
-        if (! $hasHis) {
-            $defaultHisFile = base_path('HIS_GPOK_2026-9-011600.DBF');
-            if (file_exists($defaultHisFile)) {
-                $files[] = [
-                    'id' => 'default_his_gpok',
-                    'type' => 'his_gpok',
-                    'filename' => basename($defaultHisFile),
-                    'stored_name' => basename($defaultHisFile),
-                    'path' => $defaultHisFile,
-                    'size' => round(filesize($defaultHisFile) / (1024 * 1024), 2).' MB',
-                    'records' => 166812,
-                    'keterangan' => 'Database Histori Gaji Pokok & SK Awal (Bawaan)',
-                    'uploaded_at' => date('d M Y H:i', filemtime($defaultHisFile)),
-                    'is_active' => true,
-                ];
-                $modified = true;
-            }
-        }
-
-        if (! $hasKel) {
-            $defaultKelFile = base_path('KEL_2026-10-011600.DBF');
-            if (file_exists($defaultKelFile)) {
-                $files[] = [
-                    'id' => 'default_kel',
-                    'type' => 'kel',
-                    'filename' => basename($defaultKelFile),
-                    'stored_name' => basename($defaultKelFile),
-                    'path' => $defaultKelFile,
-                    'size' => round(filesize($defaultKelFile) / (1024 * 1024), 2).' MB',
-                    'records' => 70479,
-                    'keterangan' => 'Database Riwayat Keluarga & Tanggungan Awal (Bawaan)',
-                    'uploaded_at' => date('d M Y H:i', filemtime($defaultKelFile)),
-                    'is_active' => true,
-                ];
-                $modified = true;
-            }
-        }
-
-        // Deduplikasi file berdasarkan path atau id agar rapi
+        // 4. Deduplikasi berkas secara aman
         $uniqueFiles = [];
         foreach ($files as $fileItem) {
-            $key = $fileItem['id'] ?? ($fileItem['path'] ?? uniqid());
+            $key = $fileItem['id'] ?? ($fileItem['stored_name'] ?? ($fileItem['filename'] ?? ($fileItem['path'] ?? uniqid())));
             if (! isset($uniqueFiles[$key])) {
                 $uniqueFiles[$key] = $fileItem;
             }
@@ -981,28 +1120,87 @@ class RekonsiliasiSimgajiController extends Controller
         return $files;
     }
 
-    private function saveDbfManifest(array $files): void
+    public function saveDbfManifest(array $files): void
     {
         $manifestPath = storage_path('app/simgaji/manifest.json');
         if (! is_dir(dirname($manifestPath))) {
-            mkdir(dirname($manifestPath), 0755, true);
+            @mkdir(dirname($manifestPath), 0775, true);
         }
-        file_put_contents($manifestPath, json_encode(array_values($files), JSON_PRETTY_PRINT));
+        @file_put_contents($manifestPath, json_encode(array_values($files), JSON_PRETTY_PRINT));
+        @chmod($manifestPath, 0664);
     }
 
-    private function getActiveDbfFile(string $type = 'mst_pgw'): ?array
+    public function getActiveDbfFile(string $type = 'mst_pgw'): ?array
     {
         $files = $this->getDbfManifest();
         foreach ($files as $f) {
             $fType = $f['type'] ?? 'mst_pgw';
-            if ($fType === $type && ! empty($f['is_active']) && file_exists($f['path'])) {
+            $actual = $this->resolveActualPath($f);
+            if ($fType === $type && ! empty($f['is_active']) && $actual && file_exists($actual)) {
+                $f['path'] = $actual;
+
                 return $f;
             }
         }
         foreach ($files as $f) {
             $fType = $f['type'] ?? 'mst_pgw';
-            if ($fType === $type && file_exists($f['path'])) {
+            $actual = $this->resolveActualPath($f);
+            if ($fType === $type && $actual && file_exists($actual)) {
+                $f['path'] = $actual;
+
                 return $f;
+            }
+        }
+
+        // Cari langsung berkas fisik di disk jika belum terindeks
+        $diskCandidates = array_merge(
+            $this->scanDirectoryForDbfs(storage_path('app/simgaji')),
+            $this->scanDirectoryForDbfs(base_path())
+        );
+
+        foreach ($diskCandidates as $df) {
+            $detected = $this->detectDbfType(basename($df), $df);
+            if ($detected === $type && file_exists($df)) {
+                $bName = basename($df);
+                $records = 0;
+                try {
+                    $reader = new TableReader($df, ['encoding' => 'cp850']);
+                    $records = $reader->getRecordCount();
+                } catch (\Exception $e) {
+                    $records = ($type === 'kel') ? SimgajiKeluarga::count() : 0;
+                }
+
+                return [
+                    'id' => 'disk_'.md5($df),
+                    'type' => $type,
+                    'filename' => preg_replace('/^\d+_/', '', $bName),
+                    'stored_name' => $bName,
+                    'path' => $df,
+                    'size' => round(filesize($df) / (1024 * 1024), 2).' MB',
+                    'records' => $records ?: (($type === 'kel') ? SimgajiKeluarga::count() : 0),
+                    'uploaded_at' => date('d M Y H:i', filemtime($df)),
+                    'is_active' => true,
+                    'keterangan' => 'Berkas terdeteksi di server',
+                ];
+            }
+        }
+
+        // Khusus KEL: jika data keluarga sudah masuk ke database simgaji_keluargas
+        if ($type === 'kel') {
+            $totalDb = SimgajiKeluarga::count();
+            if ($totalDb > 0) {
+                return [
+                    'id' => 'db_synced_kel',
+                    'type' => 'kel',
+                    'filename' => 'Basis Data Riwayat Keluarga SIMGAJI (Tersimpan di Database)',
+                    'stored_name' => 'database',
+                    'path' => '',
+                    'size' => 'Tersimpan di DB',
+                    'records' => $totalDb,
+                    'uploaded_at' => 'Tersinkronisasi di Server',
+                    'is_active' => true,
+                    'keterangan' => 'Data tanggungan keluarga aktif dari basis data MySQL',
+                ];
             }
         }
 

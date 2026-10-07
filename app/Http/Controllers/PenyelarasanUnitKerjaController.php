@@ -117,21 +117,7 @@ class PenyelarasanUnitKerjaController extends Controller
 
     private function getActiveDbfFile(string $type = 'mst_pgw'): ?array
     {
-        $files = $this->getDbfManifest();
-        foreach ($files as $f) {
-            $fType = $f['type'] ?? 'mst_pgw';
-            if ($fType === $type && ! empty($f['is_active']) && file_exists($f['path'])) {
-                return $f;
-            }
-        }
-        foreach ($files as $f) {
-            $fType = $f['type'] ?? 'mst_pgw';
-            if ($fType === $type && file_exists($f['path'])) {
-                return $f;
-            }
-        }
-
-        return null;
+        return app(RekonsiliasiSimgajiController::class)->getActiveDbfFile($type);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Http\Controllers\RekonsiliasiSimgajiController;
 use App\Models\Pegawai;
 use App\Models\SimgajiKeluarga;
 use Carbon\Carbon;
@@ -308,31 +309,75 @@ class SyncSimgajiData extends Command
             return $customPath;
         }
 
-        // Cek manifest.json
+        $resolveActual = function ($f) {
+            $path = is_array($f) ? ($f['path'] ?? '') : $f;
+            $storedName = is_array($f) ? ($f['stored_name'] ?? '') : '';
+            $filename = is_array($f) ? ($f['filename'] ?? '') : '';
+
+            if (! empty($path) && file_exists($path)) {
+                return $path;
+            }
+            if (! empty($storedName) && file_exists(storage_path('app/simgaji/'.$storedName))) {
+                return storage_path('app/simgaji/'.$storedName);
+            }
+            if (! empty($filename) && file_exists(storage_path('app/simgaji/'.$filename))) {
+                return storage_path('app/simgaji/'.$filename);
+            }
+            if (! empty($path) && file_exists(storage_path('app/simgaji/'.basename($path)))) {
+                return storage_path('app/simgaji/'.basename($path));
+            }
+            if (! empty($filename) && file_exists(base_path($filename))) {
+                return base_path($filename);
+            }
+            if (! empty($path) && file_exists(base_path(basename($path)))) {
+                return base_path(basename($path));
+            }
+
+            return null;
+        };
+
+        // 0. Cek file aktif dari RekonsiliasiSimgajiController
+        $activeFile = app(RekonsiliasiSimgajiController::class)->getActiveDbfFile($type);
+        if ($activeFile && ! empty($activeFile['path']) && file_exists($activeFile['path'])) {
+            return $activeFile['path'];
+        }
+
+        // 1. Cek manifest.json
         $manifestPath = storage_path('app/simgaji/manifest.json');
         if (file_exists($manifestPath)) {
             $files = json_decode(file_get_contents($manifestPath), true) ?: [];
             foreach ($files as $f) {
-                if (($f['type'] ?? '') === $type && ! empty($f['is_active']) && ! empty($f['path']) && file_exists($f['path'])) {
-                    return $f['path'];
+                $actual = $resolveActual($f);
+                if (($f['type'] ?? '') === $type && ! empty($f['is_active']) && $actual && file_exists($actual)) {
+                    return $actual;
                 }
             }
             foreach ($files as $f) {
-                if (($f['type'] ?? '') === $type && ! empty($f['path']) && file_exists($f['path'])) {
-                    return $f['path'];
+                $actual = $resolveActual($f);
+                if (($f['type'] ?? '') === $type && $actual && file_exists($actual)) {
+                    return $actual;
                 }
             }
         }
 
-        // Cek di root directory
-        $rootFiles = glob(base_path("{$prefix}*.DBF"));
-        if (! empty($rootFiles)) {
-            return $rootFiles[0];
+        // 2. Cek di direktori storage/app/simgaji
+        $storageFiles = array_merge(
+            glob(storage_path("app/simgaji/*{$prefix}*.DBF")) ?: [],
+            glob(storage_path("app/simgaji/*{$prefix}*.dbf")) ?: [],
+            glob(storage_path('app/simgaji/*'.strtolower($prefix).'*.dbf')) ?: []
+        );
+        if (! empty($storageFiles)) {
+            return $storageFiles[0];
         }
 
-        $rootFilesLower = glob(base_path(strtolower($prefix).'*.dbf'));
-        if (! empty($rootFilesLower)) {
-            return $rootFilesLower[0];
+        // 3. Cek di root directory project
+        $rootFiles = array_merge(
+            glob(base_path("{$prefix}*.DBF")) ?: [],
+            glob(base_path(strtolower($prefix).'*.dbf')) ?: [],
+            glob(base_path("*{$prefix}*.DBF")) ?: []
+        );
+        if (! empty($rootFiles)) {
+            return $rootFiles[0];
         }
 
         return null;

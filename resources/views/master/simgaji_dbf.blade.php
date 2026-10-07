@@ -143,9 +143,15 @@
                             <span style="font-size: 11px; color: var(--text-muted);">Data Pokok Pegawai Aktif</span>
                         </div>
                     </div>
-                    <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; padding: 3px 8px; border-radius: 999px; font-weight: 700; font-size: 10.5px;">
-                        <i class="ph-bold ph-check"></i> AKTIF
-                    </span>
+                    @if(!empty($activeMstPgw))
+                        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; padding: 3px 8px; border-radius: 999px; font-weight: 700; font-size: 10.5px;">
+                            <i class="ph-bold ph-check"></i> AKTIF
+                        </span>
+                    @else
+                        <span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #64748b; padding: 3px 8px; border-radius: 999px; font-weight: 700; font-size: 10.5px;">
+                            BELUM AKTIF
+                        </span>
+                    @endif
                 </div>
 
                 @if(!empty($activeMstPgw))
@@ -192,9 +198,15 @@
                             <span style="font-size: 11px; color: var(--text-muted);">Riwayat SK Pangkat & Gaji Berkala</span>
                         </div>
                     </div>
-                    <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; padding: 3px 8px; border-radius: 999px; font-weight: 700; font-size: 10.5px;">
-                        <i class="ph-bold ph-check"></i> AKTIF
-                    </span>
+                    @if(!empty($activeHisGpok))
+                        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; padding: 3px 8px; border-radius: 999px; font-weight: 700; font-size: 10.5px;">
+                            <i class="ph-bold ph-check"></i> AKTIF
+                        </span>
+                    @else
+                        <span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #64748b; padding: 3px 8px; border-radius: 999px; font-weight: 700; font-size: 10.5px;">
+                            BELUM AKTIF
+                        </span>
+                    @endif
                 </div>
 
                 @if(!empty($activeHisGpok))
@@ -234,9 +246,15 @@
                             <span style="font-size: 11px; color: var(--text-muted);">Anggota Keluarga & Tanggungan</span>
                         </div>
                     </div>
-                    <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; padding: 3px 8px; border-radius: 999px; font-weight: 700; font-size: 10.5px;">
-                        <i class="ph-bold ph-check"></i> AKTIF
-                    </span>
+                    @if(!empty($activeKel))
+                        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; padding: 3px 8px; border-radius: 999px; font-weight: 700; font-size: 10.5px;">
+                            <i class="ph-bold ph-check"></i> AKTIF
+                        </span>
+                    @else
+                        <span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #64748b; padding: 3px 8px; border-radius: 999px; font-weight: 700; font-size: 10.5px;">
+                            BELUM AKTIF
+                        </span>
+                    @endif
                 </div>
 
                 @if(!empty($activeKel))
@@ -335,9 +353,13 @@
                         </td>
                         <td>
                             <strong style="color: var(--text-main);">{{ $file['filename'] }}</strong>
-                            @if(file_exists($file['path']))
+                            @if(!empty($file['path']) && file_exists($file['path']))
                                 <small style="display: block; color: var(--text-muted); font-size: 11px;">
                                     <i class="ph-bold ph-check-circle" style="color: #10b981;"></i> Tersedia di server
+                                </small>
+                            @elseif(($file['stored_name'] ?? '') === 'database' || ($file['id'] ?? '') === 'db_synced_kel')
+                                <small style="display: block; color: #059669; font-size: 11px;">
+                                    <i class="ph-bold ph-database" style="color: #059669;"></i> Tersimpan & Tersinkron di Basis Data
                                 </small>
                             @else
                                 <small style="display: block; color: #ef4444; font-size: 11px;">

@@ -202,38 +202,25 @@ class AuditTunjanganKeluargaController extends Controller
             'last_analyzed' => $auditData['analyzed_at'] ?? now()->translatedFormat('d F Y H:i'),
         ];
 
-        // Resolusi berkas KEL_*.DBF aktif dari manifest atau direktori root
-        $manifestPath = storage_path('app/simgaji/manifest.json');
-        $activeKel = null;
-        if (file_exists($manifestPath)) {
-            $files = json_decode(file_get_contents($manifestPath), true) ?: [];
-            foreach ($files as $f) {
-                if (($f['type'] ?? '') === 'kel' && ! empty($f['is_active']) && file_exists($f['path'] ?? '')) {
-                    $activeKel = $f;
-                    break;
-                }
-            }
-            if (! $activeKel) {
-                foreach ($files as $f) {
-                    if (($f['type'] ?? '') === 'kel' && file_exists($f['path'] ?? '')) {
-                        $activeKel = $f;
-                        break;
-                    }
-                }
-            }
-        }
-        if (! $activeKel) {
-            $defaultKel = glob(base_path('KEL_*.DBF')) ?: glob(base_path('kel_*.dbf'));
-            if (! empty($defaultKel) && file_exists($defaultKel[0])) {
-                $activeKel = [
-                    'filename' => basename($defaultKel[0]),
-                    'size' => round(filesize($defaultKel[0]) / (1024 * 1024), 2).' MB',
-                    'records' => 70479,
-                    'uploaded_at' => date('d M Y H:i', filemtime($defaultKel[0])),
-                ];
-            }
-        }
+        // Resolusi berkas KEL_*.DBF aktif tersentralisasi dari RekonsiliasiSimgajiController
         $totalKeluargaDb = SimgajiKeluarga::count();
+        $rekonsiliasiCtrl = app(RekonsiliasiSimgajiController::class);
+        $activeKel = $rekonsiliasiCtrl->getActiveDbfFile('kel');
+
+        if (! $activeKel && $totalKeluargaDb > 0) {
+            $activeKel = [
+                'id' => 'db_synced_kel',
+                'type' => 'kel',
+                'filename' => 'Basis Data Riwayat Keluarga SIMGAJI (Tersimpan di Database)',
+                'stored_name' => 'database',
+                'path' => '',
+                'size' => 'Tersimpan di DB',
+                'records' => $totalKeluargaDb,
+                'uploaded_at' => 'Tersinkronisasi di Server',
+                'is_active' => true,
+                'keterangan' => 'Data tanggungan keluarga aktif dari basis data MySQL',
+            ];
+        }
 
         return view('laporan.audit_tunjangan.index', compact(
             'tab',
