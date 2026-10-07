@@ -674,6 +674,58 @@
         </div>
     @endif
 
+    {{-- Status Berkas DBF Riwayat Keluarga --}}
+    <div style="background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 14px; padding: 16px 20px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: rgba(5, 150, 105, 0.12); color: #059669; display: flex; align-items: center; justify-content: center; font-size: 22px;">
+                <i class="ph ph-users-four"></i>
+            </div>
+            <div>
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span style="font-size: 13px; font-weight: 700; color: var(--text-main);">Sumber Berkas DBF Riwayat Keluarga:</span>
+                    @if(!empty($activeKel))
+                        <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 11.5px;">
+                            <i class="ph ph-file-code"></i> {{ $activeKel['filename'] }} ({{ $activeKel['size'] ?? '-' }})
+                        </span>
+                    @else
+                        <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #dc2626; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 11.5px;">
+                            <i class="ph ph-warning-circle"></i> Belum ada file KEL_*.DBF aktif
+                        </span>
+                    @endif
+
+                    @if(($totalKeluargaDb ?? 0) > 0)
+                        <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #2563eb; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 11.5px;">
+                            <i class="ph ph-database"></i> {{ number_format($totalKeluargaDb, 0, ',', '.') }} tanggungan di database
+                        </span>
+                    @else
+                        <span class="badge" style="background: rgba(245, 158, 11, 0.18); color: #d97706; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 11.5px;">
+                            <i class="ph ph-warning"></i> Tabel database masih 0 baris (Perlu Sinkronisasi)
+                        </span>
+                    @endif
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                    Modul audit menganalisis data tanggungan dari berkas <code>KEL_*.DBF</code> SIMGAJI Taspen yang telah dimuat ke basis data.
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-sm" onclick="openUploadKelModal()" style="background: #059669; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="ph ph-upload-simple"></i> Unggah / Ganti KEL_*.DBF
+            </button>
+            <form action="{{ route('master.simgaji_dbf.sync') }}" method="POST" style="margin: 0;">
+                @csrf
+                <input type="hidden" name="type" value="keluarga">
+                <button type="submit" class="btn btn-sm btn-outline-secondary" style="border-radius: 8px; padding: 8px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;" title="Muat ulang seluruh record dari file DBF aktif ke tabel database">
+                    <i class="ph ph-arrows-clockwise"></i> Sinkronkan ke DB
+                </button>
+            </form>
+            <a href="{{ route('master.simgaji_dbf.index') }}" class="btn btn-sm btn-outline-secondary" style="border-radius: 8px; padding: 8px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;" title="Buka menu manajemen seluruh berkas DBF">
+                <i class="ph ph-folder-open"></i> Kelola DBF
+            </a>
+        </div>
+    </div>
+
     {{-- KPI Cards --}}
     <div class="kpi-grid">
         {{-- Card 1: Dobel Anak --}}
@@ -1178,6 +1230,82 @@
 
 </div>
 
+{{-- MODAL UNGGAH BERKAS DBF KELUARGA (KEL_*.DBF) --}}
+<div class="modal-overlay" id="modalUploadKelDbf">
+    <div class="modal-content" style="max-width: 520px;">
+        <div class="modal-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(5, 150, 105, 0.12); color: #059669; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                    <i class="ph-bold ph-users-four"></i>
+                </div>
+                <div>
+                    <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--text-main);">Unggah Berkas DBF Riwayat Keluarga</h3>
+                    <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Format ekspor SIMGAJI: Berkas <code>KEL_*.DBF</code></p>
+                </div>
+            </div>
+            <button type="button" class="btn-close" onclick="closeUploadKelModal()">&times;</button>
+        </div>
+
+        <form action="{{ route('master.simgaji_dbf.upload') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            <input type="hidden" name="jenis_dbf" value="kel">
+            <input type="hidden" name="redirect_to" value="audit_tunjangan">
+
+            <div style="padding: 20px 24px;">
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="font-weight: 600; font-size: 13px; margin-bottom: 8px; display: block;">Pilih Berkas KEL_*.DBF <span style="color: #ef4444;">*</span></label>
+                    <input type="file" name="file_dbf" id="inputAuditKelFile" accept=".dbf,.DBF" required class="form-control" style="padding: 10px; border: 2px dashed var(--border-color); border-radius: 8px;">
+                    
+                    <!-- Live preview detection -->
+                    <div id="previewAuditKelBox" style="display: none; margin-top: 8px; padding: 10px 12px; border-radius: 8px; font-size: 12px; background: rgba(5, 150, 105, 0.08); border: 1px solid rgba(5, 150, 105, 0.25);">
+                        <div style="font-weight: 700; color: var(--text-main);" id="previewAuditKelName"></div>
+                        <div style="color: var(--text-muted); font-size: 11.5px; margin-top: 2px;" id="previewAuditKelInfo"></div>
+                        <div style="margin-top: 4px;">
+                            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;">
+                                <i class="ph-bold ph-check-circle"></i> Berkas Riwayat Keluarga Terbaca
+                            </span>
+                        </div>
+                    </div>
+
+                    <small style="display: block; color: var(--text-muted); margin-top: 6px; font-size: 11.5px;">
+                        Berkas ini biasanya bernama <code>KEL_2026-10-011600.DBF</code> atau berawalan <code>KEL_</code> hasil ekspor SIMGAJI Taspen.
+                    </small>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 16px; background: var(--bg-surface-secondary, #f8fafc); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px;">
+                    <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; margin: 0; font-size: 12px; color: var(--text-main);">
+                        <input type="checkbox" name="auto_sync" value="1" checked style="margin-top: 2px;">
+                        <span><strong>Otomatis sinkronkan ke basis data</strong> (data seluruh tanggungan langsung dimuat ke tabel <code>simgaji_keluargas</code>).</span>
+                    </label>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="font-weight: 600; font-size: 13px; margin-bottom: 6px; display: block;">Catatan / Keterangan (Opsional)</label>
+                    <input type="text" name="keterangan" class="form-control" placeholder="Misal: Berkas KEL SIMGAJI Taspen Periode Oktober 2026" style="border-radius: 8px; font-size: 12.5px;">
+                </div>
+
+                <div style="background: rgba(5, 150, 105, 0.05); border: 1px solid rgba(5, 150, 105, 0.2); border-radius: 8px; padding: 12px 14px; font-size: 12px; color: var(--text-muted);">
+                    <strong style="color: #065f46; display: block; margin-bottom: 4px;">
+                        <i class="ph-bold ph-info"></i> Fungsi Berkas KEL_*.DBF:
+                    </strong>
+                    <ul style="margin: 0; padding-left: 18px; line-height: 1.6;">
+                        <li>Mendeteksi anak yang ditunjang ganda oleh Ayah &amp; Ibu (PNS/PPPK).</li>
+                        <li>Mendeteksi pasangan (suami-istri) yang saling menunjang 10% + 10%.</li>
+                        <li>Mendeteksi kelebihan kuota anak tertunjang (&gt;2 anak).</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px; padding: 14px 24px; border-top: 1px solid var(--border-color); background: var(--bg-surface);">
+                <button type="button" class="btn btn-export" onclick="closeUploadKelModal()">Batal</button>
+                <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, #059669, #047857); border-color: #047857;">
+                    <i class="ph-bold ph-upload-simple"></i> Unggah &amp; Proses DBF
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {{-- MODAL TINDAK LANJUT / INPUT BUKTI STS --}}
 <div class="modal-overlay" id="resolusiModal">
     <div class="modal-content" style="max-width: 560px;">
@@ -1305,5 +1433,46 @@ function confirmDeleteResolusi(resolusiId) {
         form.submit();
     }
 }
+
+function openUploadKelModal() {
+    var modal = document.getElementById('modalUploadKelDbf');
+    if (modal) {
+        modal.classList.add('active');
+    }
+}
+
+function closeUploadKelModal() {
+    var modal = document.getElementById('modalUploadKelDbf');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+document.getElementById('modalUploadKelDbf')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeUploadKelModal();
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const kelInput = document.getElementById('inputAuditKelFile');
+    const previewBox = document.getElementById('previewAuditKelBox');
+    const previewName = document.getElementById('previewAuditKelName');
+    const previewInfo = document.getElementById('previewAuditKelInfo');
+
+    if (kelInput) {
+        kelInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) {
+                if (previewBox) previewBox.style.display = 'none';
+                return;
+            }
+            const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+            if (previewBox) previewBox.style.display = 'block';
+            if (previewName) previewName.textContent = '📄 ' + file.name;
+            if (previewInfo) previewInfo.textContent = 'Ukuran berkas: ' + sizeMb + ' MB (' + file.size.toLocaleString('id-ID') + ' bytes)';
+        });
+    }
+});
 </script>
 @endsection

@@ -1374,7 +1374,7 @@
                     <i class="ph ph-identification-badge"></i> 2. Jabatan
                 </a>
                 <a href="/master/simgaji-dbf" class="submenu-item {{ Request::is('master/simgaji-dbf*') ? 'active' : '' }}">
-                    <i class="ph ph-database"></i> 3. Upload Master SIMGAJI
+                    <i class="ph ph-database"></i> 3. Database SIMGAJI (.DBF)
                 </a>
                 <a href="/master/pegawai-simpeg" class="submenu-item {{ Request::is('master/pegawai-simpeg*') ? 'active' : '' }}">
                     <i class="ph ph-file-arrow-up"></i> 4. Upload Pegawai SIMPEG

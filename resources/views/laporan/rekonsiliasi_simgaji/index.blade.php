@@ -866,7 +866,7 @@
                 </div>
                 <div>
                     <h3 style="margin: 0; font-size: 16px;">Unggah File Database SIMGAJI</h3>
-                    <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Pilih file master pegawai hasil ekspor SIMGAJI (.DBF)</p>
+                    <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Pilih berkas ekspor SIMGAJI Taspen (.DBF) — Master Pegawai, Histori SK, atau Riwayat Keluarga</p>
                 </div>
             </div>
             <button class="btn-close" onclick="closeModal('uploadDbfModal')">&times;</button>
@@ -876,22 +876,38 @@
             <div style="padding: 20px 24px;">
                 <div class="form-group" style="margin-bottom: 16px;">
                     <label style="font-weight: 600; font-size: 13px; margin-bottom: 8px; display: block;">Jenis Database DBF</label>
-                    <select name="jenis_dbf" class="form-control" style="padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px; width: 100%;">
+                    <select name="jenis_dbf" id="modalRekonSelectJenis" class="form-control" style="padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 13px; width: 100%;">
                         <option value="auto">🤖 Otomatis Deteksi (Rekomendasi)</option>
-                        <option value="mst_pgw">👤 Master Pegawai (MST_PGW)</option>
-                        <option value="his_gpok">📄 Histori Gaji Pokok & SK (HIS_GPOK)</option>
+                        <option value="mst_pgw">👤 Master Pegawai (MST_PGW_*.DBF)</option>
+                        <option value="his_gpok">📄 Histori Gaji Pokok & SK (HIS_GPOK_*.DBF)</option>
+                        <option value="kel">👨‍👩‍👧‍👦 Riwayat Anggota Keluarga & Tanggungan (KEL_*.DBF)</option>
                     </select>
                     <small style="display: block; color: var(--text-muted); margin-top: 6px; font-size: 11.5px;">
-                        Pilih jenis file atau biarkan otomatis dideteksi berdasarkan struktur kolom.
+                        Pilih jenis berkas atau biarkan otomatis dideteksi berdasarkan nama berkas dan kolom DBF.
                     </small>
                 </div>
 
                 <div class="form-group" style="margin-bottom: 16px;">
                     <label style="font-weight: 600; font-size: 13px; margin-bottom: 8px; display: block;">File DBF SIMGAJI (.dbf)</label>
-                    <input type="file" name="file_dbf" accept=".dbf,.DBF" required class="form-control" style="padding: 10px; border: 2px dashed var(--border-color); border-radius: 8px;">
+                    <input type="file" name="file_dbf" id="modalRekonFileInput" accept=".dbf,.DBF" required class="form-control" style="padding: 10px; border: 2px dashed var(--border-color); border-radius: 8px;">
+                    
+                    <!-- Live Preview Detection -->
+                    <div id="modalRekonPreviewBox" style="display: none; margin-top: 8px; padding: 10px 12px; border-radius: 8px; font-size: 12px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2);">
+                        <div style="font-weight: 700; color: var(--text-main);" id="modalRekonPreviewName"></div>
+                        <div style="color: var(--text-muted); font-size: 11.5px; margin-top: 2px;" id="modalRekonPreviewInfo"></div>
+                        <div id="modalRekonPreviewBadge" style="margin-top: 6px;"></div>
+                    </div>
+
                     <small style="display: block; color: var(--text-muted); margin-top: 6px; font-size: 11.5px;">
-                        Mendukung file Master Pegawai (<code>MST_PGW_*.DBF</code>) maupun Histori SK Gaji (<code>HIS_GPOK_*.DBF</code>).
+                        Mendukung <code>MST_PGW_*.DBF</code> (Master Pegawai), <code>HIS_GPOK_*.DBF</code> (Histori SK), dan <code>KEL_*.DBF</code> (Riwayat Keluarga).
                     </small>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 16px; background: var(--bg-surface-secondary, #f8fafc); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 12px;">
+                    <label style="display: flex; align-items: flex-start; gap: 8px; cursor: pointer; margin: 0; font-size: 12px; color: var(--text-main);">
+                        <input type="checkbox" name="auto_sync" value="1" checked style="margin-top: 2px;">
+                        <span><strong>Otomatis sinkronkan ke database</strong> setelah upload berhasil (data langsung tersedia di analisis).</span>
+                    </label>
                 </div>
 
                 <div style="background: rgba(76, 53, 222, 0.04); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; font-size: 12px; color: var(--text-muted);">
@@ -899,9 +915,10 @@
                         <i class="ph-bold ph-info"></i> Informasi & Tata Cara:
                     </strong>
                     <ul style="margin: 0; padding-left: 18px; line-height: 1.6;">
-                        <li>File yang diunggah akan langsung menjadi database acuan rekonsiliasi aktif untuk jenisnya.</li>
-                        <li>File <strong>HIS_GPOK</strong> digunakan untuk memverifikasi pegawai yang SK-nya sudah terjadwal di SIMGAJI.</li>
-                        <li>Kelola riwayat seluruh file DBF di menu <a href="{{ route('master.simgaji_dbf.index') }}" style="color: #2563eb; font-weight: 600; text-decoration: underline;">Master Database SIMGAJI</a>.</li>
+                        <li>Berkas yang diunggah akan langsung menjadi database acuan aktif untuk jenisnya.</li>
+                        <li>Berkas <strong>HIS_GPOK_*.DBF</strong> memverifikasi SK kenaikan pangkat/gaji yang sudah terjadwal di SIMGAJI.</li>
+                        <li>Berkas <strong>KEL_*.DBF</strong> memuat data tanggungan keluarga untuk Audit Tunjangan Keluarga dan Trace Gaji.</li>
+                        <li>Kelola riwayat seluruh berkas DBF di menu <a href="{{ route('master.simgaji_dbf.index') }}" style="color: #2563eb; font-weight: 600; text-decoration: underline;">Master Database SIMGAJI</a>.</li>
                     </ul>
                 </div>
             </div>
@@ -927,6 +944,44 @@
     window.addEventListener('click', function(e) {
         if (e.target.classList.contains('modal-overlay')) {
             e.target.classList.remove('active');
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const fileInput = document.getElementById('modalRekonFileInput');
+        const previewBox = document.getElementById('modalRekonPreviewBox');
+        const previewName = document.getElementById('modalRekonPreviewName');
+        const previewInfo = document.getElementById('modalRekonPreviewInfo');
+        const previewBadge = document.getElementById('modalRekonPreviewBadge');
+        const select = document.getElementById('modalRekonSelectJenis');
+
+        if (fileInput) {
+            fileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) {
+                    if (previewBox) previewBox.style.display = 'none';
+                    return;
+                }
+
+                const nameUpper = file.name.toUpperCase();
+                const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+                previewBox.style.display = 'block';
+                previewName.textContent = '📄 ' + file.name;
+                previewInfo.textContent = 'Ukuran berkas: ' + sizeMb + ' MB (' + file.size.toLocaleString('id-ID') + ' bytes)';
+
+                if (nameUpper.includes('KEL')) {
+                    previewBadge.innerHTML = '<span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;">👨‍👩‍👧‍👦 Terdeteksi: Riwayat Anggota Keluarga & Tanggungan (KEL_*.DBF)</span>';
+                    if (select) select.value = 'kel';
+                } else if (nameUpper.includes('HIS') || nameUpper.includes('GPOK')) {
+                    previewBadge.innerHTML = '<span class="badge" style="background: rgba(147, 51, 234, 0.15); color: #9333ea; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;">📜 Terdeteksi: Histori Gaji Pokok & SK (HIS_GPOK_*.DBF)</span>';
+                    if (select) select.value = 'his_gpok';
+                } else if (nameUpper.includes('MST') || nameUpper.includes('PGW')) {
+                    previewBadge.innerHTML = '<span class="badge" style="background: rgba(37, 99, 235, 0.15); color: #2563eb; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;">👤 Terdeteksi: Master Pegawai (MST_PGW_*.DBF)</span>';
+                    if (select) select.value = 'mst_pgw';
+                } else {
+                    previewBadge.innerHTML = '<span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #475569; padding: 3px 8px; border-radius: 6px; font-weight: 600; font-size: 11px;">🤖 Berkas DBF Terbaca</span>';
+                }
+            });
         }
     });
 </script>

@@ -129,5 +129,29 @@ class SimgajiKeluargaTest extends TestCase
         $response->assertSee('Riwayat Keluarga');
         $response->assertSee('Master Pegawai');
         $response->assertSee('Histori Gaji Pokok &amp; SK', false);
+        $response->assertSee('KEL_*.DBF');
+    }
+
+    public function test_audit_tunjangan_page_displays_kel_dbf_status_and_modal(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('laporan.audit_tunjangan.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee('Sumber Berkas DBF Riwayat Keluarga');
+        $response->assertSee('Unggah / Ganti KEL_*.DBF');
+        $response->assertSee('modalUploadKelDbf');
+    }
+
+    public function test_reconciliation_upload_modal_includes_kel_option(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get(route('laporan.rekonsiliasi_simgaji.index'));
+
+        $response->assertStatus(200);
+        $response->assertSee('value="kel"', false);
+        $response->assertSee('KEL_*.DBF');
     }
 }

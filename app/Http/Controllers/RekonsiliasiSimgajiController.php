@@ -595,7 +595,7 @@ class RekonsiliasiSimgajiController extends Controller
 
         $typeLabel = match ($finalType) {
             'his_gpok' => 'Histori Gaji Pokok & SK (HIS_GPOK)',
-            'kel' => 'Riwayat Anggota Keluarga (KEL)',
+            'kel' => 'Riwayat Anggota Keluarga & Tanggungan (KEL)',
             default => 'Master Pegawai (MST_PGW)',
         };
 
@@ -615,8 +615,32 @@ class RekonsiliasiSimgajiController extends Controller
 
         $this->saveDbfManifest($files);
         Cache::forget('rekonsiliasi_simgaji_data');
+        Cache::forget('audit_tunjangan_keluarga_data_v2');
 
-        return redirect()->back()->with('success', "File database {$typeLabel} '{$originalName}' (".number_format($recordsCount, 0, ',', '.').' record) berhasil diunggah dan dijadikan acuan aktif!');
+        // Jalankan auto-sync jika diminta
+        $autoSyncMsg = '';
+        if ($request->boolean('auto_sync')) {
+            try {
+                if ($finalType === 'kel') {
+                    Artisan::call('simgaji:sync', ['--type' => 'keluarga']);
+                    $autoSyncMsg = ' dan seluruh data keluarga telah berhasil disinkronkan ke database!';
+                } elseif ($finalType === 'mst_pgw') {
+                    Artisan::call('simgaji:sync', ['--type' => 'master']);
+                    $autoSyncMsg = ' dan NIK/No. Rekening pegawai telah berhasil disinkronkan ke database!';
+                }
+            } catch (\Exception $e) {
+                $autoSyncMsg = ' (namun auto-sinkronisasi database mengalami kendala: '.$e->getMessage().')';
+            }
+        }
+
+        $successMsg = "File database {$typeLabel} '{$originalName}' (".number_format($recordsCount, 0, ',', '.')." record) berhasil diunggah{$autoSyncMsg}";
+
+        $redirectTo = $request->input('redirect_to');
+        if ($redirectTo === 'audit_tunjangan') {
+            return redirect()->route('laporan.audit_tunjangan.index')->with('success', $successMsg);
+        }
+
+        return redirect()->back()->with('success', $successMsg);
     }
 
     public function setActiveDbf($id)
