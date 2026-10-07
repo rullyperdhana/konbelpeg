@@ -32,18 +32,51 @@ Thumbs.db
 *.xlsx
 *.xls
 *.csv
+*.tsv
+*.ods
 
-# Database & Data files (confidential)
+# Database & Data dumps (confidential)
 *.sqlite
 *.sqlite*
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
 *.db
+*.db*
 *.sql
+*.sql*
 *.sql.gz
 *.dump
+
+# SSL Certificates, Private Keys & Credentials
+*.pem
+*.key
+*.crt
+*.cer
+*.pfx
+*.p12
+
+# Backup & Archive files
+*.bak
+*.backup
+*.old
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# Specific database and storage folders
 /database/*.sqlite*
+/database/*.db*
+/database/*.sql*
+/database/*.dump
 /storage/app/simgaji/*
 !/storage/app/simgaji/.gitignore
+/storage/app/simpeg/*
+!/storage/app/simpeg/.gitignore
+/storage/app/*.xlsx
+/storage/app/*.xls
+/storage/app/*.csv
 
