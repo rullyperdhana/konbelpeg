@@ -111,7 +111,54 @@
 </div>
 
 <!-- Main Section: Form Upload & Panduan Kolom -->
-<div style="display: grid; grid-template-columns: 420px 1fr; gap: 20px; margin-bottom: 24px;">
+@if(!empty($activeFile))
+<div class="card" style="padding: 20px 24px; margin-bottom: 24px; border: 1px solid rgba(16, 185, 129, 0.35); background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(37, 99, 235, 0.03));">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 48px; height: 48px; border-radius: 12px; background: rgba(16, 185, 129, 0.12); color: #059669; display: flex; align-items: center; justify-content: center; font-size: 26px;">
+                <i class="ph-bold ph-file-xls"></i>
+            </div>
+            <div>
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: var(--text-main);">{{ $activeFile['original_name'] ?? $activeFile['filename'] }}</h4>
+                    <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #059669; font-size: 11px; font-weight: 700;">
+                        <i class="ph-bold ph-check-circle"></i> Berkas Aktif di Server
+                    </span>
+                    @if(($activeFile['status'] ?? '') === 'uploaded')
+                        <span class="badge" style="background: #fef3c7; color: #b45309; font-size: 11px; font-weight: 700;">
+                            <i class="ph-bold ph-clock"></i> Tersimpan (Belum Disinkronkan)
+                        </span>
+                    @else
+                        <span class="badge" style="background: #e0f2fe; color: #0284c7; font-size: 11px; font-weight: 700;">
+                            <i class="ph-bold ph-arrows-clockwise"></i> Tersinkron ({{ number_format($activeFile['total_rows'] ?? 0, 0, ',', '.') }} data)
+                        </span>
+                    @endif
+                </div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">
+                    Ukuran: {{ !empty($activeFile['file_size']) ? round($activeFile['file_size'] / (1024 * 1024), 2) . ' MB' : '-' }} &bull; Diunggah: {{ !empty($activeFile['uploaded_at']) ? date('d M Y H:i', strtotime($activeFile['uploaded_at'])) : '-' }}
+                    @if(!empty($activeFile['keterangan'])) &bull; <em>{{ $activeFile['keterangan'] }}</em> @endif
+                </div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button type="button" class="btn btn-success" style="padding: 10px 20px; font-size: 13px; font-weight: 700; background: linear-gradient(135deg, #059669, #047857); border-color: #047857; color: white; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);" onclick="runSyncFile('{{ $activeFile['id'] }}', '{{ addslashes($activeFile['original_name'] ?? $activeFile['filename']) }}')">
+                <i class="ph-bold ph-lightning" style="font-size: 17px;"></i> Mulai Proses & Sinkronkan Data ke Database
+            </button>
+        </div>
+    </div>
+    
+    <!-- Info CLI VPS untuk data besar tanpa timeout -->
+    <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(16, 185, 129, 0.25); font-size: 12px; color: #475569; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 6px;">
+            <i class="ph-bold ph-terminal" style="color: #2563eb; font-size: 15px;"></i>
+            <span><strong>Opsi Jalur Terminal VPS (Tanpa Batas Waktu Browser):</strong> Jika data berjumlah puluhan ribu baris, Anda juga dapat menjalankan sinkronisasi via SSH:</span>
+        </div>
+        <code style="background: #1e293b; color: #38bdf8; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-family: monospace;">php artisan simpeg:sync</code>
+    </div>
+</div>
+@endif
+
+<div style="display: grid; grid-template-columns: 430px 1fr; gap: 20px; margin-bottom: 24px;">
     <!-- Form Upload Card -->
     <div class="card" style="padding: 24px;">
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 18px;">
@@ -119,8 +166,8 @@
                 <i class="ph-bold ph-cloud-arrow-up"></i>
             </div>
             <div>
-                <h3 style="margin: 0; font-size: 16px; font-weight: 700;">Unggah File Excel SIMPEG</h3>
-                <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Mendukung format: .xlsx, .xls, .csv</p>
+                <h3 style="margin: 0; font-size: 16px; font-weight: 700;">Unggah & Simpan Berkas Excel</h3>
+                <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Tahap 1: Simpan berkas ke server (Instan 1-2 detik)</p>
             </div>
         </div>
 
@@ -129,13 +176,11 @@
             <div style="display: flex; gap: 10px; align-items: flex-start;">
                 <i class="ph-bold ph-info" style="font-size: 20px; color: #2563eb; margin-top: 1px; flex-shrink: 0;"></i>
                 <div style="font-size: 12px; color: var(--text-main); line-height: 1.5;">
-                    <strong style="color: #1d4ed8; font-size: 12.5px;">Informasi Alur Sinkronisasi Master Pegawai:</strong><br>
-                    Data SIMPEG baru akan dipadukan secara otomatis ke database:
-                    <ul style="margin: 5px 0 0 0; padding-left: 16px; color: var(--text-muted); font-size: 11.5px;">
-                        <li><strong>Pegawai Baru:</strong> Otomatis ditambahkan ke database beserta relasi SKPD, UPTD, dan Jabatannya.</li>
-                        <li><strong>Pegawai Lama:</strong> Data SKPD, unit kerja/UPTD, jabatan, dan pangkat langsung diperbarui mengikuti mutasi.</li>
-                        <li><strong>Proteksi Data SIMGAJI:</strong> NIK, No. Rekening, Bank Penyalur, dan Tanggungan Keluarga <strong>tidak akan terhapus / tertimpa</strong>.</li>
-                    </ul>
+                    <strong style="color: #1d4ed8; font-size: 12.5px;">Alur Kerja Unggah & Proses:</strong><br>
+                    <ol style="margin: 5px 0 0 0; padding-left: 16px; color: var(--text-muted); font-size: 11.5px;">
+                        <li><strong>Diterima & Disimpan Dulu:</strong> Berkas Excel disimpan langsung di server dalam hitungan detik tanpa risiko timeout browser.</li>
+                        <li><strong>Diproses & Disinkronkan:</strong> Data diproses ke database dengan in-memory lookup berkecepatan tinggi tanpa menimpa data rekening SIMGAJI.</li>
+                    </ol>
                 </div>
             </div>
         </div>
@@ -177,7 +222,7 @@
             </div>
 
             <button type="submit" id="btnSubmitUpload" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 11px; font-weight: 700; background: linear-gradient(135deg, #2563eb, #1d4ed8); border-color: #1d4ed8; font-size: 13.5px;">
-                <i class="ph-bold ph-upload-simple"></i> Mulai Unggah & Impor Data
+                <i class="ph-bold ph-cloud-arrow-up"></i> Unggah & Simpan Berkas ke Server (1-2 Detik)
             </button>
         </form>
     </div>
@@ -337,14 +382,22 @@
                         </td>
                         <td style="text-align: right;">
                             <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center;">
-                                <button type="button" class="btn" style="padding: 5px 10px; font-size: 11.5px; background: rgba(37, 99, 235, 0.08); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.2);" onclick="reSyncFile('{{ $f['id'] }}', '{{ addslashes($f['original_name'] ?? $f['filename']) }}')" title="Impor ulang dari file ini">
-                                    <i class="ph-bold ph-arrows-clockwise"></i> Impor Ulang
+                                <button type="button" class="btn" style="padding: 5px 10px; font-size: 11.5px; background: rgba(5, 150, 105, 0.1); color: #059669; border: 1px solid rgba(5, 150, 105, 0.25); font-weight: 600;" onclick="runSyncFile('{{ $f['id'] }}', '{{ addslashes($f['original_name'] ?? $f['filename']) }}')" title="Proses dan sinkronkan data berkas ini">
+                                    <i class="ph-bold ph-lightning"></i> Proses Data
                                 </button>
+                                @if(empty($f['is_active']))
+                                    <form action="{{ route('master.pegawai_simpeg.activate', $f['id']) }}" method="POST" style="display: inline;">
+                                        @csrf
+                                        <button type="submit" class="btn" style="padding: 5px 8px; font-size: 11.5px; background: rgba(37, 99, 235, 0.08); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.2);" title="Pilih sebagai berkas aktif">
+                                            <i class="ph-bold ph-check"></i>
+                                        </button>
+                                    </form>
+                                @endif
                                 @if($f['id'] !== 'default_initial_simpeg')
                                     <form action="{{ route('master.pegawai_simpeg.destroy', $f['id']) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus arsip berkas ini?');" style="display: inline;">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn" style="padding: 5px 8px; font-size: 11.5px; background: rgba(239, 68, 68, 0.08); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.2);" title="Hapus arsip">
+                                        <button type="submit" class="btn" style="padding: 5px 8px; font-size: 11.5px; background: rgba(239, 68, 68, 0.08); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.2);" title="Hapus berkas dari server">
                                             <i class="ph-bold ph-trash"></i>
                                         </button>
                                     </form>
@@ -359,10 +412,10 @@
     @endif
 </div>
 
-<!-- SweetAlert2 Script & Progress Handling -->
+<!-- SweetAlert2 Script & Two-Step Upload/Sync Handling -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    // File input change visual update
+    // Visual update saat berkas dipilih
     document.getElementById('fileSimpeg').addEventListener('change', function(e) {
         const file = e.target.files[0];
         const display = document.getElementById('fileNameDisplay');
@@ -374,7 +427,7 @@
         }
     });
 
-    // Upload Form Submit dengan SweetAlert2 & Real-time Progress Bar
+    // Langkah 1: Form Upload Berkas (Hanya menyimpan ke server - Selesai dalam 1-2 detik)
     document.getElementById('uploadSimpegForm').addEventListener('submit', function(e) {
         e.preventDefault();
 
@@ -386,19 +439,79 @@
         }
 
         const formData = new FormData(form);
-        const uploadId = Date.now().toString() + Math.random().toString(36).substring(2, 7);
-        formData.append('upload_id', uploadId);
-
         const btn = document.getElementById('btnSubmitUpload');
         btn.disabled = true;
-        btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Mengunggah Berkas...';
+        btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Menyimpan Berkas ke Server...';
 
         Swal.fire({
-            title: 'Mengimpor Data Pegawai SIMPEG',
+            title: 'Mengunggah Berkas ke Server',
+            html: '<p style="color: #64748b; font-size: 13px;">Sedang memindahkan dan menyimpan berkas Excel ke storage server...</p>',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph-bold ph-cloud-arrow-up"></i> Unggah & Simpan Berkas ke Server (1-2 Detik)';
+
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berkas Diterima & Tersimpan!',
+                    html: `
+                        <p style="font-size: 13.5px; color: #475569; margin: 6px 0 12px 0;">
+                            Berkas <strong>${data.filename}</strong> berhasil disimpan di server.
+                        </p>
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; text-align: left; font-size: 12.5px; color: #334155; margin-bottom: 12px;">
+                            <strong>Langkah Selanjutnya:</strong><br>
+                            Anda dapat langsung memproses dan menyinkronkan data master pegawai ke database sekarang.
+                        </div>
+                    `,
+                    showCancelButton: true,
+                    confirmButtonText: '⚡ Ya, Proses & Sinkronkan Sekarang',
+                    cancelButtonText: 'Tutup / Proses Nanti',
+                    confirmButtonColor: '#059669',
+                    cancelButtonColor: '#64748b'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        runSyncFile(data.file_id, data.filename);
+                    } else {
+                        window.location.reload();
+                    }
+                });
+            } else {
+                Swal.fire('Gagal!', data.message || 'Terjadi kesalahan saat mengunggah berkas.', 'error');
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph-bold ph-cloud-arrow-up"></i> Unggah & Simpan Berkas ke Server (1-2 Detik)';
+            Swal.fire('Error!', 'Gagal menghubungi server atau ukuran berkas melebihi batas upload.', 'error');
+        });
+    });
+
+    // Langkah 2: Proses & Sinkronkan Data ke Database
+    function runSyncFile(fileId, fileName) {
+        const uploadId = Date.now().toString() + Math.random().toString(36).substring(2, 7);
+
+        Swal.fire({
+            title: 'Memproses Data Pegawai SIMPEG',
             html: `
-                <div style="margin-top: 15px; margin-bottom: 10px; text-align: left; font-size: 13px; color: #64748b;" id="progress-text">Menyiapkan dan membaca berkas spreadsheet...</div>
+                <div style="margin-top: 15px; margin-bottom: 10px; text-align: left; font-size: 13px; color: #64748b;" id="progress-text">Menyiapkan in-memory lookup dan membaca berkas spreadsheet...</div>
                 <div style="width: 100%; background-color: #e2e8f0; border-radius: 999px; height: 14px; overflow: hidden;">
-                    <div id="progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #3b82f6, #1d4ed8); transition: width 0.3s ease;"></div>
+                    <div id="progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #059669); transition: width 0.3s ease;"></div>
                 </div>
             `,
             allowOutsideClick: false,
@@ -409,7 +522,7 @@
             }
         });
 
-        // Polling Progress
+        // Polling Progress ke Server
         const pollInterval = setInterval(() => {
             fetch('/upload/progress?id=' + uploadId)
                 .then(res => res.json())
@@ -420,18 +533,27 @@
 
                         const text = data.total > 0 
                             ? `Memproses data ke-${data.progress.toLocaleString()} dari ${data.total.toLocaleString()} (${percent}%)`
-                            : `Memproses data ke-${data.progress.toLocaleString()}...`;
+                            : `Memproses baris ke-${data.progress.toLocaleString()} data pegawai...`;
 
                         const progText = document.getElementById('progress-text');
                         const progBar = document.getElementById('progress-bar');
                         if (progText) progText.innerText = text;
-                        if (progBar && data.total > 0) progBar.style.width = percent + '%';
+                        if (progBar) {
+                            if (data.total > 0) {
+                                progBar.style.width = percent + '%';
+                            } else {
+                                progBar.style.width = '100%';
+                            }
+                        }
                     }
                 }).catch(err => console.error(err));
         }, 1000);
 
-        // Kirim request AJAX
-        fetch(form.action, {
+        const formData = new FormData();
+        formData.append('_token', '{{ csrf_token() }}');
+        formData.append('upload_id', uploadId);
+
+        fetch('/master/pegawai-simpeg/' + fileId + '/sync', {
             method: 'POST',
             body: formData,
             headers: {
@@ -445,14 +567,14 @@
                 const res = data.result || {};
                 Swal.fire({
                     icon: 'success',
-                    title: 'Impor Pegawai Berhasil!',
+                    title: 'Sinkronisasi Selesai!',
                     html: `
-                        <p style="font-size: 13.5px; color: #475569; margin: 6px 0 14px 0;">Data kepegawaian SIMPEG berhasil diproses ke database.</p>
+                        <p style="font-size: 13.5px; color: #475569; margin: 6px 0 14px 0;">Data kepegawaian SIMPEG berhasil disinkronkan ke database.</p>
                         <div style="text-align: left; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
                             <div style="font-weight: 700; color: #0f172a; margin-bottom: 8px; font-size: 13px;">Ringkasan Data:</div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12.5px;">
                                 <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                                    <div style="color: #64748b; font-size: 11px;">Total Baris File</div>
+                                    <div style="color: #64748b; font-size: 11px;">Total Baris Diproses</div>
                                     <div style="font-weight: 800; font-size: 16px; color: #2563eb;">${(res.total_rows || 0).toLocaleString()}</div>
                                 </div>
                                 <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
@@ -475,125 +597,18 @@
                     window.location.reload();
                 });
             } else {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="ph-bold ph-upload-simple"></i> Mulai Unggah & Impor Data';
-                Swal.fire('Gagal!', data.message || 'Terjadi kesalahan saat mengimpor berkas.', 'error');
+                Swal.fire('Gagal!', data.message || 'Terjadi kesalahan saat memproses data berkas.', 'error');
             }
         })
         .catch(err => {
             clearInterval(pollInterval);
-            btn.disabled = false;
-            btn.innerHTML = '<i class="ph-bold ph-upload-simple"></i> Mulai Unggah & Impor Data';
-            Swal.fire('Error!', 'Gagal menghubungi server atau berkas melebihi batas upload.', 'error');
+            Swal.fire('Error!', 'Terjadi kesalahan saat menghubungi server.', 'error');
         });
-    });
+    }
 
-    // Re-sync file function
+    // Alias fungsi reSyncFile untuk kompabilitas
     function reSyncFile(fileId, fileName) {
-        Swal.fire({
-            title: 'Impor Ulang Berkas?',
-            text: 'Aplikasi akan menyinkronkan kembali master pegawai dari berkas "' + fileName + '".',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Ya, Jalankan Impor Ulang',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const uploadId = Date.now().toString() + Math.random().toString(36).substring(2, 7);
-
-                Swal.fire({
-                    title: 'Menyinkronkan Ulang Data',
-                    html: `
-                        <div style="margin-top: 15px; margin-bottom: 10px; text-align: left; font-size: 13px; color: #64748b;" id="progress-text">Memproses ulang data pegawai...</div>
-                        <div style="width: 100%; background-color: #e2e8f0; border-radius: 999px; height: 14px; overflow: hidden;">
-                            <div id="progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #3b82f6, #1d4ed8); transition: width 0.3s ease;"></div>
-                        </div>
-                    `,
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    showConfirmButton: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
-                const pollInterval = setInterval(() => {
-                    fetch('/upload/progress?id=' + uploadId)
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data && data.progress > 0) {
-                                let percent = data.total > 0 ? Math.round((data.progress / data.total) * 100) : 0;
-                                if (percent > 100) percent = 100;
-
-                                const text = data.total > 0 
-                                    ? `Memproses data ke-${data.progress.toLocaleString()} dari ${data.total.toLocaleString()} (${percent}%)`
-                                    : `Memproses data ke-${data.progress.toLocaleString()}...`;
-
-                                const progText = document.getElementById('progress-text');
-                                const progBar = document.getElementById('progress-bar');
-                                if (progText) progText.innerText = text;
-                                if (progBar && data.total > 0) progBar.style.width = percent + '%';
-                            }
-                        }).catch(err => console.error(err));
-                }, 1000);
-
-                const formData = new FormData();
-                formData.append('_token', '{{ csrf_token() }}');
-                formData.append('upload_id', uploadId);
-
-                fetch('/master/pegawai-simpeg/' + fileId + '/sync', {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                .then(res => res.json())
-                .then(data => {
-                    clearInterval(pollInterval);
-                    if (data.success) {
-                        const res = data.result || {};
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Sinkronisasi Selesai!',
-                            html: `
-                                <p style="font-size: 13.5px; color: #475569; margin: 6px 0 14px 0;">Sinkronisasi ulang berkas SIMPEG berhasil dituntaskan.</p>
-                                <div style="text-align: left; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
-                                    <div style="font-weight: 700; color: #0f172a; margin-bottom: 8px; font-size: 13px;">Ringkasan Pembaruan:</div>
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12.5px;">
-                                        <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                                            <div style="color: #64748b; font-size: 11px;">Total Baris File</div>
-                                            <div style="font-weight: 800; font-size: 16px; color: #2563eb;">${(res.total_rows || 0).toLocaleString()}</div>
-                                        </div>
-                                        <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                                            <div style="color: #64748b; font-size: 11px;">Pegawai Baru</div>
-                                            <div style="font-weight: 800; font-size: 16px; color: #059669;">+${(res.inserted_count || 0).toLocaleString()}</div>
-                                        </div>
-                                        <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                                            <div style="color: #64748b; font-size: 11px;">Pegawai Diperbarui</div>
-                                            <div style="font-weight: 800; font-size: 16px; color: #d97706;">${(res.updated_count || 0).toLocaleString()}</div>
-                                        </div>
-                                        <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                                            <div style="color: #64748b; font-size: 11px;">Baris Dilewati</div>
-                                            <div style="font-weight: 800; font-size: 16px; color: #64748b;">${(res.skipped_count || 0).toLocaleString()}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            `,
-                            confirmButtonText: 'Selesai & Muat Ulang'
-                        }).then(() => {
-                            window.location.reload();
-                        });
-                    } else {
-                        Swal.fire('Gagal!', data.message, 'error');
-                    }
-                })
-                .catch(err => {
-                    clearInterval(pollInterval);
-                    Swal.fire('Error!', 'Terjadi kesalahan saat sinkronisasi.', 'error');
-                });
-            }
-        });
+        runSyncFile(fileId, fileName);
     }
 </script>
 @endsection

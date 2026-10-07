@@ -129,6 +129,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/master/pegawai-simpeg', [PegawaiSimpegController::class, 'index'])->name('master.pegawai_simpeg.index');
     Route::post('/master/pegawai-simpeg/upload', [PegawaiSimpegController::class, 'upload'])->name('master.pegawai_simpeg.upload');
     Route::post('/master/pegawai-simpeg/{id}/sync', [PegawaiSimpegController::class, 'sync'])->name('master.pegawai_simpeg.sync');
+    Route::post('/master/pegawai-simpeg/{id}/activate', [PegawaiSimpegController::class, 'activate'])->name('master.pegawai_simpeg.activate');
     Route::delete('/master/pegawai-simpeg/{id}', [PegawaiSimpegController::class, 'destroy'])->name('master.pegawai_simpeg.destroy');
     Route::get('/master/pegawai-simpeg/template', [PegawaiSimpegController::class, 'downloadTemplate'])->name('master.pegawai_simpeg.template');
 

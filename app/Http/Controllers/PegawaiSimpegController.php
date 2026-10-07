@@ -60,7 +60,7 @@ class PegawaiSimpegController extends Controller
     }
 
     /**
-     * Proses unggah berkas Excel SIMPEG dan lakukan impor data ke database.
+     * Proses unggah berkas Excel SIMPEG dan simpan ke server.
      */
     public function upload(Request $request): JsonResponse|RedirectResponse
     {
@@ -68,6 +68,7 @@ class PegawaiSimpegController extends Controller
             'file' => 'required|file|mimes:xlsx,xls,csv|max:30720',
             'mode' => 'nullable|string|in:upsert,insert_only',
             'keterangan' => 'nullable|string|max:255',
+            'auto_sync' => 'nullable|boolean',
         ]);
 
         $file = $request->file('file');
@@ -75,7 +76,6 @@ class PegawaiSimpegController extends Controller
         $originalName = $file->getClientOriginalName();
         $mode = $request->input('mode', 'upsert');
         $keterangan = $request->input('keterangan') ?: 'Unggah Berkas SIMPEG ('.date('d M Y H:i').')';
-        $uploadId = $request->input('upload_id', uniqid());
 
         $targetDir = storage_path('app/simpeg');
         if (! is_dir($targetDir)) {
@@ -88,13 +88,10 @@ class PegawaiSimpegController extends Controller
         $file->move($targetDir, $storedName);
         $fullPath = $targetDir.'/'.$storedName;
 
-        // Jalankan proses impor
-        $result = $this->processImportFile($fullPath, $extension, $mode, $uploadId);
-
         // Perbarui manifest berkas
         $manifest = $this->getManifest();
 
-        // Nonaktifkan status aktif berkas lainnya jika berkas baru berhasil diimpor
+        // Nonaktifkan status aktif berkas lainnya
         foreach ($manifest as &$m) {
             $m['is_active'] = false;
         }
@@ -107,23 +104,40 @@ class PegawaiSimpegController extends Controller
             'file_size' => filesize($fullPath),
             'keterangan' => $keterangan,
             'mode' => $mode,
-            'total_rows' => $result['total_rows'],
-            'inserted_count' => $result['inserted_count'],
-            'updated_count' => $result['updated_count'],
-            'skipped_count' => $result['skipped_count'],
+            'total_rows' => 0,
+            'inserted_count' => 0,
+            'updated_count' => 0,
+            'skipped_count' => 0,
+            'status' => 'uploaded',
             'is_active' => true,
         ];
+
+        // Jika auto_sync diminta (misalnya unit test atau pilihan pengguna)
+        if ($request->boolean('auto_sync')) {
+            $uploadId = $request->input('upload_id', uniqid());
+            $result = $this->processImportFile($fullPath, $extension, $mode, $uploadId);
+            $manifestItem['total_rows'] = $result['total_rows'];
+            $manifestItem['inserted_count'] = $result['inserted_count'];
+            $manifestItem['updated_count'] = $result['updated_count'];
+            $manifestItem['skipped_count'] = $result['skipped_count'];
+            $manifestItem['status'] = 'synced';
+            $manifestItem['last_synced_at'] = date('Y-m-d H:i:s');
+        }
 
         array_unshift($manifest, $manifestItem);
         $this->saveManifest($manifest);
 
-        $msg = "Impor data pegawai SIMPEG berhasil! Total: {$result['total_rows']} data (Baru: {$result['inserted_count']}, Diperbarui: {$result['updated_count']}).";
+        $msg = $request->boolean('auto_sync')
+            ? "Impor data pegawai SIMPEG berhasil! Total: {$manifestItem['total_rows']} data."
+            : "Berkas '{$originalName}' berhasil diterima dan disimpan di server. Silakan klik tombol 'Proses & Sinkronkan Data' untuk memperbarui database.";
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'success' => true,
                 'message' => $msg,
-                'result' => $result,
+                'file_id' => $fileId,
+                'filename' => $originalName,
+                'is_synced' => $request->boolean('auto_sync'),
             ]);
         }
 
@@ -131,7 +145,33 @@ class PegawaiSimpegController extends Controller
     }
 
     /**
-     * Impor ulang data dari berkas yang tersimpan di server.
+     * Aktifkan berkas tertentu sebagai berkas aktif.
+     */
+    public function activate(Request $request, string $id): RedirectResponse
+    {
+        $manifest = $this->getManifest();
+        $targetFound = false;
+
+        foreach ($manifest as &$item) {
+            if ($item['id'] === $id) {
+                $item['is_active'] = true;
+                $targetFound = true;
+            } else {
+                $item['is_active'] = false;
+            }
+        }
+
+        if (! $targetFound) {
+            return redirect()->back()->with('error', 'Berkas tidak ditemukan.');
+        }
+
+        $this->saveManifest($manifest);
+
+        return redirect()->route('master.pegawai_simpeg.index')->with('success', 'Berkas aktif berhasil diubah.');
+    }
+
+    /**
+     * Impor / sinkronkan data dari berkas yang tersimpan di server ke database.
      */
     public function sync(Request $request, string $id): JsonResponse|RedirectResponse
     {
@@ -175,18 +215,20 @@ class PegawaiSimpegController extends Controller
 
         $result = $this->processImportFile($filePath, $extension, $mode, $uploadId);
 
-        // Tandai sebagai file aktif
+        // Tandai sebagai file aktif dan perbarui statistik
         foreach ($manifest as &$m) {
             $m['is_active'] = false;
         }
         $manifest[$targetIndex]['is_active'] = true;
+        $manifest[$targetIndex]['status'] = 'synced';
         $manifest[$targetIndex]['last_synced_at'] = date('Y-m-d H:i:s');
+        $manifest[$targetIndex]['total_rows'] = $result['total_rows'];
         $manifest[$targetIndex]['inserted_count'] = $result['inserted_count'];
         $manifest[$targetIndex]['updated_count'] = $result['updated_count'];
         $manifest[$targetIndex]['skipped_count'] = $result['skipped_count'];
         $this->saveManifest($manifest);
 
-        $msg = "Sinkronisasi ulang berhasil! Total: {$result['total_rows']} data (Baru: {$result['inserted_count']}, Diperbarui: {$result['updated_count']}).";
+        $msg = "Sinkronisasi berhasil! Total: {$result['total_rows']} data diproses (Baru: {$result['inserted_count']}, Diperbarui: {$result['updated_count']}, Dilewati: {$result['skipped_count']}).";
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
@@ -307,173 +349,169 @@ class PegawaiSimpegController extends Controller
     }
 
     /**
-     * Memproses baris demi baris berkas Excel menggunakan SimpleExcelReader.
+     * Memproses baris demi baris berkas Excel menggunakan SimpleExcelReader dengan single-pass memory optimization.
      */
     private function processImportFile(string $filePath, string $extension, string $mode, string $uploadId): array
     {
-        // Hitung total baris terlebih dahulu
-        $totalRows = 0;
-        $counterReader = SimpleExcelReader::create($filePath, $extension);
-        $counterReader->getRows()->each(function () use (&$totalRows) {
-            $totalRows++;
-        });
-
         // Set progress awal
-        $this->updateProgress($uploadId, 0, $totalRows);
+        $this->updateProgress($uploadId, 0, 0);
 
-        $reader = SimpleExcelReader::create($filePath, $extension);
+        // Preload master lookup ke memori RAM untuk kecepatan tinggi
+        $unitKerjaMap = [];
+        foreach (UnitKerja::all() as $uk) {
+            $unitKerjaMap["{$uk->skpd}|{$uk->upt}|{$uk->satker}"] = $uk->id;
+        }
+
+        $jabatanMap = [];
+        foreach (Jabatan::all() as $jab) {
+            $jabatanMap["{$jab->nama}|{$jab->eselon}|{$jab->jenis}"] = $jab->id;
+        }
+
+        $pegawaiMap = Pegawai::pluck('id', 'nip')->toArray();
 
         $insertedCount = 0;
         $updatedCount = 0;
         $skippedCount = 0;
         $processedCount = 0;
 
-        // Cache UnitKerja & Jabatan di memori untuk akselerasi eksekusi
-        $unitKerjaCache = [];
-        $jabatanCache = [];
+        DB::disableQueryLog();
 
-        DB::beginTransaction();
+        $reader = SimpleExcelReader::create($filePath, $extension);
 
-        try {
-            $reader->getRows()->each(function (array $rawRow) use (
-                &$insertedCount,
-                &$updatedCount,
-                &$skippedCount,
-                &$processedCount,
-                &$unitKerjaCache,
-                &$jabatanCache,
-                $mode,
-                $uploadId,
-                $totalRows
-            ) {
-                // Normalisasi kunci header (Case-insensitive & Trim)
-                $row = [];
-                foreach ($rawRow as $k => $v) {
-                    $cleanKey = strtoupper(trim((string) $k));
-                    $cleanKey = str_replace([' ', '-', '.'], '_', $cleanKey);
-                    $row[$cleanKey] = is_string($v) ? trim($v) : $v;
-                }
+        $reader->getRows()->each(function (array $rawRow) use (
+            &$insertedCount,
+            &$updatedCount,
+            &$skippedCount,
+            &$processedCount,
+            &$unitKerjaMap,
+            &$jabatanMap,
+            &$pegawaiMap,
+            $mode,
+            $uploadId
+        ) {
+            // Normalisasi kunci header (Case-insensitive & Trim)
+            $row = [];
+            foreach ($rawRow as $k => $v) {
+                $cleanKey = strtoupper(trim((string) $k));
+                $cleanKey = str_replace([' ', '-', '.'], '_', $cleanKey);
+                $row[$cleanKey] = is_string($v) ? trim($v) : $v;
+            }
 
-                $nip = ! empty($row['NIP']) ? trim((string) $row['NIP']) : null;
-                // Bersihkan karakter non-digit/kutip pada NIP
-                if ($nip) {
-                    $nip = preg_replace('/[^0-9]/', '', $nip);
-                }
+            $nip = ! empty($row['NIP']) ? trim((string) $row['NIP']) : null;
+            if ($nip) {
+                $nip = preg_replace('/[^0-9]/', '', $nip);
+            }
 
-                if (empty($nip)) {
-                    $skippedCount++;
-                    $processedCount++;
-
-                    return;
-                }
-
-                // 1. Simpan atau Ambil Unit Kerja
-                $skpd = ! empty($row['SKPD']) ? trim((string) $row['SKPD']) : null;
-                $upt = ! empty($row['UPT']) ? trim((string) $row['UPT']) : null;
-                $satker = ! empty($row['SATKER']) ? trim((string) $row['SATKER']) : null;
-
-                $ukKey = "{$skpd}|{$upt}|{$satker}";
-                if (! isset($unitKerjaCache[$ukKey])) {
-                    $unitKerja = UnitKerja::firstOrCreate([
-                        'skpd' => $skpd,
-                        'upt' => $upt,
-                        'satker' => $satker,
-                    ]);
-                    $unitKerjaCache[$ukKey] = $unitKerja->id;
-                }
-                $unitKerjaId = $unitKerjaCache[$ukKey];
-
-                // 2. Simpan atau Ambil Jabatan
-                $namaJabatan = ! empty($row['JABATAN']) ? trim((string) $row['JABATAN']) : null;
-                $eselon = ! empty($row['ESELON']) ? trim((string) $row['ESELON']) : null;
-                $jenisJabatan = ! empty($row['JENIS_JABATAN']) ? trim((string) $row['JENIS_JABATAN']) : null;
-
-                $jabKey = "{$namaJabatan}|{$eselon}|{$jenisJabatan}";
-                if (! isset($jabatanCache[$jabKey])) {
-                    $jabatan = Jabatan::firstOrCreate([
-                        'nama' => $namaJabatan,
-                        'eselon' => $eselon,
-                        'jenis' => $jenisJabatan,
-                    ]);
-                    $jabatanCache[$jabKey] = $jabatan->id;
-                }
-                $jabatanId = $jabatanCache[$jabKey];
-
-                // 3. Format Tanggal Lahir (Mendukung DD-MM-YYYY, YYYY-MM-DD, Excel Serial Date)
-                $tglLahir = null;
-                $rawTglLahir = $row['TGL_LAHIR'] ?? null;
-                if (! empty($rawTglLahir)) {
-                    if (is_numeric($rawTglLahir) && (int) $rawTglLahir > 1000) {
-                        try {
-                            $tglLahir = Carbon::instance(Date::excelToDateTimeObject($rawTglLahir))->format('Y-m-d');
-                        } catch (\Throwable $e) {
-                            $tglLahir = null;
-                        }
-                    } else {
-                        $formats = ['d-m-Y', 'Y-m-d', 'd/m/Y', 'Y/m/d', 'd-m-y', 'd/m/y'];
-                        foreach ($formats as $fmt) {
-                            try {
-                                $tglLahir = Carbon::createFromFormat($fmt, (string) $rawTglLahir)->format('Y-m-d');
-                                break;
-                            } catch (\Throwable $e) {
-                                // Coba format berikutnya
-                            }
-                        }
-                    }
-                }
-
-                $pegawaiData = [
-                    'nama' => ! empty($row['NAMA']) ? trim((string) $row['NAMA']) : null,
-                    'tempat_lahir' => ! empty($row['TEMPAT_LAHIR']) ? trim((string) $row['TEMPAT_LAHIR']) : null,
-                    'tgl_lahir' => $tglLahir,
-                    'jk' => ! empty($row['JK']) ? trim((string) $row['JK']) : null,
-                    'agama' => ! empty($row['AGAMA']) ? trim((string) $row['AGAMA']) : null,
-                    'status_pegawai' => ! empty($row['STATUS']) ? trim((string) $row['STATUS']) : null,
-                    'golru' => ! empty($row['GOLRU']) ? trim((string) $row['GOLRU']) : null,
-                    'tmt_golru' => ! empty($row['TMT_GOLRU']) ? trim((string) $row['TMT_GOLRU']) : null,
-                    'masa_kerja_tahun' => isset($row['MK_THN']) && is_numeric($row['MK_THN']) ? (int) $row['MK_THN'] : null,
-                    'masa_kerja_bulan' => isset($row['MK_BLN']) && is_numeric($row['MK_BLN']) ? (int) $row['MK_BLN'] : null,
-                    'tk_ijazah' => ! empty($row['TK_IJAZAH']) ? trim((string) $row['TK_IJAZAH']) : null,
-                    'nm_pendidikan' => ! empty($row['NM_PENDIDIKAN']) ? trim((string) $row['NM_PENDIDIKAN']) : null,
-                    'th_lulus' => isset($row['TH_LULUS']) && is_numeric($row['TH_LULUS']) ? (int) $row['TH_LULUS'] : null,
-                    'jabatan_id' => $jabatanId,
-                    'unit_kerja_id' => $unitKerjaId,
-                ];
-
-                // Cek keberadaan pegawai
-                $existingPegawai = Pegawai::where('nip', $nip)->first();
-
-                if ($existingPegawai) {
-                    if ($mode === 'insert_only') {
-                        $skippedCount++;
-                    } else {
-                        // Perbarui data pegawai, jaga agar data finansial SIMGAJI tidak tertimpa kosong
-                        $existingPegawai->update(array_filter($pegawaiData, fn ($val) => $val !== null));
-                        $updatedCount++;
-                    }
-                } else {
-                    $pegawaiData['nip'] = $nip;
-                    Pegawai::create($pegawaiData);
-                    $insertedCount++;
-                }
-
+            if (empty($nip)) {
+                $skippedCount++;
                 $processedCount++;
 
-                if ($processedCount % 50 === 0 || $processedCount === $totalRows) {
-                    $this->updateProgress($uploadId, $processedCount, $totalRows);
+                return;
+            }
+
+            // 1. Simpan atau Ambil Unit Kerja
+            $skpd = ! empty($row['SKPD']) ? trim((string) $row['SKPD']) : null;
+            $upt = ! empty($row['UPT']) ? trim((string) $row['UPT']) : null;
+            $satker = ! empty($row['SATKER']) ? trim((string) $row['SATKER']) : null;
+
+            $ukKey = "{$skpd}|{$upt}|{$satker}";
+            if (! isset($unitKerjaMap[$ukKey])) {
+                $unitKerja = UnitKerja::firstOrCreate([
+                    'skpd' => $skpd,
+                    'upt' => $upt,
+                    'satker' => $satker,
+                ]);
+                $unitKerjaMap[$ukKey] = $unitKerja->id;
+            }
+            $unitKerjaId = $unitKerjaMap[$ukKey];
+
+            // 2. Simpan atau Ambil Jabatan
+            $namaJabatan = ! empty($row['JABATAN']) ? trim((string) $row['JABATAN']) : null;
+            $eselon = ! empty($row['ESELON']) ? trim((string) $row['ESELON']) : null;
+            $jenisJabatan = ! empty($row['JENIS_JABATAN']) ? trim((string) $row['JENIS_JABATAN']) : null;
+
+            $jabKey = "{$namaJabatan}|{$eselon}|{$jenisJabatan}";
+            if (! isset($jabatanMap[$jabKey])) {
+                $jabatan = Jabatan::firstOrCreate([
+                    'nama' => $namaJabatan,
+                    'eselon' => $eselon,
+                    'jenis' => $jenisJabatan,
+                ]);
+                $jabatanMap[$jabKey] = $jabatan->id;
+            }
+            $jabatanId = $jabatanMap[$jabKey];
+
+            // 3. Format Tanggal Lahir (Mendukung DD-MM-YYYY, YYYY-MM-DD, Excel Serial Date)
+            $tglLahir = null;
+            $rawTglLahir = $row['TGL_LAHIR'] ?? null;
+            if (! empty($rawTglLahir)) {
+                if (is_numeric($rawTglLahir) && (int) $rawTglLahir > 1000) {
+                    try {
+                        $tglLahir = Carbon::instance(Date::excelToDateTimeObject($rawTglLahir))->format('Y-m-d');
+                    } catch (\Throwable $e) {
+                        $tglLahir = null;
+                    }
+                } else {
+                    $formats = ['d-m-Y', 'Y-m-d', 'd/m/Y', 'Y/m/d', 'd-m-y', 'd/m/y'];
+                    foreach ($formats as $fmt) {
+                        try {
+                            $tglLahir = Carbon::createFromFormat($fmt, (string) $rawTglLahir)->format('Y-m-d');
+                            break;
+                        } catch (\Throwable $e) {
+                            // Coba format berikutnya
+                        }
+                    }
                 }
-            });
+            }
 
-            DB::commit();
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            throw $e;
-        }
+            $pegawaiData = [
+                'nama' => ! empty($row['NAMA']) ? trim((string) $row['NAMA']) : null,
+                'tempat_lahir' => ! empty($row['TEMPAT_LAHIR']) ? trim((string) $row['TEMPAT_LAHIR']) : null,
+                'tgl_lahir' => $tglLahir,
+                'jk' => ! empty($row['JK']) ? trim((string) $row['JK']) : null,
+                'agama' => ! empty($row['AGAMA']) ? trim((string) $row['AGAMA']) : null,
+                'status_pegawai' => ! empty($row['STATUS']) ? trim((string) $row['STATUS']) : null,
+                'golru' => ! empty($row['GOLRU']) ? trim((string) $row['GOLRU']) : null,
+                'tmt_golru' => ! empty($row['TMT_GOLRU']) ? trim((string) $row['TMT_GOLRU']) : null,
+                'masa_kerja_tahun' => isset($row['MK_THN']) && is_numeric($row['MK_THN']) ? (int) $row['MK_THN'] : null,
+                'masa_kerja_bulan' => isset($row['MK_BLN']) && is_numeric($row['MK_BLN']) ? (int) $row['MK_BLN'] : null,
+                'tk_ijazah' => ! empty($row['TK_IJAZAH']) ? trim((string) $row['TK_IJAZAH']) : null,
+                'nm_pendidikan' => ! empty($row['NM_PENDIDIKAN']) ? trim((string) $row['NM_PENDIDIKAN']) : null,
+                'th_lulus' => isset($row['TH_LULUS']) && is_numeric($row['TH_LULUS']) ? (int) $row['TH_LULUS'] : null,
+                'jabatan_id' => $jabatanId,
+                'unit_kerja_id' => $unitKerjaId,
+                'updated_at' => now(),
+            ];
 
-        $this->updateProgress($uploadId, $totalRows, $totalRows);
+            if (isset($pegawaiMap[$nip])) {
+                if ($mode === 'insert_only') {
+                    $skippedCount++;
+                } else {
+                    $cleanData = array_filter($pegawaiData, fn ($val) => $val !== null);
+                    if (! empty($cleanData)) {
+                        DB::table('pegawais')->where('nip', $nip)->update($cleanData);
+                    }
+                    $updatedCount++;
+                }
+            } else {
+                $pegawaiData['nip'] = $nip;
+                $pegawaiData['created_at'] = now();
+                $newId = DB::table('pegawais')->insertGetId($pegawaiData);
+                $pegawaiMap[$nip] = $newId;
+                $insertedCount++;
+            }
+
+            $processedCount++;
+
+            if ($processedCount % 100 === 0) {
+                $this->updateProgress($uploadId, $processedCount, 0);
+            }
+        });
+
+        $this->updateProgress($uploadId, $processedCount, $processedCount);
 
         return [
-            'total_rows' => $totalRows,
+            'total_rows' => $processedCount,
             'processed_count' => $processedCount,
             'inserted_count' => $insertedCount,
             'updated_count' => $updatedCount,

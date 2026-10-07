@@ -571,7 +571,7 @@
         openModal('editModal');
     }
 
-    // Modal Upload SIMPEG Form AJAX & SweetAlert Progress
+    // Modal Upload SIMPEG Form AJAX & Two-Step Upload/Sync
     document.getElementById('modalUploadSimpegForm').addEventListener('submit', function(e) {
         e.preventDefault();
 
@@ -583,19 +583,79 @@
         }
 
         const formData = new FormData(form);
-        const uploadId = Date.now().toString() + Math.random().toString(36).substring(2, 7);
-        formData.append('upload_id', uploadId);
-
         const btn = document.getElementById('btnModalUploadSimpeg');
         btn.disabled = true;
-        btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Mengunggah...';
+        btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Menyimpan Berkas ke Server...';
 
         Swal.fire({
-            title: 'Mengimpor Data Pegawai SIMPEG',
+            title: 'Mengunggah Berkas ke Server',
+            html: '<p style="color: #64748b; font-size: 13px;">Sedang memindahkan dan menyimpan berkas Excel ke server (1-2 detik)...</p>',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph-bold ph-upload-simple"></i> Unggah & Simpan ke Server';
+
+            if (data.success) {
+                closeModal('uploadSimpegModal');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berkas Berhasil Diterima & Disimpan!',
+                    html: `
+                        <p style="font-size: 13.5px; color: #475569; margin: 6px 0 12px 0;">
+                            Berkas <strong>${data.filename}</strong> telah tersimpan di server.
+                        </p>
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; text-align: left; font-size: 12.5px; color: #334155; margin-bottom: 12px;">
+                            <strong>Langkah Selanjutnya:</strong><br>
+                            Anda dapat langsung memproses data master pegawai ke database sekarang.
+                        </div>
+                    `,
+                    showCancelButton: true,
+                    confirmButtonText: '⚡ Ya, Proses & Sinkronkan Sekarang',
+                    cancelButtonText: 'Tutup / Nanti Saja',
+                    confirmButtonColor: '#059669',
+                    cancelButtonColor: '#64748b'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        runSyncSimpegFromModal(data.file_id, data.filename);
+                    } else {
+                        window.location.reload();
+                    }
+                });
+            } else {
+                Swal.fire('Gagal!', data.message || 'Terjadi kesalahan saat mengunggah berkas.', 'error');
+            }
+        })
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph-bold ph-upload-simple"></i> Unggah & Simpan ke Server';
+            Swal.fire('Error!', 'Gagal menghubungi server atau berkas melebihi batas upload.', 'error');
+        });
+    });
+
+    function runSyncSimpegFromModal(fileId, fileName) {
+        const uploadId = Date.now().toString() + Math.random().toString(36).substring(2, 7);
+
+        Swal.fire({
+            title: 'Memproses Data Pegawai SIMPEG',
             html: `
-                <div style="margin-top: 15px; margin-bottom: 10px; text-align: left; font-size: 13px; color: #64748b;" id="modal-progress-text">Membaca dan memproses berkas spreadsheet...</div>
+                <div style="margin-top: 15px; margin-bottom: 10px; text-align: left; font-size: 13px; color: #64748b;" id="modal-progress-text">Menyiapkan in-memory lookup dan membaca berkas spreadsheet...</div>
                 <div style="width: 100%; background-color: #e2e8f0; border-radius: 999px; height: 14px; overflow: hidden;">
-                    <div id="modal-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #3b82f6, #1d4ed8); transition: width 0.3s ease;"></div>
+                    <div id="modal-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #10b981, #059669); transition: width 0.3s ease;"></div>
                 </div>
             `,
             allowOutsideClick: false,
@@ -606,7 +666,6 @@
             }
         });
 
-        // Polling Progress
         const pollInterval = setInterval(() => {
             fetch('/upload/progress?id=' + uploadId)
                 .then(res => res.json())
@@ -617,17 +676,27 @@
 
                         const text = data.total > 0 
                             ? `Memproses data ke-${data.progress.toLocaleString()} dari ${data.total.toLocaleString()} (${percent}%)`
-                            : `Memproses data ke-${data.progress.toLocaleString()}...`;
+                            : `Memproses baris ke-${data.progress.toLocaleString()} data pegawai...`;
 
                         const progText = document.getElementById('modal-progress-text');
                         const progBar = document.getElementById('modal-progress-bar');
                         if (progText) progText.innerText = text;
-                        if (progBar && data.total > 0) progBar.style.width = percent + '%';
+                        if (progBar) {
+                            if (data.total > 0) {
+                                progBar.style.width = percent + '%';
+                            } else {
+                                progBar.style.width = '100%';
+                            }
+                        }
                     }
                 }).catch(err => console.error(err));
         }, 1000);
 
-        fetch(form.action, {
+        const formData = new FormData();
+        formData.append('_token', '{{ csrf_token() }}');
+        formData.append('upload_id', uploadId);
+
+        fetch('/master/pegawai-simpeg/' + fileId + '/sync', {
             method: 'POST',
             body: formData,
             headers: {
@@ -639,17 +708,16 @@
             clearInterval(pollInterval);
             if (data.success) {
                 const res = data.result || {};
-                closeModal('uploadSimpegModal');
                 Swal.fire({
                     icon: 'success',
-                    title: 'Impor Pegawai Berhasil!',
+                    title: 'Sinkronisasi Selesai!',
                     html: `
-                        <p style="font-size: 13.5px; color: #475569; margin: 6px 0 14px 0;">Data kepegawaian SIMPEG berhasil diproses ke database.</p>
+                        <p style="font-size: 13.5px; color: #475569; margin: 6px 0 14px 0;">Data kepegawaian SIMPEG berhasil disinkronkan ke database.</p>
                         <div style="text-align: left; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
                             <div style="font-weight: 700; color: #0f172a; margin-bottom: 8px; font-size: 13px;">Ringkasan Data:</div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12.5px;">
                                 <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
-                                    <div style="color: #64748b; font-size: 11px;">Total Baris File</div>
+                                    <div style="color: #64748b; font-size: 11px;">Total Baris Diproses</div>
                                     <div style="font-weight: 800; font-size: 16px; color: #2563eb;">${(res.total_rows || 0).toLocaleString()}</div>
                                 </div>
                                 <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
@@ -672,17 +740,13 @@
                     window.location.reload();
                 });
             } else {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="ph-bold ph-upload-simple"></i> Mulai Unggah & Impor';
-                Swal.fire('Gagal!', data.message || 'Terjadi kesalahan saat mengimpor berkas.', 'error');
+                Swal.fire('Gagal!', data.message || 'Terjadi kesalahan saat memproses berkas.', 'error');
             }
         })
         .catch(err => {
             clearInterval(pollInterval);
-            btn.disabled = false;
-            btn.innerHTML = '<i class="ph-bold ph-upload-simple"></i> Mulai Unggah & Impor';
-            Swal.fire('Error!', 'Gagal menghubungi server atau berkas melebihi batas upload.', 'error');
+            Swal.fire('Error!', 'Gagal menghubungi server atau proses sinkronisasi terputus.', 'error');
         });
-    });
+    }
 </script>
 @endsection

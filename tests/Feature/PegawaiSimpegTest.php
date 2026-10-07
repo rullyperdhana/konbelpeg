@@ -29,7 +29,7 @@ class PegawaiSimpegTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Data Master Pegawai SIMPEG');
         $response->assertSee('Format Kolom Spreadsheet SIMPEG');
-        $response->assertSee('Unggah File Excel SIMPEG');
+        $response->assertSee('Simpan Berkas Excel');
     }
 
     public function test_user_can_download_simpeg_excel_template(): void
@@ -40,6 +40,43 @@ class PegawaiSimpegTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertHeader('content-disposition');
+    }
+
+    public function test_user_can_upload_simpeg_excel_file_instantly(): void
+    {
+        $user = User::factory()->create();
+
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->fromArray([
+            ['NIP', 'NAMA', 'STATUS', 'GOLRU', 'SKPD', 'UPT', 'JABATAN', 'TGL_LAHIR'],
+            ['199001012015011001', 'BUDI SANTOSO, S.Kom', 'PNS', 'III/a', 'DISKOMINFO', 'Bidang TI', 'Pranata Komputer', '01-01-1990'],
+        ]);
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'test_simpeg_').'.xlsx';
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($tempPath);
+
+        $uploadedFile = new UploadedFile(
+            $tempPath,
+            'test_simpeg.xlsx',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            null,
+            true
+        );
+
+        $response = $this->actingAs($user)->post(route('master.pegawai_simpeg.upload'), [
+            'file' => $uploadedFile,
+            'mode' => 'upsert',
+            'keterangan' => 'Uji Coba Upload SIMPEG',
+        ]);
+
+        $response->assertRedirect(route('master.pegawai_simpeg.index'));
+        $response->assertSessionHas('success');
+
+        if (file_exists($tempPath)) {
+            @unlink($tempPath);
+        }
     }
 
     public function test_user_can_upload_and_import_simpeg_excel(): void
@@ -71,6 +108,7 @@ class PegawaiSimpegTest extends TestCase
             'file' => $uploadedFile,
             'mode' => 'upsert',
             'keterangan' => 'Uji Coba Import SIMPEG',
+            'auto_sync' => true,
         ]);
 
         $response->assertRedirect(route('master.pegawai_simpeg.index'));
