@@ -124,6 +124,22 @@
             </div>
         </div>
 
+        <!-- Notice Box Alur Sinkronisasi Cerdas (Dual-Sync) -->
+        <div style="margin-bottom: 18px; background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 8px; padding: 13px 15px;">
+            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                <i class="ph-bold ph-info" style="font-size: 20px; color: #2563eb; margin-top: 1px; flex-shrink: 0;"></i>
+                <div style="font-size: 12px; color: var(--text-main); line-height: 1.5;">
+                    <strong style="color: #1d4ed8; font-size: 12.5px;">Informasi Alur Sinkronisasi Master Pegawai:</strong><br>
+                    Data SIMPEG baru akan dipadukan secara otomatis ke database:
+                    <ul style="margin: 5px 0 0 0; padding-left: 16px; color: var(--text-muted); font-size: 11.5px;">
+                        <li><strong>Pegawai Baru:</strong> Otomatis ditambahkan ke database beserta relasi SKPD, UPTD, dan Jabatannya.</li>
+                        <li><strong>Pegawai Lama:</strong> Data SKPD, unit kerja/UPTD, jabatan, dan pangkat langsung diperbarui mengikuti mutasi.</li>
+                        <li><strong>Proteksi Data SIMGAJI:</strong> NIK, No. Rekening, Bank Penyalur, dan Tanggungan Keluarga <strong>tidak akan terhapus / tertimpa</strong>.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
         <form id="uploadSimpegForm" action="{{ route('master.pegawai_simpeg.upload') }}" method="POST" enctype="multipart/form-data">
             @csrf
 
@@ -425,11 +441,35 @@
         .then(data => {
             clearInterval(pollInterval);
             if (data.success) {
+                const res = data.result || {};
                 Swal.fire({
                     icon: 'success',
-                    title: 'Impor Berhasil!',
-                    text: data.message,
-                    confirmButtonText: 'OK'
+                    title: 'Impor Pegawai Berhasil!',
+                    html: `
+                        <p style="font-size: 13.5px; color: #475569; margin: 6px 0 14px 0;">Data kepegawaian SIMPEG berhasil diproses ke database.</p>
+                        <div style="text-align: left; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+                            <div style="font-weight: 700; color: #0f172a; margin-bottom: 8px; font-size: 13px;">Ringkasan Data:</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12.5px;">
+                                <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                    <div style="color: #64748b; font-size: 11px;">Total Baris File</div>
+                                    <div style="font-weight: 800; font-size: 16px; color: #2563eb;">${(res.total_rows || 0).toLocaleString()}</div>
+                                </div>
+                                <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                    <div style="color: #64748b; font-size: 11px;">Pegawai Baru</div>
+                                    <div style="font-weight: 800; font-size: 16px; color: #059669;">+${(res.inserted_count || 0).toLocaleString()}</div>
+                                </div>
+                                <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                    <div style="color: #64748b; font-size: 11px;">Pegawai Diperbarui</div>
+                                    <div style="font-weight: 800; font-size: 16px; color: #d97706;">${(res.updated_count || 0).toLocaleString()}</div>
+                                </div>
+                                <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                    <div style="color: #64748b; font-size: 11px;">Baris Dilewati</div>
+                                    <div style="font-weight: 800; font-size: 16px; color: #64748b;">${(res.skipped_count || 0).toLocaleString()}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `,
+                    confirmButtonText: 'Selesai & Muat Ulang'
                 }).then(() => {
                     window.location.reload();
                 });
@@ -511,11 +551,35 @@
                 .then(data => {
                     clearInterval(pollInterval);
                     if (data.success) {
+                        const res = data.result || {};
                         Swal.fire({
                             icon: 'success',
                             title: 'Sinkronisasi Selesai!',
-                            text: data.message,
-                            confirmButtonText: 'OK'
+                            html: `
+                                <p style="font-size: 13.5px; color: #475569; margin: 6px 0 14px 0;">Sinkronisasi ulang berkas SIMPEG berhasil dituntaskan.</p>
+                                <div style="text-align: left; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+                                    <div style="font-weight: 700; color: #0f172a; margin-bottom: 8px; font-size: 13px;">Ringkasan Pembaruan:</div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12.5px;">
+                                        <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                            <div style="color: #64748b; font-size: 11px;">Total Baris File</div>
+                                            <div style="font-weight: 800; font-size: 16px; color: #2563eb;">${(res.total_rows || 0).toLocaleString()}</div>
+                                        </div>
+                                        <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                            <div style="color: #64748b; font-size: 11px;">Pegawai Baru</div>
+                                            <div style="font-weight: 800; font-size: 16px; color: #059669;">+${(res.inserted_count || 0).toLocaleString()}</div>
+                                        </div>
+                                        <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                            <div style="color: #64748b; font-size: 11px;">Pegawai Diperbarui</div>
+                                            <div style="font-weight: 800; font-size: 16px; color: #d97706;">${(res.updated_count || 0).toLocaleString()}</div>
+                                        </div>
+                                        <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                            <div style="color: #64748b; font-size: 11px;">Baris Dilewati</div>
+                                            <div style="font-weight: 800; font-size: 16px; color: #64748b;">${(res.skipped_count || 0).toLocaleString()}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `,
+                            confirmButtonText: 'Selesai & Muat Ulang'
                         }).then(() => {
                             window.location.reload();
                         });

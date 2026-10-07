@@ -10,9 +10,9 @@
         <p>Pengelolaan master pegawai, status kepegawaian, jabatan, dan unit kerja / UPTD.</p>
     </div>
     <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-        <a href="{{ route('master.pegawai_simpeg.index') }}" class="btn" style="background: rgba(37, 99, 235, 0.08); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.25); display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+        <button type="button" class="btn" onclick="openModal('uploadSimpegModal')" style="background: rgba(37, 99, 235, 0.08); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.25); display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
             <i class="ph-bold ph-file-arrow-up" style="font-size: 16px;"></i> Upload Excel SIMPEG
-        </a>
+        </button>
         <button class="btn btn-primary" onclick="openModal('addModal')">
             <i class="ph ph-plus-circle"></i> Tambah Pegawai
         </button>
@@ -405,6 +405,84 @@
     </div>
 </div>
 
+<!-- Modal Upload Data Pegawai SIMPEG -->
+<div class="modal-overlay" id="uploadSimpegModal">
+    <div class="modal-content" style="max-width: 640px; width: 95%;">
+        <div class="modal-header">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(37, 99, 235, 0.1); color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                    <i class="ph-bold ph-cloud-arrow-up"></i>
+                </div>
+                <div>
+                    <h3 style="margin: 0; font-size: 16px; font-weight: 700;">Upload Master Pegawai SIMPEG</h3>
+                    <p style="margin: 0; font-size: 11.5px; color: var(--text-muted);">Pembaruan berkas spreadsheet (.xlsx, .xls, .csv) BKD</p>
+                </div>
+            </div>
+            <button class="btn-close" onclick="closeModal('uploadSimpegModal')">&times;</button>
+        </div>
+        <div style="padding: 22px;">
+            <!-- Notice Box Informasi Alur Sinkronisasi Cerdas -->
+            <div style="margin-bottom: 18px; background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 8px; padding: 13px 15px;">
+                <div style="display: flex; gap: 10px; align-items: flex-start;">
+                    <i class="ph-bold ph-info" style="font-size: 20px; color: #2563eb; margin-top: 1px; flex-shrink: 0;"></i>
+                    <div style="font-size: 12px; color: var(--text-main); line-height: 1.5;">
+                        <strong style="color: #1d4ed8; font-size: 12.5px;">Informasi Alur Sinkronisasi Master Pegawai:</strong><br>
+                        Data SIMPEG baru akan dipadukan secara otomatis ke database:
+                        <ul style="margin: 5px 0 0 0; padding-left: 16px; color: var(--text-muted); font-size: 11.5px;">
+                            <li><strong>Pegawai Baru:</strong> Otomatis didaftarkan ke sistem beserta relasi SKPD, UPTD, dan Jabatannya.</li>
+                            <li><strong>Pegawai Lama:</strong> Data SKPD, unit kerja/UPTD, jabatan, dan golongan langsung diperbarui mengikuti mutasi.</li>
+                            <li><strong>Proteksi Data SIMGAJI:</strong> NIK, No. Rekening, Bank Penyalur, dan Tanggungan Keluarga <strong>tidak akan terhapus / tertimpa</strong>.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <form id="modalUploadSimpegForm" action="{{ route('master.pegawai_simpeg.upload') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+
+                <!-- File Input -->
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="font-weight: 600; font-size: 12.5px; margin-bottom: 6px; display: block;">Pilih Berkas Excel SIMPEG (.xlsx, .xls, .csv) *</label>
+                    <input type="file" name="file" id="modalFileSimpeg" accept=".xlsx,.xls,.csv" required class="form-control" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px;">
+                    <small style="color: var(--text-muted); font-size: 11.5px; display: block; margin-top: 4px;">Header kolom wajib: <code>NIP</code> dan <code>NAMA</code>. Kolom pelengkap: <code>STATUS</code>, <code>GOLRU</code>, <code>SKPD</code>, <code>UPT</code>, <code>JABATAN</code>, dll.</small>
+                </div>
+
+                <!-- Mode Penanganan -->
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="font-weight: 600; font-size: 12.5px; margin-bottom: 6px; display: block;">Metode Penanganan Data</label>
+                    <select name="mode" class="form-control" style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px;">
+                        <option value="upsert" selected>🔄 Perbarui Data Lama & Tambah Pegawai Baru (Rekomendasi)</option>
+                        <option value="insert_only">➕ Hanya Tambah Pegawai Baru (Abaikan yang sudah ada)</option>
+                    </select>
+                </div>
+
+                <!-- Catatan / Keterangan -->
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="font-weight: 600; font-size: 12.5px; margin-bottom: 6px; display: block;">Catatan / Keterangan Berkas (Opsional)</label>
+                    <input type="text" name="keterangan" class="form-control" placeholder="Contoh: Pembaruan SIMPEG TMT 1 Oktober 2026" style="width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 13px;">
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 16px;">
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <a href="{{ route('master.pegawai_simpeg.template') }}" class="btn" style="font-size: 11.5px; color: #2563eb; background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(37, 99, 235, 0.2); padding: 6px 12px;">
+                            <i class="ph-bold ph-file-arrow-down"></i> Unduh Template
+                        </a>
+                        <a href="{{ route('master.pegawai_simpeg.index') }}" class="btn" style="font-size: 11.5px; color: #64748b; background: var(--bg-surface-secondary, #f8fafc); border: 1px solid var(--border-color); padding: 6px 12px;" title="Lihat riwayat dan panduan kolom lengkap">
+                            <i class="ph-bold ph-list-dashes"></i> Riwayat & Arsip
+                        </a>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn" onclick="closeModal('uploadSimpegModal')" style="padding: 7px 14px; background: var(--bg-surface-secondary, #f1f5f9); border: 1px solid var(--border-color);">Batal</button>
+                        <button type="submit" id="btnModalUploadSimpeg" class="btn btn-primary" style="padding: 7px 16px; font-weight: 600;">
+                            <i class="ph-bold ph-upload-simple"></i> Mulai Unggah & Impor
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
     // Initialize TomSelect for Search Filter
     document.addEventListener("DOMContentLoaded", function() {
@@ -490,5 +568,119 @@
         
         openModal('editModal');
     }
+
+    // Modal Upload SIMPEG Form AJAX & SweetAlert Progress
+    document.getElementById('modalUploadSimpegForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const form = this;
+        const fileInput = document.getElementById('modalFileSimpeg');
+        if (!fileInput.files || fileInput.files.length === 0) {
+            Swal.fire('Peringatan', 'Silakan pilih berkas Excel terlebih dahulu.', 'warning');
+            return;
+        }
+
+        const formData = new FormData(form);
+        const uploadId = Date.now().toString() + Math.random().toString(36).substring(2, 7);
+        formData.append('upload_id', uploadId);
+
+        const btn = document.getElementById('btnModalUploadSimpeg');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Mengunggah...';
+
+        Swal.fire({
+            title: 'Mengimpor Data Pegawai SIMPEG',
+            html: `
+                <div style="margin-top: 15px; margin-bottom: 10px; text-align: left; font-size: 13px; color: #64748b;" id="modal-progress-text">Membaca dan memproses berkas spreadsheet...</div>
+                <div style="width: 100%; background-color: #e2e8f0; border-radius: 999px; height: 14px; overflow: hidden;">
+                    <div id="modal-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #3b82f6, #1d4ed8); transition: width 0.3s ease;"></div>
+                </div>
+            `,
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        // Polling Progress
+        const pollInterval = setInterval(() => {
+            fetch('/upload/progress?id=' + uploadId)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.progress > 0) {
+                        let percent = data.total > 0 ? Math.round((data.progress / data.total) * 100) : 0;
+                        if (percent > 100) percent = 100;
+
+                        const text = data.total > 0 
+                            ? `Memproses data ke-${data.progress.toLocaleString()} dari ${data.total.toLocaleString()} (${percent}%)`
+                            : `Memproses data ke-${data.progress.toLocaleString()}...`;
+
+                        const progText = document.getElementById('modal-progress-text');
+                        const progBar = document.getElementById('modal-progress-bar');
+                        if (progText) progText.innerText = text;
+                        if (progBar && data.total > 0) progBar.style.width = percent + '%';
+                    }
+                }).catch(err => console.error(err));
+        }, 1000);
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            clearInterval(pollInterval);
+            if (data.success) {
+                const res = data.result || {};
+                closeModal('uploadSimpegModal');
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Impor Pegawai Berhasil!',
+                    html: `
+                        <p style="font-size: 13.5px; color: #475569; margin: 6px 0 14px 0;">Data kepegawaian SIMPEG berhasil diproses ke database.</p>
+                        <div style="text-align: left; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px;">
+                            <div style="font-weight: 700; color: #0f172a; margin-bottom: 8px; font-size: 13px;">Ringkasan Data:</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12.5px;">
+                                <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                    <div style="color: #64748b; font-size: 11px;">Total Baris File</div>
+                                    <div style="font-weight: 800; font-size: 16px; color: #2563eb;">${(res.total_rows || 0).toLocaleString()}</div>
+                                </div>
+                                <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                    <div style="color: #64748b; font-size: 11px;">Pegawai Baru</div>
+                                    <div style="font-weight: 800; font-size: 16px; color: #059669;">+${(res.inserted_count || 0).toLocaleString()}</div>
+                                </div>
+                                <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                    <div style="color: #64748b; font-size: 11px;">Pegawai Diperbarui</div>
+                                    <div style="font-weight: 800; font-size: 16px; color: #d97706;">${(res.updated_count || 0).toLocaleString()}</div>
+                                </div>
+                                <div style="background: white; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                    <div style="color: #64748b; font-size: 11px;">Baris Dilewati</div>
+                                    <div style="font-weight: 800; font-size: 16px; color: #64748b;">${(res.skipped_count || 0).toLocaleString()}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `,
+                    confirmButtonText: 'Selesai & Muat Ulang'
+                }).then(() => {
+                    window.location.reload();
+                });
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph-bold ph-upload-simple"></i> Mulai Unggah & Impor';
+                Swal.fire('Gagal!', data.message || 'Terjadi kesalahan saat mengimpor berkas.', 'error');
+            }
+        })
+        .catch(err => {
+            clearInterval(pollInterval);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph-bold ph-upload-simple"></i> Mulai Unggah & Impor';
+            Swal.fire('Error!', 'Gagal menghubungi server atau berkas melebihi batas upload.', 'error');
+        });
+    });
 </script>
 @endsection
