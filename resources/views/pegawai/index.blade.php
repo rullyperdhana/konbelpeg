@@ -703,7 +703,15 @@
                 'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(res => res.json())
+        .then(async res => {
+            const isJson = res.headers.get('content-type')?.includes('application/json');
+            const data = isJson ? await res.json() : null;
+            if (!res.ok) {
+                const errorMsg = (data && data.message) ? data.message : `Server mengembalikan status HTTP ${res.status} (${res.statusText || 'Error'})`;
+                throw new Error(errorMsg);
+            }
+            return data;
+        })
         .then(data => {
             clearInterval(pollInterval);
             if (data.success) {
@@ -745,7 +753,7 @@
         })
         .catch(err => {
             clearInterval(pollInterval);
-            Swal.fire('Error!', 'Gagal menghubungi server atau proses sinkronisasi terputus.', 'error');
+            Swal.fire('Error!', err.message || 'Gagal menghubungi server atau proses sinkronisasi terputus.', 'error');
         });
     }
 </script>

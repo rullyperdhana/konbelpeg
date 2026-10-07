@@ -95,7 +95,7 @@ Route::middleware(['auth'])->group(function () {
         }
         $data = Cache::store('file')->get('upload_progress_'.$id);
         if (! $data) {
-            $data = Cache::get('upload_progress_'.$id, ['progress' => 0, 'total' => 0, 'percent' => 0]);
+            $data = ['progress' => 0, 'total' => 0, 'percent' => 0];
         }
 
         return response()->json($data);

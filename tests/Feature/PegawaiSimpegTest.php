@@ -133,4 +133,59 @@ class PegawaiSimpegTest extends TestCase
             @unlink($tempPath);
         }
     }
+
+    public function test_user_can_sync_uploaded_file_via_ajax(): void
+    {
+        $user = User::factory()->create();
+
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->fromArray([
+            ['NIP', 'NAMA', 'STATUS', 'GOLRU', 'TMT_GOLRU', 'SKPD', 'UPT', 'JABATAN', 'TGL_LAHIR'],
+            ['198808082012011003', 'HENDRA KURNIAWAN, S.T', 'PNS', 'III/b', '01-04-2020', 'DINAS PUPR', 'Bidang Bina Marga', 'Teknik Jalan & Jembatan', '08-08-1988'],
+        ]);
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'test_simpeg_sync_').'.xlsx';
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($tempPath);
+
+        $uploadedFile = new UploadedFile(
+            $tempPath,
+            'test_simpeg_sync.xlsx',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            null,
+            true
+        );
+
+        $uploadResponse = $this->actingAs($user)->postJson(route('master.pegawai_simpeg.upload'), [
+            'file' => $uploadedFile,
+            'mode' => 'upsert',
+            'keterangan' => 'Upload For Sync Test',
+        ]);
+
+        $uploadResponse->assertStatus(200);
+        $fileId = $uploadResponse->json('file_id');
+        $this->assertNotEmpty($fileId);
+
+        $syncResponse = $this->actingAs($user)->postJson(route('master.pegawai_simpeg.sync', $fileId), [
+            'mode' => 'upsert',
+        ]);
+
+        $syncResponse->assertStatus(200);
+        $syncResponse->assertJson([
+            'success' => true,
+        ]);
+
+        $this->assertDatabaseHas('pegawais', [
+            'nip' => '198808082012011003',
+            'nama' => 'HENDRA KURNIAWAN, S.T',
+            'status_pegawai' => 'PNS',
+            'golru' => 'III/b',
+            'tmt_golru' => '01-04-2020',
+        ]);
+
+        if (file_exists($tempPath)) {
+            @unlink($tempPath);
+        }
+    }
 }

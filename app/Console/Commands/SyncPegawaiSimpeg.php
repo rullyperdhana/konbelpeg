@@ -66,122 +66,176 @@ class SyncPegawaiSimpeg extends Command
         $processedCount = 0;
 
         $reader = SimpleExcelReader::create($filePath, $extension);
-        $chunkSize = 200;
-        $chunk = [];
+        $chunkSize = 250;
+        $currentChunkCount = 0;
 
-        $reader->getRows()->each(function (array $rawRow) use (
-            &$insertedCount,
-            &$updatedCount,
-            &$skippedCount,
-            &$processedCount,
-            &$unitKerjaMap,
-            &$jabatanMap,
-            &$pegawaiMap,
-            &$chunk,
-            $mode
+        DB::disableQueryLog();
+        DB::beginTransaction();
 
-        ) {
-            $row = [];
-            foreach ($rawRow as $k => $v) {
-                $cleanKey = strtoupper(trim((string) $k));
-                $cleanKey = str_replace([' ', '-', '.'], '_', $cleanKey);
-                $row[$cleanKey] = is_string($v) ? trim($v) : $v;
-            }
-
-            $nip = ! empty($row['NIP']) ? preg_replace('/[^0-9]/', '', (string) $row['NIP']) : null;
-            if (empty($nip)) {
-                $skippedCount++;
-                $processedCount++;
-
-                return;
-            }
-
-            // Unit Kerja
-            $skpd = ! empty($row['SKPD']) ? trim((string) $row['SKPD']) : null;
-            $upt = ! empty($row['UPT']) ? trim((string) $row['UPT']) : null;
-            $satker = ! empty($row['SATKER']) ? trim((string) $row['SATKER']) : null;
-            $ukKey = "{$skpd}|{$upt}|{$satker}";
-
-            if (! isset($unitKerjaMap[$ukKey])) {
-                $uk = UnitKerja::firstOrCreate(['skpd' => $skpd, 'upt' => $upt, 'satker' => $satker]);
-                $unitKerjaMap[$ukKey] = $uk->id;
-            }
-            $unitKerjaId = $unitKerjaMap[$ukKey];
-
-            // Jabatan
-            $namaJabatan = ! empty($row['JABATAN']) ? trim((string) $row['JABATAN']) : null;
-            $eselon = ! empty($row['ESELON']) ? trim((string) $row['ESELON']) : null;
-            $jenisJabatan = ! empty($row['JENIS_JABATAN']) ? trim((string) $row['JENIS_JABATAN']) : null;
-            $jabKey = "{$namaJabatan}|{$eselon}|{$jenisJabatan}";
-
-            if (! isset($jabatanMap[$jabKey])) {
-                $jab = Jabatan::firstOrCreate(['nama' => $namaJabatan, 'eselon' => $eselon, 'jenis' => $jenisJabatan]);
-                $jabatanMap[$jabKey] = $jab->id;
-            }
-            $jabatanId = $jabatanMap[$jabKey];
-
-            // Tanggal Lahir
-            $tglLahir = null;
-            $rawTglLahir = $row['TGL_LAHIR'] ?? null;
-            if (! empty($rawTglLahir)) {
-                if (is_numeric($rawTglLahir) && (int) $rawTglLahir > 1000) {
-                    try {
-                        $tglLahir = Carbon::instance(Date::excelToDateTimeObject($rawTglLahir))->format('Y-m-d');
-                    } catch (\Throwable $e) {
-                        $tglLahir = null;
-                    }
-                } else {
-                    $formats = ['d-m-Y', 'Y-m-d', 'd/m/Y', 'Y/m/d'];
-                    foreach ($formats as $fmt) {
-                        try {
-                            $tglLahir = Carbon::createFromFormat($fmt, (string) $rawTglLahir)->format('Y-m-d');
-                            break;
-                        } catch (\Throwable $e) {
+        try {
+            $reader->getRows()->each(function (array $rawRow) use (
+                &$insertedCount,
+                &$updatedCount,
+                &$skippedCount,
+                &$processedCount,
+                &$unitKerjaMap,
+                &$jabatanMap,
+                &$pegawaiMap,
+                &$currentChunkCount,
+                $chunkSize,
+                $mode
+            ) {
+                try {
+                    $row = [];
+                    foreach ($rawRow as $k => $v) {
+                        $cleanKey = strtoupper(trim((string) $k));
+                        $cleanKey = str_replace([' ', '-', '.'], '_', $cleanKey);
+                        if ($v instanceof \DateTimeInterface) {
+                            $row[$cleanKey] = $v;
+                        } elseif (is_string($v)) {
+                            $row[$cleanKey] = trim($v);
+                        } else {
+                            $row[$cleanKey] = $v;
                         }
                     }
-                }
-            }
 
-            $pegawaiData = [
-                'nama' => ! empty($row['NAMA']) ? trim((string) $row['NAMA']) : null,
-                'tempat_lahir' => ! empty($row['TEMPAT_LAHIR']) ? trim((string) $row['TEMPAT_LAHIR']) : null,
-                'tgl_lahir' => $tglLahir,
-                'jk' => ! empty($row['JK']) ? trim((string) $row['JK']) : null,
-                'agama' => ! empty($row['AGAMA']) ? trim((string) $row['AGAMA']) : null,
-                'status_pegawai' => ! empty($row['STATUS']) ? trim((string) $row['STATUS']) : null,
-                'golru' => ! empty($row['GOLRU']) ? trim((string) $row['GOLRU']) : null,
-                'tmt_golru' => ! empty($row['TMT_GOLRU']) ? trim((string) $row['TMT_GOLRU']) : null,
-                'masa_kerja_tahun' => isset($row['MK_THN']) && is_numeric($row['MK_THN']) ? (int) $row['MK_THN'] : null,
-                'masa_kerja_bulan' => isset($row['MK_BLN']) && is_numeric($row['MK_BLN']) ? (int) $row['MK_BLN'] : null,
-                'tk_ijazah' => ! empty($row['TK_IJAZAH']) ? trim((string) $row['TK_IJAZAH']) : null,
-                'nm_pendidikan' => ! empty($row['NM_PENDIDIKAN']) ? trim((string) $row['NM_PENDIDIKAN']) : null,
-                'th_lulus' => isset($row['TH_LULUS']) && is_numeric($row['TH_LULUS']) ? (int) $row['TH_LULUS'] : null,
-                'jabatan_id' => $jabatanId,
-                'unit_kerja_id' => $unitKerjaId,
-            ];
+                    $nip = ! empty($row['NIP']) ? preg_replace('/[^0-9]/', '', (string) $row['NIP']) : null;
+                    if (empty($nip)) {
+                        $skippedCount++;
+                        $processedCount++;
 
-            if (isset($pegawaiMap[$nip])) {
-                if ($mode === 'insert_only') {
-                    $skippedCount++;
-                } else {
-                    $cleanData = array_filter($pegawaiData, fn ($v) => $v !== null);
-                    if (! empty($cleanData)) {
-                        DB::table('pegawais')->where('nip', $nip)->update($cleanData);
+                        return;
                     }
-                    $updatedCount++;
-                }
-            } else {
-                $pegawaiData['nip'] = $nip;
-                $newId = DB::table('pegawais')->insertGetId($pegawaiData);
-                $pegawaiMap[$nip] = $newId;
-                $insertedCount++;
-            }
 
-            $processedCount++;
-            if ($processedCount % 500 === 0) {
-                $this->info("Telah memproses {$processedCount} baris (Baru: {$insertedCount}, Diperbarui: {$updatedCount})...");
-            }
-        });
+                    // Unit Kerja
+                    $skpd = ! empty($row['SKPD']) ? trim((string) $row['SKPD']) : null;
+                    $upt = ! empty($row['UPT']) ? trim((string) $row['UPT']) : null;
+                    $satker = ! empty($row['SATKER']) ? trim((string) $row['SATKER']) : null;
+
+                    $unitKerjaId = null;
+                    if ($skpd || $upt || $satker) {
+                        $ukKey = "{$skpd}|{$upt}|{$satker}";
+                        if (! isset($unitKerjaMap[$ukKey])) {
+                            $uk = UnitKerja::firstOrCreate(['skpd' => $skpd, 'upt' => $upt, 'satker' => $satker]);
+                            $unitKerjaMap[$ukKey] = $uk->id;
+                        }
+                        $unitKerjaId = $unitKerjaMap[$ukKey];
+                    }
+
+                    // Jabatan
+                    $namaJabatan = ! empty($row['JABATAN']) ? trim((string) $row['JABATAN']) : null;
+                    $eselon = ! empty($row['ESELON']) ? trim((string) $row['ESELON']) : null;
+                    $jenisJabatan = ! empty($row['JENIS_JABATAN']) ? trim((string) $row['JENIS_JABATAN']) : null;
+
+                    $jabatanId = null;
+                    if ($namaJabatan || $eselon || $jenisJabatan) {
+                        $jabKey = "{$namaJabatan}|{$eselon}|{$jenisJabatan}";
+                        if (! isset($jabatanMap[$jabKey])) {
+                            $jab = Jabatan::firstOrCreate(['nama' => $namaJabatan, 'eselon' => $eselon, 'jenis' => $jenisJabatan]);
+                            $jabatanMap[$jabKey] = $jab->id;
+                        }
+                        $jabatanId = $jabatanMap[$jabKey];
+                    }
+
+                    // Tanggal Lahir
+                    $tglLahir = null;
+                    $rawTglLahir = $row['TGL_LAHIR'] ?? null;
+                    if (! empty($rawTglLahir)) {
+                        if ($rawTglLahir instanceof \DateTimeInterface) {
+                            $tglLahir = $rawTglLahir->format('Y-m-d');
+                        } elseif (is_numeric($rawTglLahir) && (int) $rawTglLahir > 1000) {
+                            try {
+                                $tglLahir = Carbon::instance(Date::excelToDateTimeObject($rawTglLahir))->format('Y-m-d');
+                            } catch (\Throwable $e) {
+                                $tglLahir = null;
+                            }
+                        } else {
+                            $formats = ['d-m-Y', 'Y-m-d', 'd/m/Y', 'Y/m/d', 'd-m-y', 'd/m/y'];
+                            foreach ($formats as $fmt) {
+                                try {
+                                    $tglLahir = Carbon::createFromFormat($fmt, (string) $rawTglLahir)->format('Y-m-d');
+                                    break;
+                                } catch (\Throwable $e) {
+                                }
+                            }
+                        }
+                    }
+
+                    // TMT Golru
+                    $tmtGolru = null;
+                    $rawTmtGolru = $row['TMT_GOLRU'] ?? null;
+                    if (! empty($rawTmtGolru)) {
+                        if ($rawTmtGolru instanceof \DateTimeInterface) {
+                            $tmtGolru = $rawTmtGolru->format('d-m-Y');
+                        } elseif (is_numeric($rawTmtGolru) && (int) $rawTmtGolru > 1000) {
+                            try {
+                                $tmtGolru = Carbon::instance(Date::excelToDateTimeObject($rawTmtGolru))->format('d-m-Y');
+                            } catch (\Throwable $e) {
+                                $tmtGolru = (string) $rawTmtGolru;
+                            }
+                        } else {
+                            $tmtGolru = trim((string) $rawTmtGolru);
+                        }
+                    }
+
+                    $pegawaiData = [
+                        'nama' => ! empty($row['NAMA']) ? trim((string) $row['NAMA']) : null,
+                        'tempat_lahir' => ! empty($row['TEMPAT_LAHIR']) ? trim((string) $row['TEMPAT_LAHIR']) : null,
+                        'tgl_lahir' => $tglLahir,
+                        'jk' => ! empty($row['JK']) ? trim((string) $row['JK']) : null,
+                        'agama' => ! empty($row['AGAMA']) ? trim((string) $row['AGAMA']) : null,
+                        'status_pegawai' => ! empty($row['STATUS']) ? trim((string) $row['STATUS']) : null,
+                        'golru' => ! empty($row['GOLRU']) ? trim((string) $row['GOLRU']) : null,
+                        'tmt_golru' => $tmtGolru,
+                        'masa_kerja_tahun' => isset($row['MK_THN']) && is_numeric($row['MK_THN']) ? (int) $row['MK_THN'] : null,
+                        'masa_kerja_bulan' => isset($row['MK_BLN']) && is_numeric($row['MK_BLN']) ? (int) $row['MK_BLN'] : null,
+                        'tk_ijazah' => ! empty($row['TK_IJAZAH']) ? trim((string) $row['TK_IJAZAH']) : null,
+                        'nm_pendidikan' => ! empty($row['NM_PENDIDIKAN']) ? trim((string) $row['NM_PENDIDIKAN']) : null,
+                        'th_lulus' => isset($row['TH_LULUS']) && is_numeric($row['TH_LULUS']) ? (int) $row['TH_LULUS'] : null,
+                        'jabatan_id' => $jabatanId,
+                        'unit_kerja_id' => $unitKerjaId,
+                    ];
+
+                    if (isset($pegawaiMap[$nip])) {
+                        if ($mode === 'insert_only') {
+                            $skippedCount++;
+                        } else {
+                            $cleanData = array_filter($pegawaiData, fn ($v) => $v !== null);
+                            if (! empty($cleanData)) {
+                                DB::table('pegawais')->where('nip', $nip)->update($cleanData);
+                            }
+                            $updatedCount++;
+                        }
+                    } else {
+                        $pegawaiData['nip'] = $nip;
+                        $newId = DB::table('pegawais')->insertGetId($pegawaiData);
+                        $pegawaiMap[$nip] = $newId;
+                        $insertedCount++;
+                    }
+
+                    $processedCount++;
+                    $currentChunkCount++;
+
+                    if ($currentChunkCount >= $chunkSize) {
+                        DB::commit();
+                        DB::beginTransaction();
+                        $currentChunkCount = 0;
+                    }
+
+                    if ($processedCount % 500 === 0) {
+                        $this->info("Telah memproses {$processedCount} baris (Baru: {$insertedCount}, Diperbarui: {$updatedCount})...");
+                    }
+                } catch (\Throwable $rowError) {
+                    $skippedCount++;
+                    $processedCount++;
+                }
+            });
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            throw $e;
+        }
 
         $this->info("Selesai! Total: {$processedCount} baris diproses (Baru: {$insertedCount}, Diperbarui: {$updatedCount}, Dilewati: {$skippedCount}).");
 
