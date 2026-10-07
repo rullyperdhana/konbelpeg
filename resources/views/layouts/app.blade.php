@@ -1373,6 +1373,9 @@
                 <a href="/master/simgaji-dbf" class="submenu-item {{ Request::is('master/simgaji-dbf*') ? 'active' : '' }}">
                     <i class="ph ph-database"></i> 3. Upload Master SIMGAJI
                 </a>
+                <a href="/master/pegawai-simpeg" class="submenu-item {{ Request::is('master/pegawai-simpeg*') ? 'active' : '' }}">
+                    <i class="ph ph-file-arrow-up"></i> 4. Upload Pegawai SIMPEG
+                </a>
             </div>
 
             <!-- Daftar Pegawai -->
@@ -1402,6 +1405,7 @@
                 <a href="/laporan/penyelarasan-unit-kerja" class="submenu-item {{ Request::is('laporan/penyelarasan-unit-kerja*') ? 'active' : '' }}">11. Penyelarasan SKPD & UPTD</a>
                 <a href="/laporan/iwp-jamkes" class="submenu-item {{ Request::is('laporan/iwp-jamkes*') ? 'active' : '' }}">12. IWP & Jamkes BPJS</a>
                 <a href="/laporan/trace-gaji" class="submenu-item {{ Request::is('*trace-gaji*') ? 'active' : '' }}" style="{{ Request::is('*trace-gaji*') ? 'font-weight: 700;' : '' }}">13. Trace Penggajian Per Orang</a>
+                <a href="/laporan/audit-tunjangan-keluarga" class="submenu-item {{ Request::is('laporan/audit-tunjangan-keluarga*') ? 'active' : '' }}" style="{{ Request::is('laporan/audit-tunjangan-keluarga*') ? 'font-weight: 700;' : '' }}">14. Audit Tunjangan Keluarga</a>
             </div>
             
             <div class="menu-label">Sistem & Pengaturan</div>
@@ -1611,17 +1615,80 @@
                 </div>
 
                 <div class="timeline-version">
+                    <!-- v2.9.0 -->
+                    <div class="timeline-item">
+                        <div class="timeline-badge current">v2.9.0 (Terbaru)</div>
+                        <div class="timeline-content">
+                            <h4 style="margin: 0 0 6px 0; font-size: 13.5px; font-weight: 700; color: var(--text-main);">Modul Audit Tunjangan Keluarga SIMGAJI &amp; Penyelesaian Bukti STS</h4>
+                            <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+                                <li>Uji silang dobel tunjangan anak (klaim ganda ayah &amp; ibu ASN), pasangan saling menunjang (10%+10%), dan kelebihan batas kuota (&gt;2 anak).</li>
+                                <li>Fitur tindak lanjut penyelesaian kasus dengan pencatatan bukti Surat Tanda Setoran (STS) ke Kas Daerah (No. STS, tanggal, nominal pengembalian, dan catatan tindak lanjut).</li>
+                                <li>Filter status kasus (Semua, Pending/Belum Selesai, Sudah Selesai via STS) untuk fokus menyelesaikan kasus tersisa.</li>
+                                <li>Ekspor laporan audit ke format Microsoft Excel (.xlsx) dan PDF resmi.</li>
+                                <li>Komponen navigasi halaman (pagination) modern dan responsif.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- v2.8.0 -->
+                    <div class="timeline-item">
+                        <div class="timeline-badge">v2.8.0</div>
+                        <div class="timeline-content">
+                            <h4 style="margin: 0 0 6px 0; font-size: 13.5px; font-weight: 700; color: var(--text-main);">Integrasi Riwayat Keluarga SIMGAJI (KEL), Profil Finansial &amp; Trace Gaji</h4>
+                            <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+                                <li>Dukungan berkas DBF Riwayat Keluarga (<code>KEL</code>, 70.000+ data) dengan sinkronisasi ke tabel <code>simgaji_keluargas</code>.</li>
+                                <li>Penambahan atribut finansial pegawai: NIK, No. Rekening, Bank Penyalur, NPWP, dan No. Karpeg.</li>
+                                <li>Modul Trace Riwayat Penggajian Pegawai (<code>/laporan/trace-gaji</code>) dengan profil perbankan dan tanggungan keluarga.</li>
+                                <li>Peningkatan laporan Unmatched NIP dengan informasi status kepegawaian (PNS/PPPK/Non-ASN).</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- v2.7.0 -->
+                    <div class="timeline-item">
+                        <div class="timeline-badge">v2.7.0</div>
+                        <div class="timeline-content">
+                            <h4 style="margin: 0 0 6px 0; font-size: 13.5px; font-weight: 700; color: var(--text-main);">Modul Rekonsiliasi IWP &amp; BPJS Kesehatan (Jamkes)</h4>
+                            <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+                                <li>Rekonsiliasi IWP 2% Jamkes Gaji, IWP 8% Taspen, dan IWP 1% TPP di <code>/laporan/iwp-jamkes</code>.</li>
+                                <li>Tab Rekapitulasi per SKPD dan Rincian per Pegawai beserta ekspor Excel &amp; PDF.</li>
+                                <li>Sistem 2 Tab Master SKPD Induk (42) vs UPTD/Satker (1.638) di <code>/master/skpd</code>.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- v2.6.0 -->
+                    <div class="timeline-item">
+                        <div class="timeline-badge">v2.6.0</div>
+                        <div class="timeline-content">
+                            <h4 style="margin: 0 0 6px 0; font-size: 13.5px; font-weight: 700; color: var(--text-main);">Sistem Autentikasi &amp; Containerisasi Docker VPS</h4>
+                            <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+                                <li>Autentikasi sesi multi-user berbasis peran (Role-based access).</li>
+                                <li>Konfigurasi Docker VPS (PHP 8.4-FPM, Nginx, MySQL 8).</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- v2.5.0 -->
+                    <div class="timeline-item">
+                        <div class="timeline-badge">v2.5.0</div>
+                        <div class="timeline-content">
+                            <h4 style="margin: 0 0 6px 0; font-size: 13.5px; font-weight: 700; color: var(--text-main);">Penyelarasan Unit Kerja SIMGAJI vs SIMPEG</h4>
+                            <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+                                <li>Modul penyesuaian penamaan SKPD &amp; UPTD antara data SIMGAJI dan master BKD.</li>
+                            </ul>
+                        </div>
+                    </div>
+
                     <!-- v2.4.0 -->
                     <div class="timeline-item">
-                        <div class="timeline-badge current">v2.4.0 (Terbaru)</div>
+                        <div class="timeline-badge">v2.4.0</div>
                         <div class="timeline-content">
-                            <h4 style="margin: 0 0 6px 0; font-size: 13.5px; font-weight: 700; color: var(--text-main);">Integrasi DBF Histori Gaji Pokok (HIS_GPOK) & Manajemen DBF Ganda</h4>
+                            <h4 style="margin: 0 0 6px 0; font-size: 13.5px; font-weight: 700; color: var(--text-main);">Integrasi DBF Histori Gaji Pokok (HIS_GPOK) &amp; Manajemen DBF Ganda</h4>
                             <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: var(--text-muted); line-height: 1.6;">
                                 <li>Integrasi database <code>HIS_GPOK</code> untuk membaca nomor SK, TMT gaji, dan gapok baru.</li>
                                 <li>Identifikasi otomatis status SK: <strong>Terjadwal di SIMGAJI</strong> (351) vs <strong>Belum Diinput</strong> (124).</li>
-                                <li>Penyelesaian anomali NIP <code>200006152021012001</code> (Ivo Putri Viddy Andini) terverifikasi terjadwal.</li>
                                 <li>Manajemen berkas ganda di <code>/master/simgaji-dbf</code> dengan auto-detect kolom DBF.</li>
-                                <li>Kolom Status SK SIMGAJI pada ekspor Excel & PDF.</li>
                             </ul>
                         </div>
                     </div>

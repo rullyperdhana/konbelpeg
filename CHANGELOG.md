@@ -2,6 +2,59 @@
 
 Dokumen ini mencatat seluruh riwayat pembaruan, evolusi fitur, perbaikan bug, dan progres pengembangan sistem **KONBELPEG (Rekonsiliasi Realisasi Belanja Pegawai & SIMGAJI)**.
 
+## 📌 [v2.10.0] - 2026-10-07
+### 📤 Modul Upload & Sinkronisasi Master Pegawai SIMPEG via Web Spreadsheet
+- **Manajemen & Unggah Berkas SIMPEG (`/master/pegawai-simpeg`)**:
+  - Halaman antarmuka khusus untuk mengunggah berkas Excel (`.xlsx`, `.xls`, `.csv`) master kepegawaian SIMPEG BKD secara berkala.
+  - Kartu KPI statistik: Total Pegawai terdaftar (rincian PNS, PPPK, Paruh Waktu), Unit Kerja/SKPD terdaftar, Jabatan terdaftar, dan riwayat berkas aktif.
+  - Fitur unduh berkas template contoh (`/master/pegawai-simpeg/template`) yang telah terformat dengan gaya resmi dan baris contoh (PNS & PPPK).
+- **Metode Impor Cerdas (Upsert & Preservasi Data Finansial)**:
+  - Otomatis menambahkan pegawai baru yang belum terdaftar di database lengkap dengan relasi SKPD, UPTD, dan Jabatannya.
+  - Memperbarui mutasi SKPD, perubahan unit kerja/UPTD/satker, perubahan jabatan, atau kenaikan pangkat untuk pegawai lama tanpa menghapus data finansial SIMGAJI (NIK, No. Rekening, Bank Penyalur, dan data tanggungan keluarga).
+  - Pilihan metode: *Upsert (Perbarui & Tambah - Direkomendasikan)* atau *Insert Only (Hanya Tambah Baru)*.
+- **Integrasi Antarmuka & Navigasi**:
+  - Submenu baru `4. Upload Pegawai SIMPEG` pada kelompok Master Data sidebar navigasi.
+  - Tombol pintas `Upload Excel SIMPEG` pada header halaman Daftar Pegawai (`/pegawai`).
+  - Progress bar interaktif (*real-time*) dengan polling cache sistem (`/upload/progress?id=...`) terintegrasi modal SweetAlert2.
+  - Tabel riwayat berkas SIMPEG di server dengan kemampuan impor/sinkronisasi ulang (*Re-sync*) dan penghapusan arsip.
+- **Optimasi Reverse Proxy & Cloudflare SSL**:
+  - Penambahan `$middleware->trustProxies(at: '*');` pada `bootstrap/app.php` untuk memastikan deteksi protokol HTTPS dan penanganan header `X-Forwarded-Proto` dari Cloudflare berjalan tanpa redirect loop.
+- **Pengujian Otomatis (*Feature Tests*)**:
+  - Pengujian komprehensif pada `tests/Feature/PegawaiSimpegTest.php` (4 skenario pengujian, 13 asersi lulus).
+
+---
+
+## 📌 [v2.9.0] - 2026-10-03
+### 🛡️ Modul Audit Tunjangan Keluarga SIMGAJI & Penyelesaian Bukti STS (Surat Tanda Setoran)
+- **Modul Audit Tunjangan Keluarga (`/laporan/audit-tunjangan-keluarga`)**:
+  - Sistem pengawasan otomatis berbasis rekonsiliasi berkas SIMGAJI Taspen (`KEL_*.DBF` dan `MST_PGW.DBF`) untuk mengidentifikasi potensi kelebihan bayar tunjangan keluarga.
+  - Tiga pilar uji silang (*Cross-Audit Rules*):
+    1. 👶 **Tab 1: Dobel Tunjangan Anak (2% + 2%)**: Mendeteksi anak yang sama yang diklaim tertunjang sekaligus oleh ayah dan ibu yang keduanya berstatus ASN di Pemerintah Provinsi Kalimantan Selatan.
+    2. 👥 **Tab 2: Pasangan Saling Menunjang (10% + 10%)**: Mendeteksi suami dan istri yang sama-sama berstatus ASN Pemprov Kalsel yang saling mendaftarkan pasangannya dan keduanya menerima tunjangan keluarga 10%.
+    3. ⚠️ **Tab 3: Melebihi Batas Kuota Anak (>2 Anak Tertunjang)**: Mendeteksi ASN yang memiliki lebih dari 2 anak dengan status tunjangan tertunjang (`kdtunjang = 2`) di sistem SIMGAJI melebihi kuota aturan penggajian.
+  - Tautan langsung ke modul *Trace Penggajian Pegawai* (`/laporan/trace-gaji`) untuk setiap ASN yang terlibat guna verifikasi histori transaksi riil.
+- **Pencatatan Tindak Lanjut & Bukti Pengembalian Kasda via STS**:
+  - Migrasi basis data `audit_tunjangan_resolusis` untuk mencatat penyelesaian temuan audit.
+  - Modal interaktif pencatatan tindak lanjut:
+    - Status Penyelesaian (*Selesai* vs *Pending / Belum Selesai*).
+    - Nomor Bukti STS resmi (*Surat Tanda Setoran ke Rekening Kas Umum Daerah*).
+    - Tanggal Setoran STS.
+    - Nominal Pengembalian (Rp) yang disetor ke Kasda.
+    - Catatan tindak lanjut auditor / pemeriksa.
+  - Opsi pembatalan status (*Revert*) jika terdapat kesalahan input atau pembatalan verifikasi.
+- **Filter Status & Rekapitulasi Keuangan Terpadu**:
+  - Dropdown filter status kasus: *Semua Status*, *Pending (Belum Selesai)*, dan *Sudah Selesai (STS)* sehingga auditor dapat fokus menuntaskan kasus-kasus yang tersisa.
+  - Kartu KPI Eksekutif: Total Kasus Temuan, Status Pending, Status Selesai, dan Akumulasi Nominal Setoran STS yang telah kembali ke Kasda.
+- **Ekspor Dokumen Resmi**:
+  - Ekspor hasil audit komprehensif ke **Microsoft Excel (.xlsx)** dengan format akuntansi dan kolom status STS.
+  - Ekspor ke **Dokumen PDF Resmi** (A4 Landscape) siap cetak dan arsip tindak lanjut pengawasan.
+- **Komponen Paginasi Modern**:
+  - Desain kontrol navigasi halaman kustom (*page pills*, *first/last page*, *prev/next*, *dots* `...`, dan *indicator pill*).
+  - Preservasi query string URL (`tab`, `q`, `skpd`, `status`) saat berpindah halaman.
+  - Kompatibel penuh dengan tema Light Mode & Dark Mode.
+- **Pengujian Otomatis (*Feature Tests*)**:
+  - Rangkaian pengujian komprehensif di `tests/Feature/AuditTunjanganKeluargaTest.php` (8 skenario pengujian, 34 asersi lolos).
+
 ---
 
 ## 📌 [v2.8.0] - 2026-10-02

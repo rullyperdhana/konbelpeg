@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuditTunjanganKeluargaController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\JabatanController;
@@ -8,6 +9,7 @@ use App\Http\Controllers\LaporanGabunganController;
 use App\Http\Controllers\LaporanIwpJamkesController;
 use App\Http\Controllers\LaporanPegawaiController;
 use App\Http\Controllers\PegawaiController;
+use App\Http\Controllers\PegawaiSimpegController;
 use App\Http\Controllers\PenyelarasanUnitKerjaController;
 use App\Http\Controllers\PppkGuruController;
 use App\Http\Controllers\RealisasiGajiController;
@@ -56,6 +58,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/pegawai', [PegawaiController::class, 'store']);
     Route::put('/pegawai/{id}', [PegawaiController::class, 'update']);
     Route::delete('/pegawai/{id}', [PegawaiController::class, 'destroy']);
+    Route::post('/pegawai/import', [PegawaiSimpegController::class, 'upload'])->name('pegawai.import');
 
     // Laporan Umum & Pegawai per SKPD/UPT/Satker
     Route::get('/laporan', [LaporanController::class, 'index']);
@@ -122,6 +125,13 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/laporan/unmatched-nip', [UnmatchedNipController::class, 'index']);
     Route::delete('/laporan/unmatched-nip/clear', [UnmatchedNipController::class, 'destroyAll']);
 
+    // Master Pegawai SIMPEG Management & Upload Excel
+    Route::get('/master/pegawai-simpeg', [PegawaiSimpegController::class, 'index'])->name('master.pegawai_simpeg.index');
+    Route::post('/master/pegawai-simpeg/upload', [PegawaiSimpegController::class, 'upload'])->name('master.pegawai_simpeg.upload');
+    Route::post('/master/pegawai-simpeg/{id}/sync', [PegawaiSimpegController::class, 'sync'])->name('master.pegawai_simpeg.sync');
+    Route::delete('/master/pegawai-simpeg/{id}', [PegawaiSimpegController::class, 'destroy'])->name('master.pegawai_simpeg.destroy');
+    Route::get('/master/pegawai-simpeg/template', [PegawaiSimpegController::class, 'downloadTemplate'])->name('master.pegawai_simpeg.template');
+
     // Master Database SIMGAJI (.DBF) Management
     Route::get('/master/simgaji-dbf', [RekonsiliasiSimgajiController::class, 'uploadPage'])->name('master.simgaji_dbf.index');
     Route::post('/master/simgaji-dbf/upload', [RekonsiliasiSimgajiController::class, 'uploadDbf'])->name('master.simgaji_dbf.upload');
@@ -150,6 +160,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/laporan/iwp-jamkes', [LaporanIwpJamkesController::class, 'index'])->name('laporan.iwp_jamkes.index');
     Route::get('/laporan/iwp-jamkes/export/excel', [LaporanIwpJamkesController::class, 'exportExcel'])->name('laporan.iwp_jamkes.export_excel');
     Route::get('/laporan/iwp-jamkes/export/pdf', [LaporanIwpJamkesController::class, 'exportPdf'])->name('laporan.iwp_jamkes.export_pdf');
+
+    // Audit Tunjangan Keluarga (Dobel Menunjang & Kuota)
+    Route::get('/laporan/audit-tunjangan-keluarga', [AuditTunjanganKeluargaController::class, 'index'])->name('laporan.audit_tunjangan.index');
+    Route::get('/laporan/audit-tunjangan-keluarga/refresh', [AuditTunjanganKeluargaController::class, 'refreshCache'])->name('laporan.audit_tunjangan.refresh');
+    Route::get('/laporan/audit-tunjangan-keluarga/export/excel', [AuditTunjanganKeluargaController::class, 'exportExcel'])->name('laporan.audit_tunjangan.export_excel');
+    Route::get('/laporan/audit-tunjangan-keluarga/export/pdf', [AuditTunjanganKeluargaController::class, 'exportPdf'])->name('laporan.audit_tunjangan.export_pdf');
+    Route::post('/laporan/audit-tunjangan-keluarga/resolusi', [AuditTunjanganKeluargaController::class, 'storeResolusi'])->name('laporan.audit_tunjangan.store_resolusi');
+    Route::delete('/laporan/audit-tunjangan-keluarga/resolusi/{id}', [AuditTunjanganKeluargaController::class, 'destroyResolusi'])->name('laporan.audit_tunjangan.destroy_resolusi');
 
     // Pengaturan
     Route::prefix('setting/users')->name('setting.users.')->group(function () {

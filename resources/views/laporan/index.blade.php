@@ -125,5 +125,23 @@
         <p>Rekonsiliasi Iuran Wajib Pegawai (IWP 10%) dan pemotongan Jaminan Kesehatan BPJS dari Gaji Reguler (2%) dan TPP (1%) per SKPD & Pegawai.</p>
         <a href="/laporan/iwp-jamkes" class="btn-report" style="background: #10b981;">Buka Laporan</a>
     </div>
+
+    <div class="report-card">
+        <div class="report-icon" style="background: rgba(59, 130, 246, 0.12); color: #3b82f6;">
+            <i class="ph ph-identification-card"></i>
+        </div>
+        <h3>Trace Penggajian Per Orang</h3>
+        <p>Penelusuran detail riwayat pembayaran gaji, komponen tunjangan, potongan, serta data keluarga dan rekening bank per pegawai.</p>
+        <a href="/laporan/trace-gaji" class="btn-report" style="background: #3b82f6;">Buka Laporan</a>
+    </div>
+
+    <div class="report-card">
+        <div class="report-icon" style="background: rgba(239, 68, 68, 0.12); color: #ef4444;">
+            <i class="ph ph-shield-check"></i>
+        </div>
+        <h3>Audit Tunjangan Keluarga (SIMGAJI)</h3>
+        <p>Deteksi anomali dobel tunjangan anak oleh kedua orang tua ASN, pasangan sesama ASN yang saling menunjang (10%+10%), dan kuota &gt;2 anak.</p>
+        <a href="/laporan/audit-tunjangan-keluarga" class="btn-report" style="background: #ef4444;">Buka Laporan</a>
+    </div>
 </div>
 @endsection

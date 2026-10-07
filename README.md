@@ -98,7 +98,13 @@ Seringkali terjadi diskrepansi yang menyebabkan potensi kelebihan/kekurangan bay
 7. **Laporan Unmatched NIP (`/laporan/unmatched-nip`)**:
    - Mencatat transaksi pembayaran yang NIP-nya tidak ditemukan pada master pegawai.
    - Dilengkapi identifikasi status kepegawaian (PNS / PPPK / Non-ASN) dan indikator keberadaan NIP di basis data SIMGAJI.
-   - Filter dropdown status pegawai dan tombol pembersihan massal (*Clear Log*).
+8. **Laporan Audit Tunjangan Keluarga SIMGAJI (`/laporan/audit-tunjangan-keluarga`)**:
+   - Uji silang dobel tunjangan anak (klaim ganda oleh ayah & ibu yang keduanya berstatus ASN Pemprov Kalsel).
+   - Uji silang pasangan saling menunjang (suami & istri masing-masing mendapat tunjangan pasangan 10%).
+   - Pendeteksi kelebihan kuota tunjangan anak (>2 anak tertunjang pada satu pegawai).
+   - Fitur tindak lanjut penyelesaian kasus dengan pencatatan bukti Surat Tanda Setoran (STS) ke Kas Daerah (No. STS, tanggal, nominal pengembalian, dan catatan tindak lanjut).
+   - Filter status penyelesaian (Semua, Pending/Belum Selesai, Sudah Selesai via STS) dan kartu KPI setoran kasda.
+   - Ekspor Microsoft Excel (.xlsx) dan PDF resmi.
 
 ### D. Modul Rekonsiliasi SIMGAJI (`/laporan/rekonsiliasi-simgaji`)
 Inti dari sistem KONBELPEG dengan 6 kategori pencocokan otomatis:
@@ -141,7 +147,12 @@ Inti dari sistem KONBELPEG dengan 6 kategori pencocokan otomatis:
 - **Data Pegawai (`/pegawai`)**:
   - Pengelolaan data master pegawai (PNS & PPPK): NIP, nama, NIK, No. Rekening, Bank Penyalur, golongan, unit kerja, tanggal lahir.
   - Modal interaktif **Detail Pegawai & SIMGAJI** untuk melihat profil BKD, data finansial Taspen, dan daftar tanggungan keluarga.
-  - Pencarian fleksibel berdasarkan NIP, Nama, maupun NIK.
+  - Tombol pintas **Upload Excel SIMPEG** untuk langsung memperbarui data kepegawaian.
+- **Upload & Sinkronisasi Pegawai SIMPEG (`/master/pegawai-simpeg`)**:
+  - Formulir unggah file spreadsheet Excel (`.xlsx`, `.xls`, `.csv`) master kepegawaian dari SIMPEG BKD.
+  - Opsi metode penanganan: *Upsert* (perbarui pegawai lama & tambah baru) atau *Insert Only*.
+  - Pembaruan otomatis nama, status kepegawaian, golongan, SKPD, UPTD, dan jabatan tanpa menimpa data rekening/NIK finansial SIMGAJI yang sudah tersimpan.
+  - Real-time progress bar dan pengunduhan berkas template contoh (`/master/pegawai-simpeg/template`).
 - **Artisan Command**: `php artisan import:pegawai` untuk mengimpor master pegawai awal dari berkas spreadsheet.
 
 ### G. Modul Pengaturan & Manajemen Pengguna
@@ -164,6 +175,11 @@ Inti dari sistem KONBELPEG dengan 6 kategori pencocokan otomatis:
 | `POST` | `/master/jabatan` | `JabatanController@store` | Tambah master jabatan |
 | `PUT` | `/master/jabatan/{id}`| `JabatanController@update` | Ubah master jabatan |
 | `DELETE`| `/master/jabatan/{id}`| `JabatanController@destroy`| Hapus master jabatan |
+| `GET` | `/master/pegawai-simpeg` | `PegawaiSimpegController@index` | Halaman kelola & unggah berkas SIMPEG |
+| `POST` | `/master/pegawai-simpeg/upload` | `PegawaiSimpegController@upload` | Unggah & impor berkas Excel SIMPEG |
+| `POST` | `/master/pegawai-simpeg/{id}/sync` | `PegawaiSimpegController@sync` | Impor ulang berkas SIMPEG dari arsip |
+| `DELETE`| `/master/pegawai-simpeg/{id}` | `PegawaiSimpegController@destroy`| Hapus arsip berkas SIMPEG |
+| `GET` | `/master/pegawai-simpeg/template` | `PegawaiSimpegController@downloadTemplate` | Unduh format template Excel SIMPEG |
 | `GET` | `/pegawai` | `PegawaiController@index` | Daftar pegawai master |
 | `POST` | `/pegawai` | `PegawaiController@store` | Tambah pegawai |
 | `PUT` | `/pegawai/{id}` | `PegawaiController@update` | Ubah data pegawai |
@@ -195,6 +211,11 @@ Inti dari sistem KONBELPEG dengan 6 kategori pencocokan otomatis:
 | `GET` | `/laporan/penyelarasan-unit-kerja` | `PenyelarasanUnitKerjaController@index` | Penyelarasan SKPD & UPTD SIMGAJI vs SIMPEG |
 | `GET` | `/laporan/unmatched-nip` | `UnmatchedNipController@index` | Daftar NIP tidak cocok |
 | `DELETE`| `/laporan/unmatched-nip/clear` | `UnmatchedNipController@destroyAll` | Bersihkan log unmatched NIP |
+| `GET` | `/laporan/audit-tunjangan-keluarga` | `AuditTunjanganKeluargaController@index` | Modul Audit Tunjangan Keluarga SIMGAJI |
+| `POST` | `/laporan/audit-tunjangan-keluarga/resolusi` | `AuditTunjanganKeluargaController@storeResolusi` | Simpan bukti STS penyelesaian audit |
+| `DELETE`| `/laporan/audit-tunjangan-keluarga/resolusi/{id}`| `AuditTunjanganKeluargaController@destroyResolusi`| Batalkan/hapus status penyelesaian STS |
+| `GET` | `/laporan/audit-tunjangan-keluarga/export-excel` | `AuditTunjanganKeluargaController@exportExcel` | Ekspor Excel audit tunjangan keluarga |
+| `GET` | `/laporan/audit-tunjangan-keluarga/export-pdf` | `AuditTunjanganKeluargaController@exportPdf` | Cetak PDF audit tunjangan keluarga |
 | `GET` | `/master/simgaji-dbf` | `RekonsiliasiSimgajiController@uploadPage` | Kelola file DBF SIMGAJI |
 | `POST` | `/master/simgaji-dbf/upload` | `RekonsiliasiSimgajiController@uploadDbf` | Unggah file DBF SIMGAJI |
 | `POST` | `/master/simgaji-dbf/{id}/activate` | `RekonsiliasiSimgajiController@setActiveDbf` | Set file DBF aktif |
@@ -259,6 +280,8 @@ Sistem membaca database keluaran SIMGAJI secara native tanpa ketergantungan driv
 Seluruh riwayat perkembangan versi aplikasi dari awal inisiasi hingga rilis terkini didokumentasikan secara rinci pada berkas [CHANGELOG.md](CHANGELOG.md).
 
 Ringkasan versi:
+- **v2.10.0 (07 Oktober 2026)**: Modul Upload & Sinkronisasi Master Pegawai SIMPEG via Web Spreadsheet (`/master/pegawai-simpeg`), tombol pintas di halaman pegawai, template Excel resmi, dukungan Cloudflare reverse proxy (`trustProxies`), dan feature tests.
+- **v2.9.0 (03 Oktober 2026)**: Modul Audit Tunjangan Keluarga SIMGAJI (`/laporan/audit-tunjangan-keluarga`), uji silang dobel tunjangan anak (2%+2%), pasangan saling menunjang (10%+10%), kelebihan kuota anak (>2 anak), fitur tindak lanjut pencatatan bukti STS Kasda, dan paginasi modern.
 - **v2.8.0 (02 Oktober 2026)**: Integrasi DBF Riwayat Keluarga (`KEL`), atribut finansial master pegawai (NIK, No. Rekening, Bank Penyalur), modul Trace Penggajian Personal (`/laporan/trace-gaji`), penambahan status pegawai pada Unmatched NIP, dan optimasi sinkronisasi database.
 - **v2.7.0 (29 September 2026)**: Modul Rekonsiliasi IWP & BPJS Kesehatan (`/laporan/iwp-jamkes`), sistem 2 Tab Master SKPD Induk vs UPTD, dan cetak PDF resmi.
 - **v2.6.0 (29 September 2026)**: Sistem Autentikasi Pengguna (`/login`, `/setting/users`) dan Containerisasi Docker VPS (PHP 8.4-FPM, Nginx, MySQL 8).

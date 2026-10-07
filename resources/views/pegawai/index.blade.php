@@ -9,9 +9,14 @@
         <h2>Data Pegawai</h2>
         <p>Pengelolaan master pegawai, status kepegawaian, jabatan, dan unit kerja / UPTD.</p>
     </div>
-    <button class="btn btn-primary" onclick="openModal('addModal')">
-        <i class="ph ph-plus-circle"></i> Tambah Pegawai
-    </button>
+    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <a href="{{ route('master.pegawai_simpeg.index') }}" class="btn" style="background: rgba(37, 99, 235, 0.08); color: #2563eb; border: 1px solid rgba(37, 99, 235, 0.25); display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
+            <i class="ph-bold ph-file-arrow-up" style="font-size: 16px;"></i> Upload Excel SIMPEG
+        </a>
+        <button class="btn btn-primary" onclick="openModal('addModal')">
+            <i class="ph ph-plus-circle"></i> Tambah Pegawai
+        </button>
+    </div>
 </div>
 
 @if(session('success'))

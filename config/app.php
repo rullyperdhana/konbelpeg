@@ -15,9 +15,9 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
-    'version' => env('APP_VERSION', 'v2.7.0'),
-    'version_date' => '29 September 2026',
-    'version_title' => 'Modul Laporan IWP & Jaminan Kesehatan (Jamkes BPJS)',
+    'version' => env('APP_VERSION', 'v2.10.0'),
+    'version_date' => '07 Oktober 2026',
+    'version_title' => 'Modul Upload & Sinkronisasi Master Pegawai SIMPEG via Web',
 
     /*
     |--------------------------------------------------------------------------
