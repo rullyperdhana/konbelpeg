@@ -483,6 +483,8 @@
     </div>
 </div>
 
+<!-- SweetAlert2 Library -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     // Initialize TomSelect for Search Filter
     document.addEventListener("DOMContentLoaded", function() {

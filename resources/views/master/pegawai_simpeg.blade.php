@@ -360,6 +360,7 @@
 </div>
 
 <!-- SweetAlert2 Script & Progress Handling -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     // File input change visual update
     document.getElementById('fileSimpeg').addEventListener('change', function(e) {
