@@ -15,8 +15,9 @@ class AuthTest extends TestCase
         $response = $this->get('/login');
 
         $response->assertStatus(200);
-        $response->assertSee('Sistem Realisasi Belanja Pegawai');
-        $response->assertSee('admin@pemda.go.id');
+        $response->assertSee('KONBELPEG');
+        $response->assertSee('Masuk ke Sistem');
+        $response->assertDontSee('Akun Bawaan');
     }
 
     public function test_users_can_authenticate_using_the_login_screen(): void

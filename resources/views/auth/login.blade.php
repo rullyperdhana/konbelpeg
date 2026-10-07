@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Masuk - Sistem Realisasi Belanja Pegawai</title>
+    <title>Masuk - KONBELPEG BKAD Kabupaten Tapin</title>
     
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,36 +15,54 @@
 
     <style>
         :root {
-            --primary: #4C35DE;
-            --primary-hover: #3b25cb;
-            --primary-light: rgba(76, 53, 222, 0.08);
-            --primary-border: rgba(76, 53, 222, 0.2);
-            --bg-canvas: #f4f6fa;
+            --primary: #1e40af;
+            --primary-hover: #1d4ed8;
+            --primary-subtle: #eff6ff;
+            --primary-border: #bfdbfe;
+            --brand-navy: #0f172a;
+            --brand-navy-light: #1e293b;
+            --accent-gold: #b45309;
+            --accent-gold-subtle: #fef3c7;
+            
+            --bg-canvas: #f1f5f9;
             --bg-surface: #ffffff;
             --border-color: #e2e8f0;
+            --border-focus: #3b82f6;
+            
             --text-main: #0f172a;
             --text-muted: #64748b;
-            --card-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.07), 0 0 1px 1px rgba(0, 0, 0, 0.04);
+            --text-light: #94a3b8;
+            
+            --card-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
         }
 
         :root.dark-mode {
-            --primary: #6366f1;
-            --primary-hover: #4f46e5;
-            --primary-light: rgba(99, 102, 241, 0.15);
-            --primary-border: rgba(99, 102, 241, 0.3);
-            --bg-canvas: #0b111e;
-            --bg-surface: #151d30;
-            --border-color: #212d46;
+            --primary: #3b82f6;
+            --primary-hover: #60a5fa;
+            --primary-subtle: rgba(59, 130, 246, 0.12);
+            --primary-border: rgba(59, 130, 246, 0.25);
+            --brand-navy: #0b1120;
+            --brand-navy-light: #131d33;
+            --accent-gold: #f59e0b;
+            --accent-gold-subtle: rgba(245, 158, 11, 0.12);
+            
+            --bg-canvas: #090e17;
+            --bg-surface: #111827;
+            --border-color: #1f2937;
+            --border-focus: #60a5fa;
+            
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
-            --card-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.4), 0 0 1px 1px rgba(255, 255, 255, 0.05);
+            --text-light: #64748b;
+            
+            --card-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
         }
 
@@ -57,42 +75,25 @@
             justify-content: center;
             padding: 1.5rem;
             position: relative;
-            overflow-x: hidden;
         }
 
-        /* Ambient Glow Background */
-        .ambient-glow {
+        /* Subtle Government Grid Background */
+        body::before {
+            content: '';
             position: fixed;
-            width: 650px;
-            height: 650px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(76, 53, 222, 0.12) 0%, rgba(76, 53, 222, 0) 70%);
-            top: -150px;
-            right: -150px;
+            inset: 0;
+            background-image: 
+                linear-gradient(to right, rgba(100, 116, 139, 0.04) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(100, 116, 139, 0.04) 1px, transparent 1px);
+            background-size: 32px 32px;
             pointer-events: none;
             z-index: 0;
         }
 
-        .ambient-glow-2 {
-            position: fixed;
-            width: 500px;
-            height: 500px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0) 70%);
-            bottom: -100px;
-            left: -100px;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .dark-mode .ambient-glow {
-            background: radial-gradient(circle, rgba(99, 102, 241, 0.18) 0%, rgba(99, 102, 241, 0) 70%);
-        }
-
-        /* Top Bar Actions */
-        .top-actions {
+        /* Top Bar Controls */
+        .top-bar {
             position: absolute;
-            top: 1.5rem;
+            top: 1.25rem;
             right: 1.5rem;
             display: flex;
             align-items: center;
@@ -104,15 +105,15 @@
             background: var(--bg-surface);
             border: 1px solid var(--border-color);
             color: var(--text-muted);
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            font-size: 1.25rem;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+            font-size: 1.15rem;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
 
         .theme-toggle-btn:hover {
@@ -120,14 +121,14 @@
             border-color: var(--primary);
         }
 
-        /* Main Card Container */
-        .login-wrapper {
+        /* Main Container */
+        .login-card {
             position: relative;
             z-index: 1;
             width: 100%;
-            max-width: 1020px;
+            max-width: 980px;
             background: var(--bg-surface);
-            border-radius: 20px;
+            border-radius: 16px;
             border: 1px solid var(--border-color);
             box-shadow: var(--card-shadow);
             display: grid;
@@ -136,156 +137,226 @@
         }
 
         @media (max-width: 860px) {
-            .login-wrapper {
+            .login-card {
                 grid-template-columns: 1fr;
-                max-width: 480px;
+                max-width: 440px;
             }
-            .brand-side {
+            .panel-institutional {
                 display: none;
             }
         }
 
-        /* Left Side: Brand & Visuals */
-        .brand-side {
-            background: linear-gradient(145deg, #1e1b4b 0%, #312e81 40%, #4338ca 100%);
+        /* Left Panel: Institutional & Brand */
+        .panel-institutional {
+            background: linear-gradient(165deg, #0f172a 0%, #1e293b 60%, #172554 100%);
             color: #ffffff;
             padding: 3.5rem 3rem;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             position: relative;
-            overflow: hidden;
+            border-right: 1px solid rgba(255, 255, 255, 0.08);
         }
 
-        .brand-side::after {
-            content: '';
-            position: absolute;
-            width: 320px;
-            height: 320px;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
-            bottom: -50px;
-            right: -50px;
-            border-radius: 50%;
-        }
-
-        .brand-header {
+        .inst-header {
             display: flex;
             align-items: center;
             gap: 1rem;
         }
 
-        .brand-logo-icon {
-            width: 48px;
-            height: 48px;
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            border-radius: 14px;
+        .inst-badge-icon {
+            width: 46px;
+            height: 46px;
+            background: #1e3a8a;
+            border: 1px solid rgba(191, 219, 254, 0.25);
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.6rem;
+            font-size: 1.5rem;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        }
+
+        .inst-badge-text h3 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            line-height: 1.25;
             color: #ffffff;
         }
 
-        .brand-logo-text h3 {
-            font-size: 1.25rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
-            line-height: 1.2;
-        }
-
-        .brand-logo-text p {
+        .inst-badge-text p {
             font-size: 0.8rem;
-            opacity: 0.8;
-            font-weight: 400;
+            color: #94a3b8;
+            font-weight: 500;
         }
 
-        .brand-hero {
-            margin: 3rem 0;
+        .inst-body {
+            margin: 2.5rem 0;
         }
 
-        .brand-hero h1 {
-            font-size: 2rem;
+        .inst-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: rgba(180, 83, 9, 0.2);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            color: #fde68a;
+            padding: 0.25rem 0.65rem;
+            border-radius: 6px;
+            font-size: 0.725rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin-bottom: 1.25rem;
+        }
+
+        .inst-title {
+            font-size: 1.85rem;
             font-weight: 800;
             line-height: 1.25;
-            letter-spacing: -0.03em;
-            margin-bottom: 1rem;
+            letter-spacing: -0.025em;
+            color: #ffffff;
+            margin-bottom: 0.85rem;
         }
 
-        .brand-hero p {
-            font-size: 0.95rem;
+        .inst-desc {
+            font-size: 0.9rem;
             line-height: 1.6;
-            opacity: 0.85;
+            color: #cbd5e1;
             font-weight: 400;
         }
 
-        .features-list {
+        .inst-features {
+            margin-top: 2rem;
             display: flex;
             flex-direction: column;
-            gap: 0.85rem;
+            gap: 0.75rem;
         }
 
-        .feature-item {
+        .inst-feature-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            font-size: 0.825rem;
+            color: #e2e8f0;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 0.75rem 0.9rem;
+            border-radius: 8px;
+        }
+
+        .inst-feature-item i {
+            font-size: 1.15rem;
+            color: #60a5fa;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .inst-feature-item strong {
+            display: block;
+            font-size: 0.85rem;
+            color: #ffffff;
+            margin-bottom: 2px;
+        }
+
+        .inst-footer {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            font-size: 0.875rem;
-            background: rgba(255, 255, 255, 0.08);
-            padding: 0.65rem 1rem;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
         }
 
-        .feature-item i {
-            font-size: 1.15rem;
-            color: #a5b4fc;
+        .inst-footer span {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
         }
 
-        .brand-footer {
-            font-size: 0.775rem;
-            opacity: 0.7;
-            padding-top: 1.5rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.12);
-        }
-
-        /* Right Side: Form */
-        .form-side {
+        /* Right Panel: Clean Professional Form */
+        .panel-form {
             padding: 3.5rem 3rem;
             display: flex;
             flex-direction: column;
             justify-content: center;
+            background: var(--bg-surface);
         }
 
         @media (max-width: 480px) {
-            .form-side {
-                padding: 2.25rem 1.75rem;
+            .panel-form {
+                padding: 2.5rem 1.75rem;
             }
         }
 
+        .mobile-header {
+            display: none;
+            margin-bottom: 1.75rem;
+            padding-bottom: 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        @media (max-width: 860px) {
+            .mobile-header {
+                display: flex;
+                align-items: center;
+                gap: 0.85rem;
+            }
+        }
+
+        .mobile-logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--primary);
+            color: #ffffff;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.35rem;
+        }
+
+        .mobile-header-text h3 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.2;
+        }
+
+        .mobile-header-text p {
+            font-size: 0.775rem;
+            color: var(--text-muted);
+        }
+
         .form-header {
-            margin-bottom: 2rem;
+            margin-bottom: 1.75rem;
         }
 
         .form-header h2 {
-            font-size: 1.75rem;
+            font-size: 1.5rem;
             font-weight: 700;
-            letter-spacing: -0.025em;
+            letter-spacing: -0.02em;
             color: var(--text-main);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.35rem;
         }
 
         .form-header p {
-            font-size: 0.9rem;
+            font-size: 0.875rem;
             color: var(--text-muted);
+            line-height: 1.5;
         }
 
         /* Alerts */
         .alert {
-            padding: 0.85rem 1rem;
-            border-radius: 10px;
-            font-size: 0.875rem;
-            margin-bottom: 1.5rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.825rem;
+            margin-bottom: 1.25rem;
             display: flex;
             align-items: flex-start;
             gap: 0.65rem;
@@ -293,18 +364,18 @@
         }
 
         .alert-danger {
-            background-color: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.25);
-            color: #ef4444;
+            background-color: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #dc2626;
         }
 
         .alert-info {
-            background-color: rgba(59, 130, 246, 0.1);
-            border: 1px solid rgba(59, 130, 246, 0.25);
-            color: #3b82f6;
+            background-color: var(--primary-subtle);
+            border: 1px solid var(--primary-border);
+            color: var(--primary);
         }
 
-        /* Form Controls */
+        /* Form Inputs */
         .form-group {
             margin-bottom: 1.25rem;
         }
@@ -313,11 +384,11 @@
             display: block;
             font-size: 0.825rem;
             font-weight: 600;
-            margin-bottom: 0.45rem;
+            margin-bottom: 0.4rem;
             color: var(--text-main);
         }
 
-        .input-group {
+        .input-wrapper {
             position: relative;
             display: flex;
             align-items: center;
@@ -325,52 +396,51 @@
 
         .input-icon {
             position: absolute;
-            left: 1rem;
-            font-size: 1.25rem;
-            color: var(--text-muted);
+            left: 0.9rem;
+            font-size: 1.15rem;
+            color: var(--text-light);
             pointer-events: none;
-            transition: color 0.2s;
+            transition: color 0.15s ease;
         }
 
-        .form-input {
+        .form-control {
             width: 100%;
-            height: 48px;
-            padding: 0 1rem 0 2.75rem;
+            height: 44px;
+            padding: 0 1rem 0 2.6rem;
             background: var(--bg-surface);
-            border: 1.5px solid var(--border-color);
-            border-radius: 10px;
-            font-size: 0.925rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.9rem;
             color: var(--text-main);
             outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
 
-        .form-input:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px var(--primary-light);
+        .form-control:focus {
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px var(--primary-subtle);
         }
 
-        .form-input:focus + .input-icon,
-        .input-group:focus-within .input-icon {
+        .input-wrapper:focus-within .input-icon {
             color: var(--primary);
         }
 
-        .toggle-password {
+        .btn-toggle-password {
             position: absolute;
-            right: 0.85rem;
+            right: 0.75rem;
             background: none;
             border: none;
-            font-size: 1.25rem;
-            color: var(--text-muted);
+            font-size: 1.15rem;
+            color: var(--text-light);
             cursor: pointer;
             padding: 0.25rem;
-            border-radius: 6px;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        .toggle-password:hover {
+        .btn-toggle-password:hover {
             color: var(--text-main);
         }
 
@@ -379,10 +449,10 @@
             align-items: center;
             justify-content: space-between;
             margin-bottom: 1.5rem;
-            font-size: 0.85rem;
+            font-size: 0.825rem;
         }
 
-        .checkbox-label {
+        .remember-checkbox {
             display: flex;
             align-items: center;
             gap: 0.5rem;
@@ -391,9 +461,9 @@
             user-select: none;
         }
 
-        .checkbox-label input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
+        .remember-checkbox input[type="checkbox"] {
+            width: 15px;
+            height: 15px;
             accent-color: var(--primary);
             border-radius: 4px;
             cursor: pointer;
@@ -401,144 +471,141 @@
 
         .btn-submit {
             width: 100%;
-            height: 48px;
-            background: var(--primary);
+            height: 46px;
+            background: #1e3a8a;
             color: #ffffff;
-            border: none;
-            border-radius: 10px;
-            font-size: 0.95rem;
+            border: 1px solid #172554;
+            border-radius: 8px;
+            font-size: 0.925rem;
             font-weight: 600;
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
             cursor: pointer;
-            box-shadow: 0 4px 14px rgba(76, 53, 222, 0.35);
-            transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+            box-shadow: 0 2px 4px rgba(15, 23, 42, 0.1);
+            transition: background-color 0.15s ease, transform 0.1s ease;
         }
 
         .btn-submit:hover {
-            background: var(--primary-hover);
-            transform: translateY(-1px);
-            box-shadow: 0 6px 18px rgba(76, 53, 222, 0.45);
+            background: #1d4ed8;
+            border-color: #1e40af;
         }
 
         .btn-submit:active {
-            transform: translateY(0);
+            transform: scale(0.99);
         }
 
-        /* Demo / Dev Helper Box */
-        .dev-credentials {
-            margin-top: 1.75rem;
-            padding: 1rem;
-            background: var(--primary-light);
-            border: 1px dashed var(--primary-border);
-            border-radius: 12px;
-            font-size: 0.8rem;
-        }
-
-        .dev-credentials-header {
+        .security-notice {
+            margin-top: 2rem;
+            padding-top: 1.25rem;
+            border-top: 1px solid var(--border-color);
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            color: var(--primary);
-        }
-
-        .btn-quick-fill {
-            background: var(--primary);
-            color: #ffffff;
-            border: none;
-            padding: 0.25rem 0.65rem;
-            border-radius: 6px;
+            align-items: flex-start;
+            gap: 0.6rem;
             font-size: 0.75rem;
-            font-weight: 500;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .btn-quick-fill:hover {
-            background: var(--primary-hover);
-        }
-
-        .dev-credentials-body {
             color: var(--text-muted);
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
+            line-height: 1.5;
+        }
+
+        .security-notice i {
+            font-size: 1.05rem;
+            color: #059669;
+            flex-shrink: 0;
+            margin-top: 1px;
         }
     </style>
 </head>
 <body>
-    <div class="ambient-glow"></div>
-    <div class="ambient-glow-2"></div>
-
-    <div class="top-actions">
+    <div class="top-bar">
         <button id="theme-toggle" class="theme-toggle-btn" aria-label="Toggle Dark Mode" title="Ganti Mode Gelap / Terang">
             <i class="ph ph-moon"></i>
         </button>
     </div>
 
-    <div class="login-wrapper">
-        <!-- Brand / Graphic Side -->
-        <div class="brand-side">
+    <div class="login-card">
+        <!-- Panel Kiri: Identitas Institusi Pemerintah -->
+        <div class="panel-institutional">
             <div>
-                <div class="brand-header">
-                    <div class="brand-logo-icon">
-                        <i class="ph ph-shield-check"></i>
+                <div class="inst-header">
+                    <div class="inst-badge-icon">
+                        <i class="ph ph-buildings"></i>
                     </div>
-                    <div class="brand-logo-text">
-                        <h3>BPKAD</h3>
+                    <div class="inst-badge-text">
+                        <h3>BKAD KABUPATEN TAPIN</h3>
                         <p>Bidang Anggaran & Perbendaharaan</p>
                     </div>
                 </div>
 
-                <div class="brand-hero">
-                    <h1>Sistem Realisasi Belanja Pegawai</h1>
-                    <p>Platform terpadu untuk monitoring belanja pegawai, sinkronisasi SIMGAJI DBF, kalkulasi TPP, dan pelaporan keuangan daerah.</p>
-                </div>
+                <div class="inst-body">
+                    <div class="inst-tag">
+                        <i class="ph-bold ph-shield-check"></i> Portal Resmi Pemerintah Daerah
+                    </div>
+                    <h1 class="inst-title">KONBELPEG</h1>
+                    <p class="inst-desc">
+                        Sistem Rekonsiliasi & Realisasi Belanja Pegawai Pemerintah Kabupaten Tapin. Terintegrasi dengan database penggajian SIMGAJI Taspen dan SIMPEG.
+                    </p>
 
-                <div class="features-list">
-                    <div class="feature-item">
-                        <i class="ph ph-database"></i>
-                        <span>Integrasi DBF SIMGAJI & Database Master Pegawai</span>
-                    </div>
-                    <div class="feature-item">
-                        <i class="ph ph-chart-line-up"></i>
-                        <span>Rekonsiliasi Realisasi Belanja Gaji & TPP ASN</span>
-                    </div>
-                    <div class="feature-item">
-                        <i class="ph ph-file-text"></i>
-                        <span>Ekspor Laporan SIKD, PPPK Guru, & Excel/PDF</span>
+                    <div class="inst-features">
+                        <div class="inst-feature-item">
+                            <i class="ph ph-arrows-clockwise"></i>
+                            <div>
+                                <strong>Sinkronisasi Basis Data SIMGAJI DBF</strong>
+                                <span>Pemadanan master data pegawai, riwayat gaji, dan tanggungan keluarga.</span>
+                            </div>
+                        </div>
+                        <div class="inst-feature-item">
+                            <i class="ph ph-scales"></i>
+                            <div>
+                                <strong>Rekonsiliasi & Audit Belanja Pegawai</strong>
+                                <span>Verifikasi belanja gaji pokok, tunjangan keluarga, dan Tambahan Penghasilan Pegawai (TPP).</span>
+                            </div>
+                        </div>
+                        <div class="inst-feature-item">
+                            <i class="ph ph-file-text"></i>
+                            <div>
+                                <strong>Pelaporan & Akuntabilitas Anggaran</strong>
+                                <span>Format laporan resmi SIKD, belanja ASN, dan cetak ekspor dokumen audit.</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="brand-footer">
-                &copy; {{ date('Y') }} Pemerintah Daerah. Hak cipta dilindungi undang-undang.
+            <div class="inst-footer">
+                <span>&copy; {{ date('Y') }} BKAD Kabupaten Tapin</span>
+                <span><i class="ph ph-lock-key"></i> Sistem Terproteksi SSL</span>
             </div>
         </div>
 
-        <!-- Form Side -->
-        <div class="form-side">
+        <!-- Panel Kanan: Formulir Masuk Resmi -->
+        <div class="panel-form">
+            <!-- Mobile Header (Tampil pada layar kecil) -->
+            <div class="mobile-header">
+                <div class="mobile-logo-icon">
+                    <i class="ph ph-buildings"></i>
+                </div>
+                <div class="mobile-header-text">
+                    <h3>KONBELPEG TAPIN</h3>
+                    <p>BKAD Kabupaten Tapin</p>
+                </div>
+            </div>
+
             <div class="form-header">
-                <h2>Selamat Datang</h2>
-                <p>Masukkan akun Anda untuk melanjutkan ke dasbor sistem.</p>
+                <h2>Masuk ke Sistem</h2>
+                <p>Silakan masukkan kredensial akun pengguna resmi Anda.</p>
             </div>
 
             @if(session('info'))
                 <div class="alert alert-info">
-                    <i class="ph ph-info" style="font-size: 1.25rem;"></i>
+                    <i class="ph ph-info" style="font-size: 1.15rem; flex-shrink: 0; margin-top: 1px;"></i>
                     <span>{{ session('info') }}</span>
                 </div>
             @endif
 
             @if($errors->any())
                 <div class="alert alert-danger">
-                    <i class="ph ph-warning-circle" style="font-size: 1.25rem;"></i>
+                    <i class="ph ph-warning-circle" style="font-size: 1.15rem; flex-shrink: 0; margin-top: 1px;"></i>
                     <div>
                         @foreach ($errors->all() as $error)
                             <div>{{ $error }}</div>
@@ -550,15 +617,15 @@
             <form action="{{ route('login') }}" method="POST" id="loginForm">
                 @csrf
                 <div class="form-group">
-                    <label class="form-label" for="email">Alamat Email</label>
-                    <div class="input-group">
+                    <label class="form-label" for="email">Alamat Email Pengguna</label>
+                    <div class="input-wrapper">
                         <i class="ph ph-envelope-simple input-icon"></i>
                         <input 
                             type="email" 
                             name="email" 
                             id="email" 
-                            class="form-input" 
-                            placeholder="admin@pemda.go.id" 
+                            class="form-control" 
+                            placeholder="nama@bkadtapin.go.id" 
                             value="{{ old('email') }}" 
                             required 
                             autofocus 
@@ -569,54 +636,47 @@
 
                 <div class="form-group">
                     <label class="form-label" for="password">Kata Sandi</label>
-                    <div class="input-group">
+                    <div class="input-wrapper">
                         <i class="ph ph-lock-key input-icon"></i>
                         <input 
                             type="password" 
                             name="password" 
                             id="password" 
-                            class="form-input" 
-                            placeholder="••••••••" 
+                            class="form-control" 
+                            placeholder="••••••••••••" 
                             required 
                             autocomplete="current-password"
                         >
-                        <button type="button" class="toggle-password" id="togglePasswordBtn" aria-label="Lihat Kata Sandi">
+                        <button type="button" class="btn-toggle-password" id="togglePasswordBtn" aria-label="Lihat Kata Sandi" title="Tampilkan / Sembunyikan Kata Sandi">
                             <i class="ph ph-eye" id="toggleIcon"></i>
                         </button>
                     </div>
                 </div>
 
                 <div class="form-options">
-                    <label class="checkbox-label">
+                    <label class="remember-checkbox">
                         <input type="checkbox" name="remember" id="remember" {{ old('remember') ? 'checked' : '' }}>
-                        <span>Ingat saya di perangkat ini</span>
+                        <span>Ingat sesi masuk saya</span>
                     </label>
                 </div>
 
                 <button type="submit" class="btn-submit" id="submitBtn">
-                    <span>Masuk ke Dashboard</span>
-                    <i class="ph ph-arrow-right" style="font-size: 1.15rem;"></i>
+                    <span>Masuk ke Dasbor</span>
+                    <i class="ph ph-arrow-right" style="font-size: 1.1rem;"></i>
                 </button>
             </form>
 
-            <!-- Quick dev access helper -->
-            <div class="dev-credentials">
-                <div class="dev-credentials-header">
-                    <span><i class="ph ph-key"></i> Akun Bawaan (Default):</span>
-                    <button type="button" class="btn-quick-fill" id="quickFillBtn" title="Isi form otomatis">
-                        <i class="ph ph-lightning"></i> Isi Otomatis
-                    </button>
-                </div>
-                <div class="dev-credentials-body">
-                    <div>Email: <strong>admin@pemda.go.id</strong></div>
-                    <div>Password: <strong>password</strong></div>
+            <div class="security-notice">
+                <i class="ph-bold ph-shield-check"></i>
+                <div>
+                    Akses terbatas untuk aparatur yang berwenang di lingkungan Pemerintah Kabupaten Tapin. Seluruh aktivitas akses tercatat dalam log audit sistem.
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Dark Mode Logic
+        // Dark Mode Handler
         const themeToggleBtn = document.getElementById('theme-toggle');
         const themeIcon = themeToggleBtn.querySelector('i');
         const savedTheme = localStorage.getItem('theme');
@@ -655,19 +715,12 @@
             }
         });
 
-        // Quick Fill for convenience
-        document.getElementById('quickFillBtn').addEventListener('click', () => {
-            document.getElementById('email').value = 'admin@pemda.go.id';
-            document.getElementById('password').value = 'password';
-            document.getElementById('remember').checked = true;
-        });
-
-        // Submit loading state
+        // Submit Loading State
         document.getElementById('loginForm').addEventListener('submit', function() {
             const btn = document.getElementById('submitBtn');
             btn.disabled = true;
-            btn.style.opacity = '0.7';
-            btn.innerHTML = '<i class="ph ph-spinner ph-spin" style="font-size: 1.25rem;"></i><span>Memproses...</span>';
+            btn.style.opacity = '0.75';
+            btn.innerHTML = '<i class="ph ph-spinner ph-spin" style="font-size: 1.15rem;"></i><span>Memverifikasi...</span>';
         });
     </script>
 </body>
