@@ -6,6 +6,7 @@ use App\Models\Pegawai;
 use App\Models\SimgajiKeluarga;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use XBase\TableReader;
 
@@ -65,10 +66,22 @@ class SyncSimgajiData extends Command
             $totalRecords = $table->getRecordCount();
             $this->info("Total record MST_PGW: {$totalRecords}");
 
+            $this->updateProgress([
+                'status' => 'syncing',
+                'type' => 'master',
+                'current' => 0,
+                'total' => $totalRecords,
+                'remaining' => $totalRecords,
+                'percent' => 0,
+                'message' => 'Mempersiapkan data Master Pegawai...',
+            ]);
+
+            $processed = 0;
             $updatedCount = 0;
             $updates = [];
 
             while ($record = $table->nextRecord()) {
+                $processed++;
                 $nip = trim((string) $record->get('nip'));
                 if (empty($nip)) {
                     continue;
@@ -96,6 +109,16 @@ class SyncSimgajiData extends Command
                     $updatedCount += $this->batchUpdatePegawai($updates);
                     $updates = [];
                     $this->output->write('.');
+
+                    $this->updateProgress([
+                        'status' => 'syncing',
+                        'type' => 'master',
+                        'current' => $processed,
+                        'total' => $totalRecords,
+                        'remaining' => max(0, $totalRecords - $processed),
+                        'percent' => round(($processed / max(1, $totalRecords)) * 100, 1),
+                        'message' => 'Memproses data pegawai: '.number_format($processed, 0, ',', '.').' / '.number_format($totalRecords, 0, ',', '.'),
+                    ]);
                 }
             }
 
@@ -103,9 +126,24 @@ class SyncSimgajiData extends Command
                 $updatedCount += $this->batchUpdatePegawai($updates);
             }
 
+            $this->updateProgress([
+                'status' => 'done',
+                'type' => 'master',
+                'current' => $processed,
+                'total' => $totalRecords,
+                'remaining' => 0,
+                'percent' => 100,
+                'message' => "Berhasil memperbarui data finansial & identitas untuk {$updatedCount} pegawai.",
+            ]);
+
             $this->newLine();
             $this->info("Berhasil memperbarui data finansial & identitas untuk {$updatedCount} pegawai.");
         } catch (\Exception $e) {
+            $this->updateProgress([
+                'status' => 'error',
+                'type' => 'master',
+                'message' => $e->getMessage(),
+            ]);
             $this->error('Gagal memproses file MST_PGW.DBF: '.$e->getMessage());
         }
     }
@@ -129,6 +167,16 @@ class SyncSimgajiData extends Command
             $table = new TableReader($filePath, ['encoding' => 'cp850']);
             $totalRecords = $table->getRecordCount();
             $this->info("Total record KEL: {$totalRecords}");
+
+            $this->updateProgress([
+                'status' => 'syncing',
+                'type' => 'keluarga',
+                'current' => 0,
+                'total' => $totalRecords,
+                'remaining' => $totalRecords,
+                'percent' => 0,
+                'message' => 'Mengosongkan tabel lama & mempersiapkan data baru...',
+            ]);
 
             // Kosongkan tabel simgaji_keluargas sebelum memuat data baru
             SimgajiKeluarga::truncate();
@@ -191,6 +239,16 @@ class SyncSimgajiData extends Command
                     $inserted += count($batch);
                     $batch = [];
                     $this->output->write('#');
+
+                    $this->updateProgress([
+                        'status' => 'syncing',
+                        'type' => 'keluarga',
+                        'current' => $inserted,
+                        'total' => $totalRecords,
+                        'remaining' => max(0, $totalRecords - $inserted),
+                        'percent' => round(($inserted / max(1, $totalRecords)) * 100, 1),
+                        'message' => 'Menyinkronkan record '.number_format($inserted, 0, ',', '.').' dari '.number_format($totalRecords, 0, ',', '.'),
+                    ]);
                 }
             }
 
@@ -199,9 +257,24 @@ class SyncSimgajiData extends Command
                 $inserted += count($batch);
             }
 
+            $this->updateProgress([
+                'status' => 'done',
+                'type' => 'keluarga',
+                'current' => $inserted,
+                'total' => $totalRecords,
+                'remaining' => 0,
+                'percent' => 100,
+                'message' => "Berhasil menyimpan {$inserted} data anggota keluarga ke tabel simgaji_keluargas.",
+            ]);
+
             $this->newLine();
             $this->info("Berhasil menyimpan {$inserted} data anggota keluarga ke tabel simgaji_keluargas.");
         } catch (\Exception $e) {
+            $this->updateProgress([
+                'status' => 'error',
+                'type' => 'keluarga',
+                'message' => $e->getMessage(),
+            ]);
             $this->error('Gagal memproses file KEL.DBF: '.$e->getMessage());
         }
     }
@@ -301,6 +374,24 @@ class SyncSimgajiData extends Command
             return Carbon::parse(trim($val))->format('Y-m-d');
         } catch (\Exception $e) {
             return null;
+        }
+    }
+
+    /**
+     * Simpan status progres sinkronisasi real-time ke file JSON dan cache.
+     */
+    private function updateProgress(array $data): void
+    {
+        $dir = storage_path('app/simgaji');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        $data['updated_at'] = time();
+        @file_put_contents($dir.'/sync_progress.json', json_encode($data, JSON_PRETTY_PRINT));
+        try {
+            Cache::put('simgaji_sync_progress', $data, 300);
+        } catch (\Exception $e) {
+            // Abaikan jika cache store sedang sibuk
         }
     }
 }

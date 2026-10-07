@@ -1,4 +1,4 @@
-{{-- Reusable DBF Upload & Sync Progress Modal Scripts --}}
+{{-- Reusable DBF Upload & Sync Progress Modal Scripts with Real-Time Data Counters --}}
 <style>
     @keyframes dbfPulse {
         0%, 100% { opacity: 1; transform: scale(1); }
@@ -8,10 +8,22 @@
         0% { background-position: -200% 0; }
         100% { background-position: 200% 0; }
     }
+    @keyframes dbfDotBlink {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.4; transform: scale(0.85); }
+    }
     .dbf-progress-active {
         background: linear-gradient(90deg, #3b82f6 0%, #2563eb 50%, #60a5fa 100%) !important;
         background-size: 200% 100% !important;
         animation: dbfShimmer 1.5s infinite linear !important;
+    }
+    .dbf-dot-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #10b981;
+        animation: dbfDotBlink 1.2s infinite ease-in-out;
     }
 </style>
 
@@ -69,7 +81,7 @@
                             <td style="padding: 6px 0; color: #64748b;">Sinkronisasi Database:</td>
                             <td style="padding: 6px 0; font-weight: 600;">
                                 ${data.auto_synced 
-                                    ? '<span style="color: #16a34a; display: inline-flex; align-items: center; gap: 4px;">✔️ Otomatis Tersinkron</span>' 
+                                    ? '<span style="color: #16a34a; display: inline-flex; align-items: center; gap: 4px;">✔️ Otomatis Tersinkron (' + formattedRecords + ' data)</span>' 
                                     : '<span style="color: #d97706;">⚠️ Manual (Belum disinkronkan)</span>'}
                             </td>
                         </tr>
@@ -105,7 +117,8 @@
     };
 
     /**
-     * Handler submit form upload DBF dengan indikator status langkah demi langkah & progress bar
+     * Handler submit form upload DBF dengan indikator status langkah demi langkah, progress bar,
+     * serta penghitung REAL-TIME data masuk & data tersisa.
      */
     window.attachDbfUploadHandler = function(formSelector, fileInputSelector) {
         const form = typeof formSelector === 'string' ? document.querySelector(formSelector) : formSelector;
@@ -152,10 +165,10 @@
                 parentModal.classList.remove('active');
             }
 
-            // Template progress dialog
+            // Template progress dialog dengan REAL-TIME DATA COUNTER
             const progressHtml = `
                 <div style="text-align: left; font-size: 12.5px; line-height: 1.5; color: #1e293b;">
-                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px;">
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px;">
                         <div style="font-size: 26px; color: #2563eb; line-height: 1;">📂</div>
                         <div style="overflow: hidden; flex: 1;">
                             <div style="font-weight: 700; color: #1e293b; font-size: 13px; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;" title="${fileName}">
@@ -167,19 +180,45 @@
                         </div>
                     </div>
 
-                    <!-- Progress Bar -->
-                    <div style="margin-bottom: 14px;">
-                        <div style="display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 6px;">
+                    <!-- Progress Bar Utama -->
+                    <div style="margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 5px;">
                             <span style="font-weight: 600; color: #475569;" id="dbfStageLabel">Mengunggah berkas ke server...</span>
-                            <span style="font-weight: 700; color: #2563eb;" id="dbfProgressPct">15%</span>
+                            <span style="font-weight: 700; color: #2563eb;" id="dbfProgressPct">10%</span>
                         </div>
                         <div style="width: 100%; height: 9px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
-                            <div id="dbfProgressBar" class="dbf-progress-active" style="width: 15%; height: 100%; border-radius: 999px; transition: width 0.4s ease;"></div>
+                            <div id="dbfProgressBar" class="dbf-progress-active" style="width: 10%; height: 100%; border-radius: 999px; transition: width 0.35s ease;"></div>
                         </div>
                     </div>
 
-                    <!-- Checklist Tahapan Proses -->
-                    <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;">
+                    <!-- KOTAK INFORMASI REAL-TIME: DATA MASUK & SISA DATA -->
+                    ${willAutoSync ? `
+                    <div id="dbfSyncDetailBox" style="background: rgba(37, 99, 235, 0.04); border: 1px solid rgba(37, 99, 235, 0.22); border-radius: 9px; padding: 10px 12px; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <span style="font-size: 11.5px; color: #1e293b; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                                <span class="dbf-dot-indicator"></span>
+                                Progres Input Basis Data (Live)
+                            </span>
+                            <span id="dbfSyncStatusText" style="font-size: 11px; color: #2563eb; font-weight: 600;">Menyiapkan sinkronisasi...</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div style="background: #ffffff; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                                <div style="color: #166534; font-size: 10.5px; font-weight: 700;">📥 DATA MASUK (TERSINKRON)</div>
+                                <div id="dbfInsertedCount" style="font-weight: 800; color: #15803d; font-size: 15px; margin-top: 2px;">0 data</div>
+                            </div>
+                            <div style="background: #ffffff; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+                                <div style="color: #9a3412; font-size: 10.5px; font-weight: 700;">⏳ SISA DATA BERKAS</div>
+                                <div id="dbfRemainingCount" style="font-weight: 800; color: #c2410c; font-size: 15px; margin-top: 2px;">0 data</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 7px; font-size: 11px; color: #64748b;">
+                            <span>Total Baris Berkas: <strong id="dbfTotalTarget" style="color: #1e293b;">Sedang dihitung...</strong></span>
+                            <span>Progres Database: <strong id="dbfDbPct" style="color: #2563eb; font-weight: 700;">0%</strong></span>
+                        </div>
+                    </div>` : ''}
+
+                    <!-- Checklist 4 Tahapan Proses -->
+                    <div style="display: flex; flex-direction: column; gap: 7px; font-size: 12px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;">
                         <div id="dbfStep1" style="display: flex; align-items: center; gap: 8px; color: #2563eb; font-weight: 600;">
                             <span class="step-icon" style="display: inline-block; width: 18px; text-align: center;">⏳</span>
                             <span>1. Mengunggah berkas ke server...</span>
@@ -198,7 +237,7 @@
                         </div>
                     </div>
 
-                    <div style="margin-top: 14px; text-align: center; font-size: 11px; color: #dc2626; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <div style="margin-top: 12px; text-align: center; font-size: 11px; color: #dc2626; display: flex; align-items: center; justify-content: center; gap: 6px;">
                         <span style="font-size: 13px;">⚠️</span>
                         <span>Mohon jangan menutup atau memuat ulang halaman saat proses berlangsung.</span>
                     </div>
@@ -212,8 +251,6 @@
                 allowEscapeKey: false,
                 showConfirmButton: false,
                 didOpen: () => {
-                    // Update timer visual progres secara dinamis
-                    let currentPct = 15;
                     const stageLabel = document.getElementById('dbfStageLabel');
                     const progressPct = document.getElementById('dbfProgressPct');
                     const progressBar = document.getElementById('dbfProgressBar');
@@ -221,44 +258,86 @@
                     const step2 = document.getElementById('dbfStep2');
                     const step3 = document.getElementById('dbfStep3');
                     const step4 = document.getElementById('dbfStep4');
+                    const insertedEl = document.getElementById('dbfInsertedCount');
+                    const remainingEl = document.getElementById('dbfRemainingCount');
+                    const targetEl = document.getElementById('dbfTotalTarget');
+                    const dbPctEl = document.getElementById('dbfDbPct');
+                    const syncStatusText = document.getElementById('dbfSyncStatusText');
 
                     const updateStep = (stepEl, icon, color, isBold) => {
                         if (!stepEl) return;
                         stepEl.querySelector('.step-icon').innerHTML = icon;
                         stepEl.style.color = color;
-                        stepEl.style.fontWeight = isBold ? '600' : 'normal';
+                        stepEl.style.fontWeight = isBold ? '700' : 'normal';
                     };
 
-                    const timer = setInterval(() => {
-                        if (currentPct < 40) {
-                            currentPct += 5;
-                        } else if (currentPct < 70) {
-                            // Masuk tahap 2
-                            updateStep(step1, '✅', '#16a34a', false);
-                            updateStep(step2, '⏳', '#2563eb', true);
-                            if (stageLabel) stageLabel.textContent = 'Membaca struktur tabel & record DBF...';
-                            currentPct += 3;
-                        } else if (currentPct < 90) {
-                            // Masuk tahap 3
-                            updateStep(step2, '✅', '#16a34a', false);
-                            updateStep(step3, '⏳', '#2563eb', true);
-                            if (stageLabel) stageLabel.textContent = willAutoSync ? 'Menyinkronkan data (~70.000 record) ke database...' : 'Menyimpan konfigurasi berkas...';
-                            currentPct += 1.5;
-                        } else if (currentPct < 96) {
-                            updateStep(step3, '⏳', '#2563eb', true);
-                            currentPct += 0.5;
+                    // Initial simulated stages for upload & parse (0-20%)
+                    let initPct = 12;
+                    const stageTimer = setInterval(() => {
+                        if (initPct < 22) {
+                            initPct += 3;
+                            if (progressBar) progressBar.style.width = initPct + '%';
+                            if (progressPct) progressPct.textContent = initPct + '%';
                         }
+                    }, 400);
 
-                        if (progressBar) progressBar.style.width = Math.min(currentPct, 96) + '%';
-                        if (progressPct) progressPct.textContent = Math.round(Math.min(currentPct, 96)) + '%';
-                    }, 500);
+                    // POLLING PROGRES REAL-TIME KE SERVER
+                    const progressUrl = '{{ route("master.simgaji_dbf.progress") }}';
+                    const pollProgress = () => {
+                        fetch(progressUrl, { cache: 'no-store' })
+                            .then(res => res.json())
+                            .then(pData => {
+                                if (!pData) return;
 
-                    // Simpan interval pada instance Swal agar dapat dibersihkan
-                    Swal._dbfTimer = timer;
+                                if (pData.status === 'syncing' || pData.status === 'done') {
+                                    clearInterval(stageTimer);
+                                    updateStep(step1, '✅', '#16a34a', false);
+                                    updateStep(step2, '✅', '#16a34a', false);
+
+                                    const isDone = pData.status === 'done';
+                                    updateStep(step3, isDone ? '✅' : '⏳', isDone ? '#16a34a' : '#2563eb', !isDone);
+
+                                    const current = Number(pData.current || 0);
+                                    const total = Number(pData.total || 0);
+                                    const remaining = Number(pData.remaining !== undefined ? pData.remaining : Math.max(0, total - current));
+                                    const rawPercent = total > 0 ? ((current / total) * 100) : (pData.percent || 0);
+                                    const syncPercent = Math.min(100, Math.round(rawPercent));
+
+                                    if (insertedEl) insertedEl.textContent = current.toLocaleString('id-ID') + ' data';
+                                    if (remainingEl) remainingEl.textContent = remaining.toLocaleString('id-ID') + ' data';
+                                    if (targetEl && total > 0) targetEl.textContent = total.toLocaleString('id-ID') + ' data';
+                                    if (dbPctEl) dbPctEl.textContent = syncPercent + '%';
+
+                                    if (syncStatusText) {
+                                        syncStatusText.textContent = isDone ? 'Selesai disinkronkan' : `Menyimpan batch (${syncPercent}%)...`;
+                                    }
+
+                                    // Hitung overall progress bar (20% s/d 97%)
+                                    const overallPct = total > 0 ? Math.min(97, Math.max(22, Math.round(20 + (syncPercent * 0.77)))) : 30;
+                                    if (progressBar) progressBar.style.width = (isDone ? 98 : overallPct) + '%';
+                                    if (progressPct) progressPct.textContent = (isDone ? 98 : overallPct) + '%';
+
+                                    if (stageLabel) {
+                                        if (isDone) {
+                                            stageLabel.textContent = `Sinkronisasi selesai (${current.toLocaleString('id-ID')} data tersimpan)...`;
+                                        } else if (total > 0) {
+                                            stageLabel.textContent = `Menyinkronkan data: ${current.toLocaleString('id-ID')} / ${total.toLocaleString('id-ID')} (Sisa ${remaining.toLocaleString('id-ID')})...`;
+                                        } else {
+                                            stageLabel.textContent = pData.message || 'Menyinkronkan data ke tabel basis data...';
+                                        }
+                                    }
+                                }
+                            })
+                            .catch(() => {});
+                    };
+
+                    const pollInterval = setInterval(pollProgress, 750);
+                    Swal._dbfPollTimer = pollInterval;
+                    Swal._dbfStageTimer = stageTimer;
                 }
             });
 
-            // Eksekusi AJAX Request
+            // Eksekusi AJAX Request Upload & Sync
             const formData = new FormData(form);
             const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || form.querySelector('input[name="_token"]')?.value;
 
@@ -272,7 +351,8 @@
                 }
             })
             .then(async (response) => {
-                if (Swal._dbfTimer) clearInterval(Swal._dbfTimer);
+                if (Swal._dbfPollTimer) clearInterval(Swal._dbfPollTimer);
+                if (Swal._dbfStageTimer) clearInterval(Swal._dbfStageTimer);
 
                 const data = await response.json().catch(() => null);
 
@@ -291,6 +371,10 @@
                 const progressBar = document.getElementById('dbfProgressBar');
                 const step3 = document.getElementById('dbfStep3');
                 const step4 = document.getElementById('dbfStep4');
+                const insertedEl = document.getElementById('dbfInsertedCount');
+                const remainingEl = document.getElementById('dbfRemainingCount');
+                const dbPctEl = document.getElementById('dbfDbPct');
+                const syncStatusText = document.getElementById('dbfSyncStatusText');
 
                 if (step3) {
                     step3.querySelector('.step-icon').innerHTML = '✅';
@@ -300,9 +384,16 @@
                 if (step4) {
                     step4.querySelector('.step-icon').innerHTML = '✅';
                     step4.style.color = '#16a34a';
-                    step4.style.fontWeight = '600';
+                    step4.style.fontWeight = '700';
                 }
-                if (stageLabel) stageLabel.textContent = 'Pemrosesan berkas selesai!';
+
+                const finalRecords = Number(data.records || 0);
+                if (insertedEl && finalRecords > 0) insertedEl.textContent = finalRecords.toLocaleString('id-ID') + ' data';
+                if (remainingEl) remainingEl.textContent = '0 data';
+                if (dbPctEl) dbPctEl.textContent = '100%';
+                if (syncStatusText) syncStatusText.textContent = 'Selesai 100%';
+
+                if (stageLabel) stageLabel.textContent = 'Pemrosesan berkas selesai sepenuhnya!';
                 if (progressPct) progressPct.textContent = '100%';
                 if (progressBar) progressBar.style.width = '100%';
 
@@ -311,7 +402,8 @@
                 }, 600);
             })
             .catch((error) => {
-                if (Swal._dbfTimer) clearInterval(Swal._dbfTimer);
+                if (Swal._dbfPollTimer) clearInterval(Swal._dbfPollTimer);
+                if (Swal._dbfStageTimer) clearInterval(Swal._dbfStageTimer);
 
                 Swal.fire({
                     icon: 'error',
@@ -325,7 +417,7 @@
     };
 
     /**
-     * Handler untuk form Sinkronisasi DBF manual
+     * Handler untuk form Sinkronisasi DBF manual dengan penghitung REAL-TIME data masuk & sisa
      */
     window.attachDbfSyncHandler = function(formSelector) {
         const forms = typeof formSelector === 'string' ? document.querySelectorAll(formSelector) : [formSelector];
@@ -347,22 +439,108 @@
                 }).then((result) => {
                     if (!result.isConfirmed) return;
 
-                    Swal.fire({
-                        title: 'Sedang Menyinkronkan Data...',
-                        html: `
-                            <div style="font-size: 13px; line-height: 1.5; color: #475569; padding: 4px;">
-                                <p style="margin-bottom: 10px;">Sedang memproses pembaruan <strong>${label}</strong> dari berkas DBF ke database MySQL...</p>
-                                <div style="display: flex; justify-content: center; margin: 12px 0;">
-                                    <div class="dbf-progress-active" style="width: 100%; height: 6px; border-radius: 999px;"></div>
+                    const syncModalHtml = `
+                        <div style="font-size: 13px; line-height: 1.5; color: #1e293b; text-align: left; padding: 4px;">
+                            <p style="margin-bottom: 10px; color: #475569;">
+                                Sedang memproses pembaruan <strong>${label}</strong> dari berkas DBF ke database MySQL...
+                            </p>
+
+                            <!-- Progress Bar -->
+                            <div style="margin-bottom: 12px;">
+                                <div style="display: flex; justify-content: space-between; font-size: 11.5px; margin-bottom: 5px;">
+                                    <span style="font-weight: 600; color: #475569;" id="dbfManualStageLabel">Menyiapkan pembacaan DBF...</span>
+                                    <span style="font-weight: 700; color: #2563eb;" id="dbfManualProgressPct">0%</span>
                                 </div>
-                                <small style="color: #64748b;">Harap tunggu beberapa saat hingga proses selesai.</small>
+                                <div style="width: 100%; height: 9px; background: #e2e8f0; border-radius: 999px; overflow: hidden;">
+                                    <div id="dbfManualProgressBar" class="dbf-progress-active" style="width: 5%; height: 100%; border-radius: 999px; transition: width 0.35s ease;"></div>
+                                </div>
                             </div>
-                        `,
+
+                            <!-- Live Counter Box -->
+                            <div style="background: rgba(37, 99, 235, 0.04); border: 1px solid rgba(37, 99, 235, 0.22); border-radius: 9px; padding: 10px 12px; margin-bottom: 10px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                    <span style="font-size: 11.5px; color: #1e293b; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                                        <span class="dbf-dot-indicator"></span>
+                                        Progres Input Basis Data (Live)
+                                    </span>
+                                    <span id="dbfManualStatusText" style="font-size: 11px; color: #2563eb; font-weight: 600;">Memproses...</span>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                    <div style="background: #ffffff; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                        <div style="color: #166534; font-size: 10.5px; font-weight: 700;">📥 DATA MASUK</div>
+                                        <div id="dbfManualInserted" style="font-weight: 800; color: #15803d; font-size: 15px; margin-top: 2px;">0 data</div>
+                                    </div>
+                                    <div style="background: #ffffff; padding: 8px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                        <div style="color: #9a3412; font-size: 10.5px; font-weight: 700;">⏳ SISA DATA</div>
+                                        <div id="dbfManualRemaining" style="font-weight: 800; color: #c2410c; font-size: 15px; margin-top: 2px;">0 data</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 7px; font-size: 11px; color: #64748b;">
+                                    <span>Total Target: <strong id="dbfManualTarget" style="color: #1e293b;">Sedang dihitung...</strong></span>
+                                    <span>Persentase: <strong id="dbfManualDbPct" style="color: #2563eb; font-weight: 700;">0%</strong></span>
+                                </div>
+                            </div>
+
+                            <small style="display: block; text-align: center; color: #94a3b8; font-size: 11px;">
+                                Harap tunggu, proses batch berlangsung aman di latar belakang.
+                            </small>
+                        </div>
+                    `;
+
+                    Swal.fire({
+                        title: '<div style="font-size: 17px; font-weight: 700; color: #0f172a;">Menyinkronkan Basis Data</div>',
+                        html: syncModalHtml,
                         allowOutsideClick: false,
                         allowEscapeKey: false,
                         showConfirmButton: false,
                         didOpen: () => {
-                            Swal.showLoading();
+                            const stageLabel = document.getElementById('dbfManualStageLabel');
+                            const progressPct = document.getElementById('dbfManualProgressPct');
+                            const progressBar = document.getElementById('dbfManualProgressBar');
+                            const insertedEl = document.getElementById('dbfManualInserted');
+                            const remainingEl = document.getElementById('dbfManualRemaining');
+                            const targetEl = document.getElementById('dbfManualTarget');
+                            const dbPctEl = document.getElementById('dbfManualDbPct');
+                            const statusText = document.getElementById('dbfManualStatusText');
+
+                            const progressUrl = '{{ route("master.simgaji_dbf.progress") }}';
+                            const pollProgress = () => {
+                                fetch(progressUrl, { cache: 'no-store' })
+                                    .then(res => res.json())
+                                    .then(pData => {
+                                        if (!pData) return;
+
+                                        if (pData.status === 'syncing' || pData.status === 'done') {
+                                            const current = Number(pData.current || 0);
+                                            const total = Number(pData.total || 0);
+                                            const remaining = Number(pData.remaining !== undefined ? pData.remaining : Math.max(0, total - current));
+                                            const rawPercent = total > 0 ? ((current / total) * 100) : (pData.percent || 0);
+                                            const syncPercent = Math.min(100, Math.round(rawPercent));
+
+                                            if (insertedEl) insertedEl.textContent = current.toLocaleString('id-ID') + ' data';
+                                            if (remainingEl) remainingEl.textContent = remaining.toLocaleString('id-ID') + ' data';
+                                            if (targetEl && total > 0) targetEl.textContent = total.toLocaleString('id-ID') + ' data';
+                                            if (dbPctEl) dbPctEl.textContent = syncPercent + '%';
+                                            if (progressBar) progressBar.style.width = Math.min(98, syncPercent) + '%';
+                                            if (progressPct) progressPct.textContent = syncPercent + '%';
+
+                                            if (statusText) {
+                                                statusText.textContent = pData.status === 'done' ? 'Selesai disinkronkan' : `Menyimpan batch (${syncPercent}%)...`;
+                                            }
+                                            if (stageLabel) {
+                                                if (pData.status === 'done') {
+                                                    stageLabel.textContent = `Sinkronisasi selesai (${current.toLocaleString('id-ID')} data tersimpan)...`;
+                                                } else if (total > 0) {
+                                                    stageLabel.textContent = `Menyinkronkan data: ${current.toLocaleString('id-ID')} / ${total.toLocaleString('id-ID')} (Sisa ${remaining.toLocaleString('id-ID')})...`;
+                                                }
+                                            }
+                                        }
+                                    })
+                                    .catch(() => {});
+                            };
+
+                            const pollInterval = setInterval(pollProgress, 750);
+                            Swal._dbfManualPollTimer = pollInterval;
                         }
                     });
 
@@ -379,22 +557,34 @@
                         }
                     })
                     .then(async (response) => {
+                        if (Swal._dbfManualPollTimer) clearInterval(Swal._dbfManualPollTimer);
+
                         const data = await response.json().catch(() => null);
                         if (!response.ok || !data || !data.success) {
                             throw new Error((data && data.message) ? data.message : 'Gagal melakukan sinkronisasi data.');
                         }
 
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Sinkronisasi Selesai!',
-                            html: `<div style="font-size: 13px; color: #1e293b;">${data.message}</div>`,
-                            confirmButtonText: 'Segarkan Halaman',
-                            confirmButtonColor: '#2563eb'
-                        }).then(() => {
-                            window.location.reload();
-                        });
+                        // Set counter ke 100%
+                        const progressBar = document.getElementById('dbfManualProgressBar');
+                        const progressPct = document.getElementById('dbfManualProgressPct');
+                        if (progressBar) progressBar.style.width = '100%';
+                        if (progressPct) progressPct.textContent = '100%';
+
+                        setTimeout(() => {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Sinkronisasi Selesai!',
+                                html: `<div style="font-size: 13px; color: #1e293b;">${data.message}</div>`,
+                                confirmButtonText: 'Segarkan Halaman',
+                                confirmButtonColor: '#2563eb'
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        }, 400);
                     })
                     .catch((err) => {
+                        if (Swal._dbfManualPollTimer) clearInterval(Swal._dbfManualPollTimer);
+
                         Swal.fire({
                             icon: 'error',
                             title: 'Sinkronisasi Gagal',

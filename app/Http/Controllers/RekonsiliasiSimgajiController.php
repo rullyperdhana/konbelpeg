@@ -625,6 +625,16 @@ class RekonsiliasiSimgajiController extends Controller
         // Jalankan auto-sync jika diminta
         $autoSyncMsg = '';
         if ($request->boolean('auto_sync')) {
+            $this->updateSyncProgress([
+                'status' => 'syncing',
+                'type' => $finalType,
+                'current' => 0,
+                'total' => $recordsCount,
+                'remaining' => $recordsCount,
+                'percent' => 0,
+                'message' => 'Mempersiapkan sinkronisasi '.number_format($recordsCount, 0, ',', '.').' record ke database...',
+            ]);
+
             try {
                 if ($finalType === 'kel') {
                     Artisan::call('simgaji:sync', ['--type' => 'keluarga']);
@@ -721,6 +731,16 @@ class RekonsiliasiSimgajiController extends Controller
     {
         $type = $request->input('type', 'all');
 
+        $this->updateSyncProgress([
+            'status' => 'syncing',
+            'type' => $type,
+            'current' => 0,
+            'total' => 0,
+            'remaining' => 0,
+            'percent' => 0,
+            'message' => 'Memulai proses sinkronisasi dari berkas DBF aktif...',
+        ]);
+
         try {
             Artisan::call('simgaji:sync', ['--type' => $type]);
 
@@ -731,6 +751,13 @@ class RekonsiliasiSimgajiController extends Controller
             };
 
             $totalKeluarga = SimgajiKeluarga::count();
+
+            $this->updateSyncProgress([
+                'status' => 'done',
+                'type' => $type,
+                'percent' => 100,
+                'message' => $msg,
+            ]);
 
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([
@@ -743,6 +770,12 @@ class RekonsiliasiSimgajiController extends Controller
 
             return redirect()->back()->with('success', $msg);
         } catch (\Exception $e) {
+            $this->updateSyncProgress([
+                'status' => 'error',
+                'type' => $type,
+                'message' => $e->getMessage(),
+            ]);
+
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => false,
@@ -751,6 +784,53 @@ class RekonsiliasiSimgajiController extends Controller
             }
 
             return redirect()->back()->with('error', 'Gagal melakukan sinkronisasi: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Endpoint API untuk memantau progres sinkronisasi DBF secara real-time.
+     */
+    public function getSyncProgress()
+    {
+        $filePath = storage_path('app/simgaji/sync_progress.json');
+        if (file_exists($filePath)) {
+            $content = @file_get_contents($filePath);
+            $data = json_decode($content, true);
+            if (is_array($data)) {
+                return response()->json($data);
+            }
+        }
+
+        $cached = Cache::get('simgaji_sync_progress');
+        if ($cached && is_array($cached)) {
+            return response()->json($cached);
+        }
+
+        return response()->json([
+            'status' => 'idle',
+            'current' => 0,
+            'total' => 0,
+            'remaining' => 0,
+            'percent' => 0,
+            'message' => 'Tidak ada proses aktif',
+        ]);
+    }
+
+    /**
+     * Simpan status progres sinkronisasi real-time ke file JSON dan cache.
+     */
+    private function updateSyncProgress(array $data): void
+    {
+        $dir = storage_path('app/simgaji');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        $data['updated_at'] = time();
+        @file_put_contents($dir.'/sync_progress.json', json_encode($data, JSON_PRETTY_PRINT));
+        try {
+            Cache::put('simgaji_sync_progress', $data, 300);
+        } catch (\Exception $e) {
+            // Abaikan jika cache store sedang sibuk
         }
     }
 

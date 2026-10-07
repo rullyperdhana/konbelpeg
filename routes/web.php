@@ -137,6 +137,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/master/simgaji-dbf', [RekonsiliasiSimgajiController::class, 'uploadPage'])->name('master.simgaji_dbf.index');
     Route::post('/master/simgaji-dbf/upload', [RekonsiliasiSimgajiController::class, 'uploadDbf'])->name('master.simgaji_dbf.upload');
     Route::post('/master/simgaji-dbf/sync', [RekonsiliasiSimgajiController::class, 'syncSimgaji'])->name('master.simgaji_dbf.sync');
+    Route::get('/master/simgaji-dbf/sync-progress', [RekonsiliasiSimgajiController::class, 'getSyncProgress'])->name('master.simgaji_dbf.progress');
     Route::post('/master/simgaji-dbf/{id}/activate', [RekonsiliasiSimgajiController::class, 'setActiveDbf'])->name('master.simgaji_dbf.activate');
     Route::delete('/master/simgaji-dbf/{id}', [RekonsiliasiSimgajiController::class, 'deleteDbf'])->name('master.simgaji_dbf.delete');
 
