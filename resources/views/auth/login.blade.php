@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Masuk - KONBELPEG BKAD Kabupaten Tapin</title>
+    <title>Masuk - KONBELPEG BKAD</title>
     
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -532,7 +532,7 @@
                         <i class="ph ph-buildings"></i>
                     </div>
                     <div class="inst-badge-text">
-                        <h3>BKAD KABUPATEN TAPIN</h3>
+                        <h3>BADAN KEUANGAN & ASET DAERAH</h3>
                         <p>Bidang Anggaran & Perbendaharaan</p>
                     </div>
                 </div>
@@ -543,7 +543,7 @@
                     </div>
                     <h1 class="inst-title">KONBELPEG</h1>
                     <p class="inst-desc">
-                        Sistem Rekonsiliasi & Realisasi Belanja Pegawai Pemerintah Kabupaten Tapin. Terintegrasi dengan database penggajian SIMGAJI Taspen dan SIMPEG.
+                        Sistem Rekonsiliasi & Realisasi Belanja Pegawai Daerah. Terintegrasi dengan database penggajian SIMGAJI Taspen dan SIMPEG.
                     </p>
 
                     <div class="inst-features">
@@ -573,7 +573,7 @@
             </div>
 
             <div class="inst-footer">
-                <span>&copy; {{ date('Y') }} BKAD Kabupaten Tapin</span>
+                <span>&copy; {{ date('Y') }} Badan Keuangan & Aset Daerah</span>
                 <span><i class="ph ph-lock-key"></i> Sistem Terproteksi SSL</span>
             </div>
         </div>
@@ -586,8 +586,8 @@
                     <i class="ph ph-buildings"></i>
                 </div>
                 <div class="mobile-header-text">
-                    <h3>KONBELPEG TAPIN</h3>
-                    <p>BKAD Kabupaten Tapin</p>
+                    <h3>KONBELPEG</h3>
+                    <p>Badan Keuangan & Aset Daerah</p>
                 </div>
             </div>
 
@@ -625,7 +625,7 @@
                             name="email" 
                             id="email" 
                             class="form-control" 
-                            placeholder="nama@bkadtapin.go.id" 
+                            placeholder="nama@instansi.go.id" 
                             value="{{ old('email') }}" 
                             required 
                             autofocus 
@@ -669,7 +669,7 @@
             <div class="security-notice">
                 <i class="ph-bold ph-shield-check"></i>
                 <div>
-                    Akses terbatas untuk aparatur yang berwenang di lingkungan Pemerintah Kabupaten Tapin. Seluruh aktivitas akses tercatat dalam log audit sistem.
+                    Akses terbatas untuk aparatur yang berwenang di lingkungan Pemerintah Daerah. Seluruh aktivitas akses tercatat dalam log audit sistem.
                 </div>
             </div>
         </div>
