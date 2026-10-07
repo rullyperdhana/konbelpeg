@@ -39,12 +39,21 @@ class AuthController extends Controller
         ]);
 
         $throttleKey = Str::transliterate(Str::lower($request->input('email')).'|'.$request->ip());
+        $ipThrottleKey = 'login_ip:'.$request->ip();
 
         if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
             $seconds = RateLimiter::availableIn($throttleKey);
 
             throw ValidationException::withMessages([
-                'email' => "Terlalu banyak percobaan login. Silakan coba lagi dalam {$seconds} detik.",
+                'email' => "Terlalu banyak percobaan login untuk akun ini. Silakan coba lagi dalam {$seconds} detik.",
+            ]);
+        }
+
+        if (RateLimiter::tooManyAttempts($ipThrottleKey, 15)) {
+            $seconds = RateLimiter::availableIn($ipThrottleKey);
+
+            throw ValidationException::withMessages([
+                'email' => "Terlalu banyak aktivitas percobaan login dari jaringan Anda. Silakan coba lagi dalam {$seconds} detik.",
             ]);
         }
 
@@ -52,12 +61,14 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials, $remember)) {
             RateLimiter::clear($throttleKey);
+            RateLimiter::clear($ipThrottleKey);
             $request->session()->regenerate();
 
             return redirect()->intended('/dashboard')->with('success', 'Selamat datang kembali, '.Auth::user()->name.'!');
         }
 
-        RateLimiter::hit($throttleKey);
+        RateLimiter::hit($throttleKey, 300);
+        RateLimiter::hit($ipThrottleKey, 60);
 
         return back()
             ->withInput($request->only('email', 'remember'))

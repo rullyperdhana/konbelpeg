@@ -26,9 +26,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Route;
 
-// Guest Authentication Routes
-Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
+// Guest Authentication Routes with Rate Limiting Protection
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login')->middleware('throttle:60,1');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:20,1');
 
 // Root redirect based on auth status
 Route::get('/', function () {
