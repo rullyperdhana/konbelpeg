@@ -871,7 +871,7 @@
             </div>
             <button class="btn-close" onclick="closeModal('uploadDbfModal')">&times;</button>
         </div>
-        <form action="{{ route('laporan.rekonsiliasi_simgaji.upload') }}" method="POST" enctype="multipart/form-data">
+        <form id="formUploadRekonDbf" action="{{ route('laporan.rekonsiliasi_simgaji.upload') }}" method="POST" enctype="multipart/form-data">
             @csrf
             <div style="padding: 20px 24px;">
                 <div class="form-group" style="margin-bottom: 16px;">
@@ -983,6 +983,13 @@
                 }
             });
         }
+
+        // Attach DBF upload progress modal handler
+        if (typeof window.attachDbfUploadHandler === 'function') {
+            window.attachDbfUploadHandler('#formUploadRekonDbf', '#modalRekonFileInput');
+        }
     });
 </script>
+
+@include('master.dbf_upload_scripts')
 @endsection

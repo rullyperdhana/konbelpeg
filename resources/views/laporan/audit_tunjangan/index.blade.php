@@ -713,7 +713,7 @@
             <button type="button" class="btn btn-sm" onclick="openUploadKelModal()" style="background: #059669; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
                 <i class="ph ph-upload-simple"></i> Unggah / Ganti KEL_*.DBF
             </button>
-            <form action="{{ route('master.simgaji_dbf.sync') }}" method="POST" style="margin: 0;">
+            <form action="{{ route('master.simgaji_dbf.sync') }}" method="POST" class="form-sync-dbf" data-label="Data Anggota Keluarga & Tanggungan" style="margin: 0;">
                 @csrf
                 <input type="hidden" name="type" value="keluarga">
                 <button type="submit" class="btn btn-sm btn-outline-secondary" style="border-radius: 8px; padding: 8px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;" title="Muat ulang seluruh record dari file DBF aktif ke tabel database">
@@ -1246,7 +1246,7 @@
             <button type="button" class="btn-close" onclick="closeUploadKelModal()">&times;</button>
         </div>
 
-        <form action="{{ route('master.simgaji_dbf.upload') }}" method="POST" enctype="multipart/form-data">
+        <form id="formUploadAuditKel" action="{{ route('master.simgaji_dbf.upload') }}" method="POST" enctype="multipart/form-data">
             @csrf
             <input type="hidden" name="jenis_dbf" value="kel">
             <input type="hidden" name="redirect_to" value="audit_tunjangan">
@@ -1473,6 +1473,16 @@ document.addEventListener('DOMContentLoaded', function() {
             if (previewInfo) previewInfo.textContent = 'Ukuran berkas: ' + sizeMb + ' MB (' + file.size.toLocaleString('id-ID') + ' bytes)';
         });
     }
+
+    // Attach DBF upload and sync progress modal handlers
+    if (typeof window.attachDbfUploadHandler === 'function') {
+        window.attachDbfUploadHandler('#formUploadAuditKel', '#inputAuditKelFile');
+    }
+    if (typeof window.attachDbfSyncHandler === 'function') {
+        window.attachDbfSyncHandler('.form-sync-dbf');
+    }
 });
 </script>
+
+@include('master.dbf_upload_scripts')
 @endsection

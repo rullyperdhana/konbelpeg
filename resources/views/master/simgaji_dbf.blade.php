@@ -83,7 +83,7 @@
             </div>
         </div>
 
-        <form action="{{ route('master.simgaji_dbf.upload') }}" method="POST" enctype="multipart/form-data">
+        <form id="formUploadDbf" action="{{ route('master.simgaji_dbf.upload') }}" method="POST" enctype="multipart/form-data">
             @csrf
             <div class="form-group" style="margin-bottom: 14px;">
                 <label style="font-weight: 600; font-size: 12.5px; margin-bottom: 6px; display: block;">Pilih Berkas DBF *</label>
@@ -122,7 +122,7 @@
                 <input type="text" name="keterangan" class="form-control" placeholder="Misal: Ekspor SIMGAJI Periode September 2026">
             </div>
 
-            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 10px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-color: #1d4ed8;">
+            <button type="submit" id="btnSubmitDbfUpload" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 10px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-color: #1d4ed8; font-weight: 700;">
                 <i class="ph-bold ph-upload-simple"></i> Unggah & Simpan ke Server
             </button>
         </form>
@@ -160,7 +160,7 @@
                             <div style="margin-top: 4px; font-style: italic; color: var(--text-muted); font-size: 11.5px;">{{ $activeMstPgw['keterangan'] ?? '-' }}</div>
                         </div>
                     </div>
-                    <form action="{{ route('master.simgaji_dbf.sync') }}" method="POST" style="margin-bottom: 10px;">
+                    <form action="{{ route('master.simgaji_dbf.sync') }}" method="POST" class="form-sync-dbf" data-label="NIK, No. Rekening & NPWP Pegawai" style="margin-bottom: 10px;">
                         @csrf
                         <input type="hidden" name="type" value="master">
                         <button type="submit" class="btn btn-export" style="width: 100%; justify-content: center; font-size: 11.5px; color: #2563eb; border-color: rgba(37, 99, 235, 0.3);" title="Sinkronkan NIK, No. Rekening, dan NPWP ke Master Pegawai">
@@ -259,7 +259,7 @@
                         </div>
                     @endif
 
-                    <form action="{{ route('master.simgaji_dbf.sync') }}" method="POST" style="margin-bottom: 10px;">
+                    <form action="{{ route('master.simgaji_dbf.sync') }}" method="POST" class="form-sync-dbf" data-label="Data Anggota Keluarga & Tanggungan" style="margin-bottom: 10px;">
                         @csrf
                         <input type="hidden" name="type" value="keluarga">
                         <button type="submit" class="btn btn-export" style="width: 100%; justify-content: center; font-size: 11.5px; color: #059669; border-color: rgba(16, 185, 129, 0.3);" title="Muat ulang seluruh record anggota keluarga ke database">
@@ -399,6 +399,8 @@
     </div>
 </div>
 
+@include('master.dbf_upload_scripts')
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const fileInput = document.getElementById('inputDbfFile');
@@ -435,6 +437,14 @@
                     previewBadge.innerHTML = '<span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #475569; padding: 3px 8px; border-radius: 6px; font-weight: 600; font-size: 11px;">🤖 Berkas DBF Terbaca</span>';
                 }
             });
+        }
+
+        // Attach AJAX upload & sync handlers with real-time status/progress dialogs
+        if (typeof window.attachDbfUploadHandler === 'function') {
+            window.attachDbfUploadHandler('#formUploadDbf', '#inputDbfFile');
+        }
+        if (typeof window.attachDbfSyncHandler === 'function') {
+            window.attachDbfSyncHandler('.form-sync-dbf');
         }
     });
 </script>

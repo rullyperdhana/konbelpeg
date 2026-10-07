@@ -541,7 +541,12 @@ class RekonsiliasiSimgajiController extends Controller
         $extension = strtolower($file->getClientOriginalExtension());
 
         if ($extension !== 'dbf') {
-            return redirect()->back()->with('error', 'File yang diunggah harus berformat database SIMGAJI (.dbf atau .DBF).');
+            $errMsg = 'File yang diunggah harus berformat database SIMGAJI (.dbf atau .DBF).';
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $errMsg], 422);
+            }
+
+            return redirect()->back()->with('error', $errMsg);
         }
 
         $originalName = $file->getClientOriginalName();
@@ -635,12 +640,31 @@ class RekonsiliasiSimgajiController extends Controller
 
         $successMsg = "File database {$typeLabel} '{$originalName}' (".number_format($recordsCount, 0, ',', '.')." record) berhasil diunggah{$autoSyncMsg}";
 
-        $redirectTo = $request->input('redirect_to');
-        if ($redirectTo === 'audit_tunjangan') {
-            return redirect()->route('laporan.audit_tunjangan.index')->with('success', $successMsg);
+        $resultPayload = [
+            'success' => true,
+            'message' => $successMsg,
+            'filename' => $originalName,
+            'type' => $finalType,
+            'type_label' => $typeLabel,
+            'records' => $recordsCount,
+            'auto_synced' => $request->boolean('auto_sync'),
+            'total_keluarga_db' => SimgajiKeluarga::count(),
+        ];
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json($resultPayload);
         }
 
-        return redirect()->back()->with('success', $successMsg);
+        $redirectTo = $request->input('redirect_to');
+        if ($redirectTo === 'audit_tunjangan') {
+            return redirect()->route('laporan.audit_tunjangan.index')
+                ->with('success', $successMsg)
+                ->with('upload_result', $resultPayload);
+        }
+
+        return redirect()->back()
+            ->with('success', $successMsg)
+            ->with('upload_result', $resultPayload);
     }
 
     public function setActiveDbf($id)
@@ -706,8 +730,26 @@ class RekonsiliasiSimgajiController extends Controller
                 default => 'Seluruh data SIMGAJI (Master Pegawai & Anggota Keluarga) berhasil disinkronkan ke database.',
             };
 
+            $totalKeluarga = SimgajiKeluarga::count();
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $msg,
+                    'type' => $type,
+                    'total_keluarga' => $totalKeluarga,
+                ]);
+            }
+
             return redirect()->back()->with('success', $msg);
         } catch (\Exception $e) {
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal melakukan sinkronisasi: '.$e->getMessage(),
+                ], 500);
+            }
+
             return redirect()->back()->with('error', 'Gagal melakukan sinkronisasi: '.$e->getMessage());
         }
     }
