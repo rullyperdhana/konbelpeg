@@ -7,7 +7,6 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
-use PhpOffice\PhpSpreadsheet\Cell\DataType;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
@@ -21,6 +20,7 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
      * Peta Kode SKPD Standar SIMGAJI Taspen
      */
     private array $skpdCodeMap = [
+        '000' => 'SKPD BELUM DITENTUKAN / TRANSIT',
         '001' => 'DINAS PENDIDIKAN DAN KEBUDAYAAN',
         '002' => 'DINAS KESEHATAN',
         '003' => 'RUMAH SAKIT DAERAH ULIN BANJARMASIN',
@@ -126,7 +126,7 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
      */
     public function getBnbaData(bool $forceRefresh = false): array
     {
-        $cacheKey = 'laporan_bnba_perbaikan_simgaji_v2';
+        $cacheKey = 'laporan_bnba_perbaikan_simgaji_v3';
         if (! $forceRefresh && Cache::has($cacheKey)) {
             return Cache::get($cacheKey);
         }
@@ -159,11 +159,11 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
             }
         }
 
-        // 2. Baca file DBF SIMGAJI (Tahap 1: Pemetaan Satker Dominan)
+        // 2. Baca file DBF SIMGAJI (Tahap 1: Pemetaan Satker Dominan & Akumulasi SKPD)
         $table = new TableReader($activeFile['path']);
         $satkerMap = [];
         $rawRecords = [];
-        $totalAktifSimgaji = 0;
+        $skpdStatsMap = [];
 
         while ($record = $table->nextRecord()) {
             if ($record->isDeleted()) {
@@ -186,13 +186,30 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
                 continue;
             }
 
-            $totalAktifSimgaji++;
+            // Inisialisasi statistik SKPD SIMGAJI
+            if (! isset($skpdStatsMap[$kdskpd])) {
+                $skpdStatsMap[$kdskpd] = [
+                    'kdskpd' => $kdskpd,
+                    'nama_simgaji' => $this->skpdCodeMap[$kdskpd] ?? ('KODE '.$kdskpd),
+                    'total_pegawai' => 0,
+                    'simpeg_skpds' => [],
+                    'total_tidak_di_simpeg' => 0,
+                    'total_selisih' => 0,
+                ];
+            }
+            $skpdStatsMap[$kdskpd]['total_pegawai']++;
 
             // Data SIMPEG
             $simpegPgw = $dbPegawais[$nip] ?? null;
             $simpegSkpd = $simpegPgw && $simpegPgw->unitKerja ? trim((string) $simpegPgw->unitKerja->skpd) : '-';
             $simpegUpt = $simpegPgw && $simpegPgw->unitKerja ? trim((string) $simpegPgw->unitKerja->upt) : '-';
             $simpegSatker = $simpegPgw && $simpegPgw->unitKerja ? trim((string) $simpegPgw->unitKerja->satker) : '-';
+
+            if ($simpegPgw && $simpegSkpd !== '-') {
+                $skpdStatsMap[$kdskpd]['simpeg_skpds'][$simpegSkpd] = ($skpdStatsMap[$kdskpd]['simpeg_skpds'][$simpegSkpd] ?? 0) + 1;
+            } else {
+                $skpdStatsMap[$kdskpd]['total_tidak_di_simpeg']++;
+            }
 
             $rawRecords[] = [
                 'nip' => $nip,
@@ -232,8 +249,9 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
             }
         }
 
-        // 3. Bangun Data BNBA Perbaikan SIMGAJI
-        $bnbaList = [];
+        // 3. Bangun Data BNBA Lengkap & Data BNBA Perbaikan
+        $allBnbaList = [];
+        $perbaikanBnbaList = [];
 
         foreach ($rawRecords as $r) {
             $nip = $r['nip'];
@@ -249,8 +267,35 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
             $simgajiSkpdName = $this->skpdCodeMap[$kdskpd] ?? ('KODE '.$kdskpd);
             $cleanSimgajiSkpd = trim((string) preg_replace('/\s*\(.*?\)/', '', $simgajiSkpdName));
 
-            // Hanya proses pegawai yang terdaftar di SIMPEG sebagai acuan dasar kebenaran
+            // Jika pegawai belum terdaftar di SIMPEG
             if (! $simpegPgw) {
+                $item = [
+                    'nip' => $nip,
+                    'nama' => $nama,
+                    'golru' => '-',
+                    'jabatan' => '-',
+                    'status_pegawai' => '-',
+                    'kdskpd_simgaji' => $kdskpd,
+                    'skpd_simgaji' => $simgajiSkpdName,
+                    'kdsatker_simgaji' => $kdsatker ?: '-',
+                    'inputer_simgaji' => $inputer ?: '-',
+                    'skpd_simpeg' => 'TIDAK TERDAFTAR DI SIMPEG',
+                    'kdskpd_rekomendasi' => '-',
+                    'skpd_rekomendasi' => '-',
+                    'upt_simpeg' => '-',
+                    'satker_simpeg' => '-',
+                    'jenis_selisih' => 'Tidak Terdaftar di SIMPEG',
+                    'status_filter' => 'tidak_di_simpeg',
+                    'is_perbaikan' => true,
+                    'priority' => 4,
+                    'rekomendasi' => 'Daftarkan/sinkronkan data pegawai ini ke master SIMPEG / BKD',
+                    'keterangan' => "NIP tercatat di SIMGAJI ({$simgajiSkpdName}), tetapi belum ada di database SIMPEG",
+                ];
+
+                $allBnbaList[] = $item;
+                $perbaikanBnbaList[] = $item;
+                $skpdStatsMap[$kdskpd]['total_selisih']++;
+
                 continue;
             }
 
@@ -258,12 +303,12 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
             $jabatan = $simpegPgw->jabatan ? trim($simpegPgw->jabatan->nama) : '-';
             $statusPegawai = $simpegPgw->status_pegawai ?: '-';
 
-            // Kasus 2: Beda SKPD Induk (Mutasi Antar-SKPD)
+            // Kasus 1: Beda SKPD Induk (Mutasi Antar-SKPD)
             $isBedaSkpdInduk = strcasecmp($cleanSimgajiSkpd, $skpdSimpeg) !== 0;
             if ($isBedaSkpdInduk) {
                 $kdRekomendasi = $simpegToSimgajiCode[$skpdSimpeg] ?? '-';
 
-                $bnbaList[] = [
+                $item = [
                     'nip' => $nip,
                     'nama' => $nama,
                     'golru' => $golru,
@@ -279,15 +324,21 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
                     'upt_simpeg' => $uptSimpeg,
                     'satker_simpeg' => $satkerSimpeg,
                     'jenis_selisih' => 'Beda SKPD Induk',
+                    'status_filter' => 'perlu_perbaikan',
+                    'is_perbaikan' => true,
                     'priority' => 1,
                     'rekomendasi' => "Pindahkan SKPD di SIMGAJI ke: {$skpdSimpeg}".($kdRekomendasi !== '-' ? " (Kode: {$kdRekomendasi})" : '').($uptSimpeg !== '-' ? " & Satker: {$uptSimpeg}" : ''),
                     'keterangan' => "SIMGAJI: {$simgajiSkpdName} (Kode {$kdskpd}) | SIMPEG Resmi: {$skpdSimpeg}",
                 ];
 
+                $allBnbaList[] = $item;
+                $perbaikanBnbaList[] = $item;
+                $skpdStatsMap[$kdskpd]['total_selisih']++;
+
                 continue;
             }
 
-            // Kasus 3: Beda Cabang Dinas Pendidikan (Kabupaten / Kota)
+            // Kasus 2: Beda Cabang Dinas Pendidikan (Kabupaten / Kota)
             $isDisdikBranch = in_array($kdskpd, ['070', '071', '072', '073', '074', '075', '076', '077', '078', '079', '080', '081', '082']);
             if ($isDisdikBranch) {
                 $targetDisdik = null;
@@ -301,7 +352,7 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
                 }
 
                 if ($targetDisdik && $targetDisdik['code'] !== $kdskpd) {
-                    $bnbaList[] = [
+                    $item = [
                         'nip' => $nip,
                         'nama' => $nama,
                         'golru' => $golru,
@@ -317,23 +368,30 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
                         'upt_simpeg' => $uptSimpeg,
                         'satker_simpeg' => $satkerSimpeg,
                         'jenis_selisih' => 'Beda Cabang Disdik',
+                        'status_filter' => 'perlu_perbaikan',
+                        'is_perbaikan' => true,
                         'priority' => 2,
                         'rekomendasi' => "Pindahkan Cabang Disdik SIMGAJI ke: {$targetDisdik['nama']} (Kode: {$targetDisdik['code']}) & Satker: {$uptSimpeg}",
                         'keterangan' => "SIMGAJI: Cabang {$kdskpd} | Unit Resmi SIMPEG: {$uptSimpeg}",
                     ];
 
+                    $allBnbaList[] = $item;
+                    $perbaikanBnbaList[] = $item;
+                    $skpdStatsMap[$kdskpd]['total_selisih']++;
+
                     continue;
                 }
             }
 
-            // Kasus 4: Beda UPTD / Sekolah / Satker di SKPD yang Sama
+            // Kasus 3: Beda UPTD / Sekolah / Satker di SKPD yang Sama
             $sKey = $kdskpd.'|'.$kdsatker;
+            $hasUptDiff = false;
             if (isset($satkerDominantUpt[$sKey]) && $satkerDominantUpt[$sKey]['total_upt_pgw'] >= 3) {
                 $domUpt = $satkerDominantUpt[$sKey]['dominant_upt'];
                 if ($uptSimpeg !== '-' && strcasecmp($uptSimpeg, $domUpt) !== 0) {
                     $kdRekomendasi = $kdskpd;
 
-                    $bnbaList[] = [
+                    $item = [
                         'nip' => $nip,
                         'nama' => $nama,
                         'golru' => $golru,
@@ -349,16 +407,53 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
                         'upt_simpeg' => $uptSimpeg,
                         'satker_simpeg' => $satkerSimpeg,
                         'jenis_selisih' => 'Beda UPTD / Satker',
+                        'status_filter' => 'perlu_perbaikan',
+                        'is_perbaikan' => true,
                         'priority' => 3,
                         'rekomendasi' => "Sesuaikan penempatan Satker SIMGAJI ke: {$uptSimpeg}",
                         'keterangan' => "SIMPEG: {$uptSimpeg} (Satker SIMGAJI saat ini dominan: {$domUpt})",
                     ];
+
+                    $allBnbaList[] = $item;
+                    $perbaikanBnbaList[] = $item;
+                    $skpdStatsMap[$kdskpd]['total_selisih']++;
+                    $hasUptDiff = true;
                 }
             }
+
+            if ($hasUptDiff) {
+                continue;
+            }
+
+            // Kasus 4: Sudah Sesuai (Cocok 100%)
+            $item = [
+                'nip' => $nip,
+                'nama' => $nama,
+                'golru' => $golru,
+                'jabatan' => $jabatan,
+                'status_pegawai' => $statusPegawai,
+                'kdskpd_simgaji' => $kdskpd,
+                'skpd_simgaji' => $simgajiSkpdName,
+                'kdsatker_simgaji' => $kdsatker ?: '-',
+                'inputer_simgaji' => $inputer ?: '-',
+                'skpd_simpeg' => $skpdSimpeg,
+                'kdskpd_rekomendasi' => $kdskpd,
+                'skpd_rekomendasi' => $skpdSimpeg,
+                'upt_simpeg' => $uptSimpeg,
+                'satker_simpeg' => $satkerSimpeg,
+                'jenis_selisih' => 'Sesuai',
+                'status_filter' => 'sesuai',
+                'is_perbaikan' => false,
+                'priority' => 5,
+                'rekomendasi' => 'Data penempatan SKPD sudah selaras',
+                'keterangan' => "SIMGAJI & SIMPEG: {$skpdSimpeg}",
+            ];
+
+            $allBnbaList[] = $item;
         }
 
-        // Urutkan data berdasarkan prioritas (Beda SKPD Induk, Beda Cabang Disdik, Beda UPTD), lalu SKPD, lalu Nama
-        usort($bnbaList, function ($a, $b) {
+        // Urutkan data berdasarkan prioritas (Beda SKPD Induk, Beda Cabang Disdik, Beda UPTD, Tidak di SIMPEG, Sesuai), lalu SKPD, lalu Nama
+        $sortFn = function ($a, $b) {
             if ($a['priority'] !== $b['priority']) {
                 return $a['priority'] <=> $b['priority'];
             }
@@ -368,27 +463,78 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
             }
 
             return strcmp($a['nama'], $b['nama']);
-        });
+        };
+        usort($allBnbaList, $sortFn);
+        usort($perbaikanBnbaList, $sortFn);
+
+        // 4. Bangun Matriks Pemetaan Master SKPD (57 Kode SIMGAJI)
+        ksort($skpdStatsMap);
+        $skpdMasterMappings = [];
+
+        foreach ($skpdStatsMap as $kd => $s) {
+            $namaSimgaji = $s['nama_simgaji'];
+            arsort($s['simpeg_skpds']);
+            $dominanSimpeg = ! empty($s['simpeg_skpds']) ? key($s['simpeg_skpds']) : '-';
+            $totalPegawai = $s['total_pegawai'];
+            $totalSelisih = $s['total_selisih'];
+            $totalTidakDiSimpeg = $s['total_tidak_di_simpeg'];
+            $totalSesuai = max(0, $totalPegawai - $totalSelisih);
+
+            $isDisdik = in_array($kd, ['070', '071', '072', '073', '074', '075', '076', '077', '078', '079', '080', '081', '082']);
+
+            if ($isDisdik) {
+                $statusNama = 'CABANG_DISDIK';
+                $rekomendasiNama = "Cabang wilayah Dinas Pendidikan. Selaraskan nama cabang di SIMGAJI: {$namaSimgaji}";
+            } elseif ($dominanSimpeg === '-') {
+                $statusNama = 'BELUM_TERPETAKAN';
+                $rekomendasiNama = 'Belum terpetakan ke data pegawai SIMPEG. Periksa status keaktifan kode di SIMGAJI.';
+            } elseif ($totalSelisih > 0) {
+                $statusNama = 'ADA_SELISIH';
+                $rekomendasiNama = "Standardisasi nama SKPD di SIMGAJI menjadi: {$dominanSimpeg}. Terdapat {$totalSelisih} pegawai perlu disinkronkan.";
+            } else {
+                $statusNama = 'SESUAI';
+                $rekomendasiNama = "Standardisasi nama SKPD di SIMGAJI menjadi: {$dominanSimpeg} (Data sudah selaras).";
+            }
+
+            $skpdMasterMappings[] = [
+                'kdskpd' => $kd,
+                'nama_simgaji' => $namaSimgaji,
+                'nama_simpeg_dominan' => $dominanSimpeg,
+                'kdskpd_rekomendasi' => $kd,
+                'total_pegawai' => $totalPegawai,
+                'total_sesuai' => $totalSesuai,
+                'total_selisih' => $totalSelisih,
+                'total_tidak_di_simpeg' => $totalTidakDiSimpeg,
+                'status_nama' => $statusNama,
+                'rekomendasi' => $rekomendasiNama,
+            ];
+        }
 
         // Rekapitulasi Statistik
-        $coll = collect($bnbaList);
-        $totalBedaSkpd = $coll->where('jenis_selisih', 'Beda SKPD Induk')->count();
-        $totalBedaCabangDisdik = $coll->where('jenis_selisih', 'Beda Cabang Disdik')->count();
-        $totalBedaUptd = $coll->where('jenis_selisih', 'Beda UPTD / Satker')->count();
-        $totalTidakDiSimpeg = $coll->where('jenis_selisih', 'Tidak Terdaftar di SIMPEG')->count();
-        $allSimpegSkpds = $coll->pluck('skpd_simpeg')->unique()->sort()->values()->toArray();
-        $allSimgajiSkpds = $coll->pluck('skpd_simgaji')->unique()->sort()->values()->toArray();
+        $collPerbaikan = collect($perbaikanBnbaList);
+        $totalBedaSkpd = $collPerbaikan->where('jenis_selisih', 'Beda SKPD Induk')->count();
+        $totalBedaCabangDisdik = $collPerbaikan->where('jenis_selisih', 'Beda Cabang Disdik')->count();
+        $totalBedaUptd = $collPerbaikan->where('jenis_selisih', 'Beda UPTD / Satker')->count();
+        $totalTidakDiSimpeg = $collPerbaikan->where('jenis_selisih', 'Tidak Terdaftar di SIMPEG')->count();
+
+        $collAll = collect($allBnbaList);
+        $allSimpegSkpds = $collAll->pluck('skpd_simpeg')->unique()->filter(fn ($v) => $v !== 'TIDAK TERDAFTAR DI SIMPEG')->sort()->values()->toArray();
+        $allSimgajiSkpds = $collAll->pluck('skpd_simgaji')->unique()->sort()->values()->toArray();
 
         $result = [
-            'bnba_items' => $bnbaList,
+            'all_bnba_items' => $allBnbaList,
+            'perbaikan_bnba_items' => $perbaikanBnbaList,
+            'skpd_mappings' => $skpdMasterMappings,
             'summary' => [
-                'total_perlu_perbaikan' => count($bnbaList),
+                'total_aktif_simgaji' => count($allBnbaList),
+                'total_perlu_perbaikan' => count($perbaikanBnbaList),
+                'total_sesuai' => count($allBnbaList) - count($perbaikanBnbaList),
                 'total_beda_skpd' => $totalBedaSkpd,
                 'total_beda_cabang_disdik' => $totalBedaCabangDisdik,
                 'total_beda_uptd' => $totalBedaUptd,
                 'total_tidak_di_simpeg' => $totalTidakDiSimpeg,
-                'total_skpd_terdampak' => count($allSimpegSkpds),
-                'total_aktif_simgaji' => $totalAktifSimgaji,
+                'total_skpd_simgaji' => count($skpdMasterMappings),
+                'total_skpd_terdampak' => $collPerbaikan->pluck('skpd_simpeg')->unique()->count(),
             ],
             'filter_options' => [
                 'skpd_simpeg' => $allSimpegSkpds,
@@ -404,14 +550,20 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
     }
 
     /**
-     * Tampilan Halaman Laporan BNBA Perbaikan SIMGAJI
+     * Tampilan Halaman Laporan BNBA & Pemetaan Master SKPD SIMGAJI
      */
     public function index(Request $request)
     {
+        $tab = $request->get('tab', 'bnba'); // 'bnba' atau 'master_skpd'
+        $statusFilter = $request->get('status', 'perlu_perbaikan'); // 'perlu_perbaikan', 'semua', 'sesuai', 'tidak_di_simpeg'
         $kategori = $request->get('kategori', 'semua');
         $skpdFilter = $request->get('skpd', 'semua');
         $simgajiFilter = $request->get('skpd_simgaji', 'semua');
         $search = trim((string) $request->get('search', ''));
+        $perPage = (int) $request->get('per_page', 25);
+        if (! in_array($perPage, [25, 50, 100, 250, 500])) {
+            $perPage = 25;
+        }
 
         $data = $this->getBnbaData();
 
@@ -419,18 +571,32 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
             return view('laporan.perbaikan_simgaji_skpd.index', [
                 'error' => $data['error'],
                 'items' => new LengthAwarePaginator([], 0, 25),
+                'skpdMappings' => [],
                 'summary' => [],
                 'filterOptions' => [],
+                'tab' => $tab,
+                'statusFilter' => $statusFilter,
                 'kategori' => $kategori,
                 'skpdFilter' => $skpdFilter,
                 'simgajiFilter' => $simgajiFilter,
                 'search' => $search,
+                'perPage' => $perPage,
             ]);
         }
 
-        $items = collect($data['bnba_items'] ?? []);
+        // Tentukan dataset berdasarkan Status Filter
+        if ($statusFilter === 'semua') {
+            $items = collect($data['all_bnba_items'] ?? []);
+        } elseif ($statusFilter === 'sesuai') {
+            $items = collect($data['all_bnba_items'] ?? [])->filter(fn ($it) => ($it['status_filter'] ?? '') === 'sesuai');
+        } elseif ($statusFilter === 'tidak_di_simpeg') {
+            $items = collect($data['all_bnba_items'] ?? [])->filter(fn ($it) => ($it['status_filter'] ?? '') === 'tidak_di_simpeg');
+        } else {
+            // Default: 'perlu_perbaikan' (Hanya yang selisih)
+            $items = collect($data['perbaikan_bnba_items'] ?? []);
+        }
 
-        // Filter Kategori
+        // Filter Kategori (Hanya relevan jika di tab bnba)
         if ($kategori !== 'semua') {
             $kategoriMap = [
                 'beda_skpd' => 'Beda SKPD Induk',
@@ -468,7 +634,6 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
         }
 
         // Pagination
-        $perPage = 25;
         $page = (int) $request->get('page', 1);
         $paginatedItems = new LengthAwarePaginator(
             $items->forPage($page, $perPage)->values(),
@@ -480,15 +645,19 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
 
         return view('laporan.perbaikan_simgaji_skpd.index', [
             'items' => $paginatedItems,
+            'skpdMappings' => $data['skpd_mappings'] ?? [],
             'filteredTotal' => $items->count(),
             'summary' => $data['summary'] ?? [],
             'filterOptions' => $data['filter_options'] ?? [],
             'activeDbf' => $data['active_dbf'] ?? null,
             'cachedAt' => $data['cached_at'] ?? null,
+            'tab' => $tab,
+            'statusFilter' => $statusFilter,
             'kategori' => $kategori,
             'skpdFilter' => $skpdFilter,
             'simgajiFilter' => $simgajiFilter,
             'search' => $search,
+            'perPage' => $perPage,
         ]);
     }
 
@@ -497,17 +666,20 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
      */
     public function refreshCache()
     {
+        Cache::forget('laporan_bnba_perbaikan_simgaji_v3');
         Cache::forget('laporan_bnba_perbaikan_simgaji_v2');
         $this->getBnbaData(true);
 
-        return redirect()->back()->with('success', 'Data BNBA Perbaikan SIMGAJI berhasil dihitung ulang dan diperbarui.');
+        return redirect()->back()->with('success', 'Data BNBA & Pemetaan Master SKPD SIMGAJI berhasil dihitung ulang dan diperbarui.');
     }
 
     /**
-     * Ekspor Data BNBA ke Microsoft Excel (.xlsx)
+     * Ekspor Data BNBA & Pemetaan Master SKPD ke Microsoft Excel (.xlsx) Multi-Sheet
      */
     public function exportExcel(Request $request)
     {
+        $scope = $request->get('scope', 'perbaikan'); // 'perbaikan' atau 'full'/'semua'
+        $statusFilter = $request->get('status', ($scope === 'full' || $scope === 'semua') ? 'semua' : 'perlu_perbaikan');
         $kategori = $request->get('kategori', 'semua');
         $skpdFilter = $request->get('skpd', 'semua');
         $simgajiFilter = $request->get('skpd_simgaji', 'semua');
@@ -518,7 +690,16 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
             return redirect()->back()->with('error', $data['error']);
         }
 
-        $items = collect($data['bnba_items'] ?? []);
+        // Tentukan dataset BNBA
+        if ($scope === 'full' || $scope === 'semua' || $statusFilter === 'semua') {
+            $items = collect($data['all_bnba_items'] ?? []);
+        } elseif ($statusFilter === 'sesuai') {
+            $items = collect($data['all_bnba_items'] ?? [])->filter(fn ($it) => ($it['status_filter'] ?? '') === 'sesuai');
+        } elseif ($statusFilter === 'tidak_di_simpeg') {
+            $items = collect($data['all_bnba_items'] ?? [])->filter(fn ($it) => ($it['status_filter'] ?? '') === 'tidak_di_simpeg');
+        } else {
+            $items = collect($data['perbaikan_bnba_items'] ?? []);
+        }
 
         if ($kategori !== 'semua') {
             $kategoriMap = [
@@ -554,22 +735,110 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
         }
 
         $spreadsheet = new Spreadsheet;
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('BNBA Perbaikan SIMGAJI');
 
-        // Header Dokumen Resmi
-        $sheet->setCellValue('A1', 'PEMERINTAH PROVINSI KALIMANTAN SELATAN');
-        $sheet->setCellValue('A2', 'LAPORAN DATA BNBA (BY NAME BY ADDRESS) USULAN PERBAIKAN SKPD & SATKER SIMGAJI TASPEN');
-        $sheet->setCellValue('A3', 'Acuan Master Data Resmi: SIMPEG / KONBELPEG | File DBF: '.($data['active_dbf']['filename'] ?? '-').' | Waktu Unduh: '.date('d/m/Y H:i').' WITA');
+        // ==========================================
+        // SHEET 1: PEMETAAN MASTER SKPD (57 SKPD)
+        // ==========================================
+        $sheet1 = $spreadsheet->getActiveSheet();
+        $sheet1->setTitle('1. Master SKPD SIMGAJI');
 
-        $sheet->getStyle('A1:A2')->getFont()->setBold(true);
-        $sheet->getStyle('A1')->getFont()->setSize(13);
-        $sheet->getStyle('A2')->getFont()->setSize(11);
-        $sheet->getStyle('A3')->getFont()->setSize(9.5)->setItalic(true);
+        $sheet1->setCellValue('A1', 'PEMERINTAH PROVINSI KALIMANTAN SELATAN');
+        $sheet1->setCellValue('A2', 'MATRIKS PEMETAAN MASTER KODE & NAMA SKPD SIMGAJI TASPEN VS SIMPEG (ACUAN RESMI)');
+        $sheet1->setCellValue('A3', 'Acuan Master Data Resmi: SIMPEG Pemprov Kalsel | 57 Kode SKPD SIMGAJI | Waktu Unduh: '.date('d/m/Y H:i').' WITA');
 
-        // Header Tabel Kolom
-        $rowNum = 5;
-        $headers = [
+        $sheet1->getStyle('A1:A2')->getFont()->setBold(true);
+        $sheet1->getStyle('A1')->getFont()->setSize(13);
+        $sheet1->getStyle('A2')->getFont()->setSize(11);
+        $sheet1->getStyle('A3')->getFont()->setSize(9.5)->setItalic(true);
+
+        $headers1 = [
+            'No',
+            'Kode SKPD SIMGAJI',
+            'Nama SKPD di SIMGAJI (Eksisting)',
+            'Nama SKPD Resmi Acuan SIMPEG',
+            'Kode Rekomendasi',
+            'Total Pegawai SIMGAJI',
+            'Pegawai Sesuai',
+            'Pegawai Selisih',
+            'Belum di SIMPEG',
+            'Status Keselarasan',
+            'Rekomendasi Standardisasi Nama / Tindakan SIMGAJI',
+        ];
+
+        $rowNum1 = 5;
+        $colLetter = 'A';
+        foreach ($headers1 as $h) {
+            $sheet1->setCellValue($colLetter.$rowNum1, $h);
+            $colLetter++;
+        }
+        $lastCol1 = chr(ord('A') + count($headers1) - 1);
+
+        $sheet1->getStyle("A{$rowNum1}:{$lastCol1}{$rowNum1}")->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => true],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '0F172A'], // Slate Dark
+            ],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CBD5E1']]],
+        ]);
+        $sheet1->getRowDimension($rowNum1)->setRowHeight(28);
+
+        $no1 = 1;
+        $rowNum1++;
+        $tableData1 = [];
+        foreach ($data['skpd_mappings'] ?? [] as $m) {
+            $tableData1[] = [
+                $no1++,
+                $m['kdskpd'],
+                $m['nama_simgaji'],
+                $m['nama_simpeg_dominan'],
+                $m['kdskpd_rekomendasi'],
+                $m['total_pegawai'],
+                $m['total_sesuai'],
+                $m['total_selisih'],
+                $m['total_tidak_di_simpeg'],
+                $m['status_nama'],
+                $m['rekomendasi'],
+            ];
+        }
+
+        $sheet1->fromArray($tableData1, null, "A{$rowNum1}");
+        $endRow1 = $rowNum1 + count($tableData1) - 1;
+
+        if ($endRow1 >= $rowNum1) {
+            $sheet1->getStyle("A{$rowNum1}:{$lastCol1}{$endRow1}")->applyFromArray([
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E2E8F0']]],
+                'alignment' => ['vertical' => Alignment::VERTICAL_CENTER],
+            ]);
+            $sheet1->getStyle("A{$rowNum1}:A{$endRow1}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet1->getStyle("B{$rowNum1}:B{$endRow1}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet1->getStyle("E{$rowNum1}:E{$endRow1}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet1->getStyle("F{$rowNum1}:I{$endRow1}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $sheet1->getStyle("J{$rowNum1}:J{$endRow1}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        }
+
+        foreach (range('A', $lastCol1) as $col) {
+            $sheet1->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // ==========================================
+        // SHEET 2: DATA BNBA PEGAWAI
+        // ==========================================
+        $sheet2 = $spreadsheet->createSheet();
+        $sheet2Title = ($scope === 'full' || $scope === 'semua' || $statusFilter === 'semua') ? '2. Full BNBA Pegawai' : '2. BNBA Perbaikan Pegawai';
+        $sheet2->setTitle($sheet2Title);
+
+        $sheet2->setCellValue('A1', 'PEMERINTAH PROVINSI KALIMANTAN SELATAN');
+        $sheet2->setCellValue('A2', 'LAPORAN DATA BNBA (BY NAME BY ADDRESS) PEMETAAN & USULAN PERBAIKAN SKPD SIMGAJI');
+        $sheet2->setCellValue('A3', 'Acuan Resmi: SIMPEG / KONBELPEG | Total Data: '.number_format($items->count(), 0, ',', '.').' Pegawai | Waktu Unduh: '.date('d/m/Y H:i').' WITA');
+
+        $sheet2->getStyle('A1:A2')->getFont()->setBold(true);
+        $sheet2->getStyle('A1')->getFont()->setSize(13);
+        $sheet2->getStyle('A2')->getFont()->setSize(11);
+        $sheet2->getStyle('A3')->getFont()->setSize(9.5)->setItalic(true);
+
+        $headers2 = [
             'No',
             'NIP',
             'Nama Pegawai',
@@ -583,18 +852,19 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
             'SKPD Acuan Resmi (SIMPEG)',
             'Kode Rekomendasi SIMGAJI',
             'UPTD / Satker Resmi (SIMPEG)',
-            'Jenis Selisih',
+            'Status / Jenis Selisih',
             'Rekomendasi Tindakan Perbaikan SIMGAJI',
         ];
 
+        $rowNum2 = 5;
         $colLetter = 'A';
-        foreach ($headers as $h) {
-            $sheet->setCellValue($colLetter.$rowNum, $h);
+        foreach ($headers2 as $h) {
+            $sheet2->setCellValue($colLetter.$rowNum2, $h);
             $colLetter++;
         }
-        $lastCol = chr(ord('A') + count($headers) - 1);
+        $lastCol2 = chr(ord('A') + count($headers2) - 1);
 
-        $sheet->getStyle("A{$rowNum}:{$lastCol}{$rowNum}")->applyFromArray([
+        $sheet2->getStyle("A{$rowNum2}:{$lastCol2}{$rowNum2}")->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => true],
             'fill' => [
@@ -603,56 +873,57 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
             ],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CBD5E1']]],
         ]);
-        $sheet->getRowDimension($rowNum)->setRowHeight(28);
+        $sheet2->getRowDimension($rowNum2)->setRowHeight(28);
 
-        // Isi Data
-        $no = 1;
-        $rowNum++;
+        $no2 = 1;
+        $rowNum2++;
+        $tableData2 = [];
         foreach ($items as $row) {
-            $sheet->setCellValueExplicit("A{$rowNum}", $no++, DataType::TYPE_NUMERIC);
-            $sheet->setCellValueExplicit("B{$rowNum}", $row['nip'], DataType::TYPE_STRING);
-            $sheet->setCellValue("C{$rowNum}", $row['nama']);
-            $sheet->setCellValue("D{$rowNum}", $row['golru']);
-            $sheet->setCellValue("E{$rowNum}", $row['status_pegawai']);
-            $sheet->setCellValue("F{$rowNum}", $row['jabatan']);
-            $sheet->setCellValueExplicit("G{$rowNum}", $row['kdskpd_simgaji'], DataType::TYPE_STRING);
-            $sheet->setCellValue("H{$rowNum}", $row['skpd_simgaji']);
-            $sheet->setCellValueExplicit("I{$rowNum}", $row['kdsatker_simgaji'], DataType::TYPE_STRING);
-            $sheet->setCellValue("J{$rowNum}", $row['inputer_simgaji']);
-            $sheet->setCellValue("K{$rowNum}", $row['skpd_simpeg']);
-            $sheet->setCellValueExplicit("L{$rowNum}", $row['kdskpd_rekomendasi'], DataType::TYPE_STRING);
-            $sheet->setCellValue("M{$rowNum}", $row['upt_simpeg']);
-            $sheet->setCellValue("N{$rowNum}", $row['jenis_selisih']);
-            $sheet->setCellValue("O{$rowNum}", $row['rekomendasi']);
+            $tableData2[] = [
+                $no2++,
+                $row['nip'],
+                $row['nama'],
+                $row['golru'],
+                $row['status_pegawai'],
+                $row['jabatan'],
+                $row['kdskpd_simgaji'],
+                $row['skpd_simgaji'],
+                $row['kdsatker_simgaji'],
+                $row['inputer_simgaji'],
+                $row['skpd_simpeg'],
+                $row['kdskpd_rekomendasi'],
+                $row['upt_simpeg'],
+                $row['jenis_selisih'],
+                $row['rekomendasi'],
+            ];
+        }
 
-            // Styling Baris
-            $fillColor = ($no % 2 === 0) ? 'FFFFFF' : 'F8FAFC';
-            $sheet->getStyle("A{$rowNum}:{$lastCol}{$rowNum}")->applyFromArray([
-                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $fillColor]],
+        $sheet2->fromArray($tableData2, null, "A{$rowNum2}");
+        $endRow2 = $rowNum2 + count($tableData2) - 1;
+
+        if ($endRow2 >= $rowNum2) {
+            $sheet2->getStyle("A{$rowNum2}:{$lastCol2}{$endRow2}")->applyFromArray([
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E2E8F0']]],
                 'alignment' => ['vertical' => Alignment::VERTICAL_CENTER],
             ]);
-
-            // Alignment khusus kolom
-            $sheet->getStyle("A{$rowNum}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("B{$rowNum}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("D{$rowNum}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("E{$rowNum}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("G{$rowNum}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("I{$rowNum}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("L{$rowNum}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("N{$rowNum}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-            $sheet->getRowDimension($rowNum)->setRowHeight(22);
-            $rowNum++;
+            $sheet2->getStyle("A{$rowNum2}:A{$endRow2}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet2->getStyle("B{$rowNum2}:B{$endRow2}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet2->getStyle("D{$rowNum2}:E{$endRow2}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet2->getStyle("G{$rowNum2}:G{$endRow2}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet2->getStyle("I{$rowNum2}:I{$endRow2}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet2->getStyle("L{$rowNum2}:L{$endRow2}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet2->getStyle("N{$rowNum2}:N{$endRow2}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
         }
 
-        // Auto width untuk setiap kolom
-        foreach (range('A', $lastCol) as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
+        foreach (range('A', $lastCol2) as $col) {
+            $sheet2->getColumnDimension($col)->setAutoSize(true);
         }
 
-        $filename = 'BNBA_Perbaikan_SKPD_SIMGAJI_'.date('Ymd_His').'.xlsx';
+        // Kembali ke sheet 1 sebagai default tampilan
+        $spreadsheet->setActiveSheetIndex(0);
+
+        $suffix = ($scope === 'full' || $scope === 'semua' || $statusFilter === 'semua') ? 'FULL_PEMETAAN' : 'PERBAIKAN';
+        $filename = "Pemetaan_SKPD_SIMGAJI_vs_SIMPEG_{$suffix}_".date('Ymd_His').'.xlsx';
 
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         header('Content-Disposition: attachment;filename="'.$filename.'"');
@@ -664,10 +935,12 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
     }
 
     /**
-     * Ekspor Data BNBA ke Dokumen PDF Resmi (A4 Landscape)
+     * Ekspor Data ke Dokumen PDF Resmi (A4 Landscape)
      */
     public function exportPdf(Request $request)
     {
+        $tab = $request->get('tab', 'bnba');
+        $statusFilter = $request->get('status', 'perlu_perbaikan');
         $kategori = $request->get('kategori', 'semua');
         $skpdFilter = $request->get('skpd', 'semua');
         $simgajiFilter = $request->get('skpd_simgaji', 'semua');
@@ -678,7 +951,15 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
             return redirect()->back()->with('error', $data['error']);
         }
 
-        $items = collect($data['bnba_items'] ?? []);
+        if ($statusFilter === 'semua') {
+            $items = collect($data['all_bnba_items'] ?? []);
+        } elseif ($statusFilter === 'sesuai') {
+            $items = collect($data['all_bnba_items'] ?? [])->filter(fn ($it) => ($it['status_filter'] ?? '') === 'sesuai');
+        } elseif ($statusFilter === 'tidak_di_simpeg') {
+            $items = collect($data['all_bnba_items'] ?? [])->filter(fn ($it) => ($it['status_filter'] ?? '') === 'tidak_di_simpeg');
+        } else {
+            $items = collect($data['perbaikan_bnba_items'] ?? []);
+        }
 
         if ($kategori !== 'semua') {
             $kategoriMap = [
@@ -722,8 +1003,11 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
 
         $pdf = Pdf::loadView('laporan.perbaikan_simgaji_skpd.pdf', [
             'items' => $items,
+            'skpdMappings' => $data['skpd_mappings'] ?? [],
             'summary' => $data['summary'] ?? [],
             'activeFile' => $data['active_dbf'] ?? [],
+            'tab' => $tab,
+            'statusFilter' => $statusFilter,
             'kategori' => $kategori,
             'skpdFilter' => $skpdFilter,
             'simgajiFilter' => $simgajiFilter,

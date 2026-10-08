@@ -106,15 +106,21 @@ Seringkali terjadi diskrepansi yang menyebabkan potensi kelebihan/kekurangan bay
    - Fitur tindak lanjut penyelesaian kasus dengan pencatatan bukti Surat Tanda Setoran (STS) ke Kas Daerah (No. STS, tanggal, nominal pengembalian, dan catatan tindak lanjut).
    - Filter status penyelesaian (Semua, Pending/Belum Selesai, Sudah Selesai via STS) dan kartu KPI setoran kasda.
    - Ekspor Microsoft Excel (.xlsx) dan PDF resmi.
-9. **Laporan BNBA Perbaikan SKPD SIMGAJI (`/laporan/perbaikan-simgaji-skpd`)**:
-   - Menyajikan data nominatif *By Name By Address* (BNBA) perorangan untuk usulan perbaikan kode dan penempatan SKPD pada aplikasi SIMGAJI Taspen.
-   - Menjadikan data **SIMPEG / KONBELPEG** sebagai acuan kebenaran (*single source of truth*).
-   - Mengklasifikasikan perbedaan ke dalam 3 kategori:
-     - **Beda SKPD Induk**: Pegawai tercatat di SKPD yang berbeda secara kelembagaan (indikasi mutasi pegawai).
-     - **Beda Cabang Disdik**: Guru/tenaga kependidikan Disdik yang kode cabangnya berbeda (rekomendasi kode 070 s.d. 082 berdasarkan kabupaten/kota penempatan SIMPEG).
-     - **Beda UPTD / Satker**: Pegawai sudah di SKPD induk yang sama namun penempatan UPTD/Satkernya belum selaras.
-   - Menyediakan teks rekomendasi tindakan perbaikan operasional untuk operator SIMGAJI.
-   - Fitur filter multi-kategori, pencarian personal, tombol salin NIP 1-klik, dan ekspor Berita Acara Excel (.xlsx) serta PDF resmi A4 Landscape.
+9. **Laporan BNBA & Pemetaan Master SKPD SIMGAJI (`/laporan/perbaikan-simgaji-skpd`)**:
+   - **Dual-Tab Perspective**:
+     - **Tab 1: Nominatif BNBA Pegawai**: Rincian perorangan (*By Name By Address*) untuk usulan perbaikan kode/penempatan SKPD di aplikasi SIMGAJI Taspen berbasis acuan data definitif **SIMPEG / KONBELPEG** (*single source of truth*).
+     - **Tab 2: Matriks Pemetaan Master SKPD SIMGAJI (57 SKPD)**: Pemetaan komprehensif seluruh 57 entitas kode SKPD SIMGAJI terhadap SKPD resmi SIMPEG, dilengkapi jumlah pegawai, status pemetaan (Sesuai, Anomali/Beda Nomenklatur, Perlu Sinkronisasi), dan rekomendasi teknis.
+   - **Klasifikasi Selisih & Rekomendasi Aksi Otomatis**:
+     - **Beda SKPD Induk**: Deteksi mutasi pegawai antar-SKPD beserta instruksi mutasi kode SKPD SIMGAJI.
+     - **Beda Cabang Disdik**: Deteksi ketidaksesuaian penempatan cabang wilayah Disdik (kode 070-082) terhadap sekolah/unit kerja riil.
+     - **Beda UPTD / Satker**: Penyelarasan penempatan satker/UPTD pada SKPD induk yang sama.
+     - **Belum Terdaftar di SIMPEG**: Mengidentifikasi NIP aktif pada penggajian SIMGAJI yang belum tercatat pada basis data kepegawaian SIMPEG.
+   - **Filter Status & Pencarian Cepat**:
+     - Filter status data: *Perlu Perbaikan* (default), *Sudah Sesuai*, *Belum Terdaftar di SIMPEG*, dan *Semua Data*.
+     - Filter Kategori Selisih, SKPD Resmi SIMPEG, SKPD SIMGAJI, serta pencarian instan (NIP, Nama, Jabatan) dan tombol salin NIP 1-klik.
+   - **Ekspor Dokumen Cerdas & Siap Cetak**:
+     - **Excel Multi-Sheet (.xlsx)**: Sheet 1 memuat Matriks Pemetaan 57 Master SKPD, Sheet 2 memuat Daftar Nominatif BNBA Pegawai.
+     - **PDF Resmi (A4 Landscape)**: Menghasilkan dokumen resmi ber-kop instansi dan tanda tangan pejabat penatausahaan keuangan yang menyesuaikan tab aktif (Matriks Master SKPD atau Nominatif BNBA).
 
 ### D. Modul Rekonsiliasi SIMGAJI (`/laporan/rekonsiliasi-simgaji`)
 Inti dari sistem KONBELPEG dengan 6 kategori pencocokan otomatis:
