@@ -9,6 +9,7 @@ use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\LaporanGabunganController;
 use App\Http\Controllers\LaporanIwpJamkesController;
 use App\Http\Controllers\LaporanPegawaiController;
+use App\Http\Controllers\LaporanTaperaController;
 use App\Http\Controllers\PegawaiController;
 use App\Http\Controllers\PegawaiSimpegController;
 use App\Http\Controllers\PenyelarasanUnitKerjaController;
@@ -177,6 +178,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/laporan/audit-tunjangan-keluarga/export/pdf', [AuditTunjanganKeluargaController::class, 'exportPdf'])->name('laporan.audit_tunjangan.export_pdf');
     Route::post('/laporan/audit-tunjangan-keluarga/resolusi', [AuditTunjanganKeluargaController::class, 'storeResolusi'])->name('laporan.audit_tunjangan.store_resolusi');
     Route::delete('/laporan/audit-tunjangan-keluarga/resolusi/{id}', [AuditTunjanganKeluargaController::class, 'destroyResolusi'])->name('laporan.audit_tunjangan.destroy_resolusi');
+
+    // Simulasi & Proyeksi Tapera (PP No. 21 Tahun 2024)
+    Route::get('/laporan/tapera', [LaporanTaperaController::class, 'index'])->name('laporan.tapera.index');
+    Route::get('/laporan/tapera/export/excel', [LaporanTaperaController::class, 'exportExcel'])->name('laporan.tapera.export_excel');
+    Route::get('/laporan/tapera/export/pdf', [LaporanTaperaController::class, 'exportPdf'])->name('laporan.tapera.export_pdf');
 
     // Pengaturan
     Route::prefix('setting/users')->name('setting.users.')->group(function () {

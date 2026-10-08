@@ -83,4 +83,56 @@ class RealisasiGaji extends Model
     {
         return $this->iwp_jamkes + $this->paskes;
     }
+
+    /**
+     * Get Tunjangan Keluarga (Pasangan + Anak) untuk dasar perhitungan Tapera.
+     */
+    public function getTunjKeluargaAttribute(): float
+    {
+        return (float) ($this->raw_data['tjistri'] ?? 0) + (float) ($this->raw_data['tjanak'] ?? 0);
+    }
+
+    /**
+     * Get Tunjangan Jabatan / Fungsional / Umum untuk dasar perhitungan Tapera.
+     */
+    public function getTunjJabatanAttribute(): float
+    {
+        return (float) ($this->raw_data['tjstruk'] ?? 0)
+            + (float) ($this->raw_data['tjfungsi'] ?? 0)
+            + (float) ($this->raw_data['tjumum'] ?? 0);
+    }
+
+    /**
+     * Get Dasar Perhitungan Simpanan Tapera (Gaji Pokok + Tunjangan Keluarga + Tunjangan Jabatan).
+     */
+    public function getDasarTaperaAttribute(): float
+    {
+        $gapok = (float) ($this->gaji_pokok ?? $this->raw_data['gapok'] ?? 0);
+
+        return $gapok + $this->tunj_keluarga + $this->tunj_jabatan;
+    }
+
+    /**
+     * Get Simulasi Potongan Tapera Pegawai/ASN (2,5%).
+     */
+    public function getSimulasiTaperaAsnAttribute(): float
+    {
+        return round($this->dasar_tapera * 0.025);
+    }
+
+    /**
+     * Get Simulasi Beban Iuran Tapera Pemberi Kerja/Pemda (0,5%).
+     */
+    public function getSimulasiTaperaPkAttribute(): float
+    {
+        return round($this->dasar_tapera * 0.005);
+    }
+
+    /**
+     * Get Simulasi Total Iuran Tapera (3,0%).
+     */
+    public function getSimulasiTaperaTotalAttribute(): float
+    {
+        return round($this->dasar_tapera * 0.03);
+    }
 }

@@ -152,5 +152,14 @@
         <p>Daftar nominatif perseorangan (By Name By Address) untuk usulan perbaikan kode/nama SKPD & Satker SIMGAJI Taspen berdasarkan acuan SIMPEG.</p>
         <a href="/laporan/perbaikan-simgaji-skpd" class="btn-report" style="background: #1e40af;">Buka Laporan</a>
     </div>
+
+    <div class="report-card">
+        <div class="report-icon" style="background: rgba(14, 116, 144, 0.12); color: #0e7490;">
+            <i class="ph ph-house-line"></i>
+        </div>
+        <h3>Simulasi Tapera (ASN & Pemda)</h3>
+        <p>Kalkulator simulasi interaktif & rekapitulasi proyeksi iuran Tapera (PP No. 21 Tahun 2024): 2,5% potongan ASN dan 0,5% beban Pemda/APBD per SKPD & nominatif.</p>
+        <a href="/laporan/tapera" class="btn-report" style="background: #0e7490;">Buka Laporan</a>
+    </div>
 </div>
 @endsection

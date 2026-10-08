@@ -2,6 +2,35 @@
 
 Dokumen ini mencatat seluruh riwayat pembaruan, evolusi fitur, perbaikan bug, dan progres pengembangan sistem **KONBELPEG (Rekonsiliasi Realisasi Belanja Pegawai & SIMGAJI)**.
 
+## 📌 [v2.13.0] - 2026-10-08
+### 🏠 Modul Simulasi & Proyeksi Iuran Tapera ASN & Pemberi Kerja (PP No. 21 Tahun 2024)
+- **Modul Baru Simulasi & Proyeksi Tapera (`/laporan/tapera`)**:
+  - Menyajikan sistem kalkulasi simulasi Tabungan Perumahan Rakyat (Tapera) total **3,0%** yang ditanggung bersama oleh **Pekerja/ASN (2,5%)** dan **Pemberi Kerja/Pemda (0,5%)** berdasarkan PP No. 25 Tahun 2020 jo. PP No. 21 Tahun 2024.
+  - Dasar perhitungan akurat mengacu pada ketentuan perundang-undangan: *Gaji Pokok + Tunjangan Keluarga (Pasangan 10% & Anak 2% max 2) + Tunjangan Jabatan/Fungsional/Umum*.
+- **Tiga Perspektif Analisis & Simulasi Interaktif (*Triple-Perspective Navigation*)**:
+  - 🧮 **Tab 1: Kalkulator Simulasi Interaktif**:
+    - Preset referensi gaji pokok dan tunjangan terbaru untuk PNS (PP No. 5 Tahun 2024: Golongan II/a s.d. IV/c) dan PPPK (Perpres No. 11 Tahun 2024: Golongan V s.d. X) atau input custom.
+    - Pilihan status pernikahan (tunjangan pasangan 10%) dan jumlah anak (0, 1, 2 anak × 2%).
+    - Komputasi otomatis secara *real-time* (tanpa reload): Dasar Tapera (100%), Potongan ASN (2,5% per bulan & proyeksi 1 tahun), Beban Pemda/APBD (0,5% per bulan & proyeksi 1 tahun), dan Total Disetor ke BP Tapera (3,0%).
+    - Indikator visual progres perbandingan proporsi beban ASN (83,3%) vs Pemda (16,7%).
+  - 🏢 **Tab 2: Rekapitulasi per SKPD (Berdasarkan Data Riil Belanja Gaji)**:
+    - Menghitung akumulasi kebutuhan anggaran belanja APBD dan potongan ASN dari database penggajian aktif (`realisasi_gajis`).
+    - Kolom lengkap: Jumlah ASN, Gaji Pokok, Tunj. Keluarga, Tunj. Jabatan, Total Dasar Tapera, Beban Pemda (0,5%), Potongan ASN (2,5%), dan Total Iuran (3,0%).
+    - Dilengkapi KPI Summary Cards Total Belanja APBD & baris Grand Total.
+  - 👥 **Tab 3: Daftar Nominatif ASN (Rinci By Name By NIP)**:
+    - Menampilkan nominatif perseorangan seluruh ASN dengan rincian NIP, Nama, SKPD, Jabatan, komponen gaji, dan estimasi iuran Tapera.
+    - Dilengkapi pencarian nama/NIP dan paginasi data.
+- **Ekspor Dokumen Resmi**:
+  - **Ekspor Excel (.xlsx)**: Template berformat akuntansi dengan border rapi, formula otomatis, dan header resmi.
+  - **Ekspor PDF Resmi (A4 Landscape)**: Format cetak resmi standar BPKAD/Pemda dengan kop dinas dan ruang tanda tangan pejabat penatausahaan keuangan.
+- **Navigasi & Akses Menu**:
+  - Submenu baru `16. Simulasi Tapera (ASN & Pemda)` pada sidebar kelompok Laporan & Realisasi.
+  - Kartu modul baru di Pusat Laporan (`/laporan`).
+- **Pengujian Otomatis (*Feature Tests*)**:
+  - Rangkaian pengujian komprehensif pada `tests/Feature/LaporanTaperaTest.php` mencakup proteksi autentikasi, render tab kalkulator, rekapitulasi, rincian nominatif, ekspor PDF, serta unit test accessor model `RealisasiGaji` (6 tests passed, 24 assertions).
+
+---
+
 ## 📌 [v2.12.0] - 2026-10-08
 ### 📋 Modul Laporan Data BNBA (By Name By Address) & Pemetaan Master SKPD SIMGAJI Taspen
 - **Modul Baru Laporan BNBA & Pemetaan Master SKPD (`/laporan/perbaikan-simgaji-skpd`)**:

@@ -121,6 +121,11 @@ Seringkali terjadi diskrepansi yang menyebabkan potensi kelebihan/kekurangan bay
    - **Ekspor Dokumen Cerdas & Siap Cetak**:
      - **Excel Multi-Sheet (.xlsx)**: Sheet 1 memuat Matriks Pemetaan 57 Master SKPD, Sheet 2 memuat Daftar Nominatif BNBA Pegawai.
      - **PDF Resmi (A4 Landscape)**: Menghasilkan dokumen resmi ber-kop instansi dan tanda tangan pejabat penatausahaan keuangan yang menyesuaikan tab aktif (Matriks Master SKPD atau Nominatif BNBA).
+10. **Laporan Simulasi & Proyeksi Tapera ASN & Pemda (`/laporan/tapera`)**:
+    - **Simulasi Berdasarkan PP No. 25/2020 jo. PP No. 21/2024**: Menghitung simpanan Tapera total 3,0% (0,5% beban APBD Pemda dan 2,5% potongan ASN) berbasis *Gaji Pokok + Tunjangan Keluarga + Tunjangan Jabatan/Fungsional/Umum*.
+    - **Kalkulator Interaktif**: Simulasi mandiri perorangan dengan preset gaji pokok ASN terbaru (PP 5/2024 & Perpres 11/2024) serta live breakdown bulanan dan tahunan.
+    - **Rekapitulasi per SKPD**: Estimasi kebutuhan belanja APBD dan potongan ASN se-kabupaten/kota/provinsi dari data transaksi penggajian riil (`realisasi_gajis`).
+    - **Daftar Nominatif ASN**: Rincian perorangan (*By Name By NIP*) beserta ekspor resmi Excel (.xlsx) dan PDF (A4 Landscape).
 
 ### D. Modul Rekonsiliasi SIMGAJI (`/laporan/rekonsiliasi-simgaji`)
 Inti dari sistem KONBELPEG dengan 6 kategori pencocokan otomatis:
@@ -249,6 +254,9 @@ Inti dari sistem KONBELPEG dengan 6 kategori pencocokan otomatis:
 | `GET` | `/laporan/perbaikan-simgaji-skpd/refresh` | `LaporanBnbaPerbaikanSimgajiController@refreshCache` | Refresh cache komparasi BNBA SKPD |
 | `GET` | `/laporan/perbaikan-simgaji-skpd/export/excel` | `LaporanBnbaPerbaikanSimgajiController@exportExcel` | Ekspor Excel Berita Acara BNBA Perbaikan |
 | `GET` | `/laporan/perbaikan-simgaji-skpd/export/pdf` | `LaporanBnbaPerbaikanSimgajiController@exportPdf` | Cetak PDF Laporan BNBA Perbaikan SKPD |
+| `GET` | `/laporan/tapera` | `LaporanTaperaController@index` | Modul Simulasi & Proyeksi Tapera ASN & Pemda (PP 21/2024) |
+| `GET` | `/laporan/tapera/export/excel` | `LaporanTaperaController@exportExcel` | Ekspor Excel Simulasi & Proyeksi Tapera |
+| `GET` | `/laporan/tapera/export/pdf` | `LaporanTaperaController@exportPdf` | Cetak PDF Simulasi & Proyeksi Tapera |
 | `GET` | `/setting/users` | `UserController@index` | Kelola akun pengguna sistem |
 | `POST` | `/setting/users` | `UserController@store` | Tambah pengguna baru |
 | `PUT` | `/setting/users/{id}` | `UserController@update` | Ubah akun pengguna |

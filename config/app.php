@@ -15,9 +15,9 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
-    'version' => env('APP_VERSION', 'v2.10.0'),
-    'version_date' => '07 Oktober 2026',
-    'version_title' => 'Modul Upload & Sinkronisasi Master Pegawai SIMPEG via Web',
+    'version' => env('APP_VERSION', 'v2.13.0'),
+    'version_date' => '08 Oktober 2026',
+    'version_title' => 'Modul Simulasi & Proyeksi Tapera ASN & Pemda (PP 21/2024)',
 
     /*
     |--------------------------------------------------------------------------

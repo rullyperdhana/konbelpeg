@@ -1410,6 +1410,7 @@
                 <a href="/laporan/trace-gaji" class="submenu-item {{ Request::is('*trace-gaji*') ? 'active' : '' }}" style="{{ Request::is('*trace-gaji*') ? 'font-weight: 700;' : '' }}">13. Trace Penggajian Per Orang</a>
                 <a href="/laporan/audit-tunjangan-keluarga" class="submenu-item {{ Request::is('laporan/audit-tunjangan-keluarga*') ? 'active' : '' }}" style="{{ Request::is('laporan/audit-tunjangan-keluarga*') ? 'font-weight: 700;' : '' }}">14. Audit Tunjangan Keluarga</a>
                 <a href="/laporan/perbaikan-simgaji-skpd" class="submenu-item {{ Request::is('laporan/perbaikan-simgaji-skpd*') ? 'active' : '' }}" style="{{ Request::is('laporan/perbaikan-simgaji-skpd*') ? 'font-weight: 700;' : '' }}">15. BNBA Perbaikan SKPD SIMGAJI</a>
+                <a href="/laporan/tapera" class="submenu-item {{ Request::is('laporan/tapera*') ? 'active' : '' }}" style="{{ Request::is('laporan/tapera*') ? 'font-weight: 700;' : '' }}">16. Simulasi Tapera (ASN & Pemda)</a>
             </div>
             
             <div class="menu-label">Sistem & Pengaturan</div>
@@ -1619,9 +1620,22 @@
                 </div>
 
                 <div class="timeline-version">
+                    <!-- v2.13.0 -->
+                    <div class="timeline-item">
+                        <div class="timeline-badge current">v2.13.0 (Terbaru)</div>
+                        <div class="timeline-content">
+                            <h4 style="margin: 0 0 6px 0; font-size: 13.5px; font-weight: 700; color: var(--text-main);">Modul Simulasi &amp; Proyeksi Iuran Tapera ASN &amp; Pemda (PP 21/2024)</h4>
+                            <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: var(--text-muted); line-height: 1.6;">
+                                <li>Kalkulator simulasi interaktif perorangan dengan preset gaji pokok ASN 2024 (PP 5/2024 &amp; Perpres 11/2024).</li>
+                                <li>Rekapitulasi proyeksi beban Pemda (0,5%) dan potongan ASN (2,5%) per SKPD berdasarkan data riil penggajian SIMGAJI.</li>
+                                <li>Daftar nominatif perorangan (By Name By NIP) beserta ekspor resmi Microsoft Excel (.xlsx) dan PDF (A4 Landscape).</li>
+                            </ul>
+                        </div>
+                    </div>
+
                     <!-- v2.9.0 -->
                     <div class="timeline-item">
-                        <div class="timeline-badge current">v2.9.0 (Terbaru)</div>
+                        <div class="timeline-badge">v2.9.0</div>
                         <div class="timeline-content">
                             <h4 style="margin: 0 0 6px 0; font-size: 13.5px; font-weight: 700; color: var(--text-main);">Modul Audit Tunjangan Keluarga SIMGAJI &amp; Penyelesaian Bukti STS</h4>
                             <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: var(--text-muted); line-height: 1.6;">
