@@ -236,6 +236,9 @@
             <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #dc2626; margin-left: 6px;">{{ $summary['beda_pegawai_count'] }}</span>
         @endif
     </a>
+    <a href="{{ route('laporan.perbaikan_simgaji_skpd.index') }}" class="tab-item" style="color: #1e40af; font-weight: 700; background: rgba(30, 64, 175, 0.06); border: 1px dashed rgba(30, 64, 175, 0.35);">
+        <i class="ph-bold ph-user-list"></i> 4. Laporan BNBA Perbaikan SIMGAJI &rarr;
+    </a>
 </div>
 
 <!-- Header Cetak -->

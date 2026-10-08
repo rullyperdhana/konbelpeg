@@ -4,6 +4,7 @@ use App\Http\Controllers\AuditTunjanganKeluargaController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\JabatanController;
+use App\Http\Controllers\LaporanBnbaPerbaikanSimgajiController;
 use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\LaporanGabunganController;
 use App\Http\Controllers\LaporanIwpJamkesController;
@@ -157,6 +158,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/laporan/penyelarasan-unit-kerja/refresh', [PenyelarasanUnitKerjaController::class, 'refreshCache'])->name('laporan.penyelarasan_unit.refresh');
     Route::get('/laporan/penyelarasan-unit-kerja/export/excel', [PenyelarasanUnitKerjaController::class, 'exportExcel'])->name('laporan.penyelarasan_unit.export_excel');
     Route::get('/laporan/penyelarasan-unit-kerja/export/pdf', [PenyelarasanUnitKerjaController::class, 'exportPdf'])->name('laporan.penyelarasan_unit.export_pdf');
+
+    // Laporan Data BNBA Perbaikan SKPD SIMGAJI (Acuan SIMPEG)
+    Route::get('/laporan/perbaikan-simgaji-skpd', [LaporanBnbaPerbaikanSimgajiController::class, 'index'])->name('laporan.perbaikan_simgaji_skpd.index');
+    Route::get('/laporan/perbaikan-simgaji-skpd/refresh', [LaporanBnbaPerbaikanSimgajiController::class, 'refreshCache'])->name('laporan.perbaikan_simgaji_skpd.refresh');
+    Route::get('/laporan/perbaikan-simgaji-skpd/export/excel', [LaporanBnbaPerbaikanSimgajiController::class, 'exportExcel'])->name('laporan.perbaikan_simgaji_skpd.export_excel');
+    Route::get('/laporan/perbaikan-simgaji-skpd/export/pdf', [LaporanBnbaPerbaikanSimgajiController::class, 'exportPdf'])->name('laporan.perbaikan_simgaji_skpd.export_pdf');
 
     // Laporan Rekonsiliasi IWP & BPJS Kesehatan (Jamkes)
     Route::get('/laporan/iwp-jamkes', [LaporanIwpJamkesController::class, 'index'])->name('laporan.iwp_jamkes.index');

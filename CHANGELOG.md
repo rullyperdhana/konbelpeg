@@ -2,6 +2,30 @@
 
 Dokumen ini mencatat seluruh riwayat pembaruan, evolusi fitur, perbaikan bug, dan progres pengembangan sistem **KONBELPEG (Rekonsiliasi Realisasi Belanja Pegawai & SIMGAJI)**.
 
+## 📌 [v2.12.0] - 2026-10-08
+### 📋 Modul Laporan Data BNBA (By Name By Address) Perbaikan SKPD SIMGAJI Taspen
+- **Modul Baru Laporan BNBA Perbaikan SIMGAJI (`/laporan/perbaikan-simgaji-skpd`)**:
+  - Menyajikan daftar nominatif perorangan (By Name By Address) bagi ASN yang memerlukan perbaikan kode atau nama SKPD dan penempatan Satker di aplikasi penggajian SIMGAJI Taspen.
+  - Menetapkan data master **SIMPEG / KONBELPEG** sebagai acuan tunggal dasar kebenaran (*single source of truth*) penempatan unit kerja dan jabatan pegawai Pemerintah Daerah.
+- **Klasifikasi Selisih & Rekomendasi Tindakan Otomatis**:
+  - 🚨 **Beda SKPD Induk (Mutasi Pegawai)**: Mendeteksi perpindahan SKPD pegawai (misal: tercatat di Setda pada SIMGAJI, namun aktif di Dinkes/Dishub pada SIMPEG). Memberikan rekomendasi mutasi kode SKPD SIMGAJI secara otomatis.
+  - 📍 **Beda Cabang Disdik (Kabupaten/Kota)**: Mendeteksi ketidaksesuaian penempatan cabang wilayah Dinas Pendidikan SIMGAJI (kode 070-082) terhadap unit kerja/sekolah riil di SIMPEG.
+  - 🏢 **Beda UPTD / Satker**: Mendeteksi penempatan satker/UPTD yang keliru pada SKPD yang sama (misal di Dinkes: tercatat di BKOM padahal seharusnya di Instalasi Farmasi).
+  - 💡 **Rekomendasi Tindakan Lengkap**: Menyajikan instruksi aksi terperinci: Kode SKPD SIMGAJI Seharusnya, Nama SKPD Resmi, dan UPTD/Sekolah penempatan resmi.
+- **Navigasi & Interaktivitas Antarmuka**:
+  - Penambahan submenu navigasi resmi `15. BNBA Perbaikan SKPD SIMGAJI` pada kelompok menu sidebar Laporan & Realisasi.
+  - Kartu navigasi baru di *Pusat Laporan* (`/laporan`).
+  - Tombol pintas navigasi di Tab 4 halaman *Penyelarasan Unit Kerja* (`/laporan/penyelarasan-unit-kerja`).
+  - Fitur salin NIP cepat 1-klik (*copy to clipboard*) dengan feedback animasi toast.
+  - Filter interaktif berdasarkan Kategori Selisih, SKPD Resmi SIMPEG, SKPD Asal SIMGAJI, dan pencarian instan (NIP, Nama, Jabatan).
+- **Format Ekspor Dokumen Resmi**:
+  - **Ekspor Excel (.xlsx)**: Diformat khusus sebagai lampiran resmi Berita Acara Usulan Perbaikan Data Penggajian ke PT Taspen / Bank Persepsi (auto-width, bordered, warna zona identitas, dan rekomendasi tindakan).
+  - **Ekspor Dokumen PDF (A4 Landscape)**: Format siap cetak dengan kop resmi Pemerintah Daerah / Badan Keuangan dan Aset Daerah serta kolom tanda tangan pejabat penatausahaan keuangan.
+- **Pengujian Otomatis (*Feature Tests*)**:
+  - Rangkaian pengujian otomatis pada `tests/Feature/LaporanBnbaPerbaikanSimgajiTest.php` (5 tests lulus, 13 asersi, total suite 75 tests lulus).
+
+---
+
 ## 📌 [v2.11.0] - 2026-10-07
 ### 🛡️ Keamanan Sistem, Proteksi Anti-Bot, Mitigasi Serangan & Hardening Halaman Login
 - **Proteksi Anti-Bot Cerdas (Honeypot & Cloudflare Turnstile)**:

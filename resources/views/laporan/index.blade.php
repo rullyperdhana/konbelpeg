@@ -143,5 +143,14 @@
         <p>Deteksi anomali dobel tunjangan anak oleh kedua orang tua ASN, pasangan sesama ASN yang saling menunjang (10%+10%), dan kuota &gt;2 anak.</p>
         <a href="/laporan/audit-tunjangan-keluarga" class="btn-report" style="background: #ef4444;">Buka Laporan</a>
     </div>
+
+    <div class="report-card">
+        <div class="report-icon" style="background: rgba(30, 64, 175, 0.12); color: #1e40af;">
+            <i class="ph ph-user-list"></i>
+        </div>
+        <h3>BNBA Perbaikan SKPD SIMGAJI</h3>
+        <p>Daftar nominatif perseorangan (By Name By Address) untuk usulan perbaikan kode/nama SKPD & Satker SIMGAJI Taspen berdasarkan acuan SIMPEG.</p>
+        <a href="/laporan/perbaikan-simgaji-skpd" class="btn-report" style="background: #1e40af;">Buka Laporan</a>
+    </div>
 </div>
 @endsection

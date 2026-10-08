@@ -106,6 +106,15 @@ Seringkali terjadi diskrepansi yang menyebabkan potensi kelebihan/kekurangan bay
    - Fitur tindak lanjut penyelesaian kasus dengan pencatatan bukti Surat Tanda Setoran (STS) ke Kas Daerah (No. STS, tanggal, nominal pengembalian, dan catatan tindak lanjut).
    - Filter status penyelesaian (Semua, Pending/Belum Selesai, Sudah Selesai via STS) dan kartu KPI setoran kasda.
    - Ekspor Microsoft Excel (.xlsx) dan PDF resmi.
+9. **Laporan BNBA Perbaikan SKPD SIMGAJI (`/laporan/perbaikan-simgaji-skpd`)**:
+   - Menyajikan data nominatif *By Name By Address* (BNBA) perorangan untuk usulan perbaikan kode dan penempatan SKPD pada aplikasi SIMGAJI Taspen.
+   - Menjadikan data **SIMPEG / KONBELPEG** sebagai acuan kebenaran (*single source of truth*).
+   - Mengklasifikasikan perbedaan ke dalam 3 kategori:
+     - **Beda SKPD Induk**: Pegawai tercatat di SKPD yang berbeda secara kelembagaan (indikasi mutasi pegawai).
+     - **Beda Cabang Disdik**: Guru/tenaga kependidikan Disdik yang kode cabangnya berbeda (rekomendasi kode 070 s.d. 082 berdasarkan kabupaten/kota penempatan SIMPEG).
+     - **Beda UPTD / Satker**: Pegawai sudah di SKPD induk yang sama namun penempatan UPTD/Satkernya belum selaras.
+   - Menyediakan teks rekomendasi tindakan perbaikan operasional untuk operator SIMGAJI.
+   - Fitur filter multi-kategori, pencarian personal, tombol salin NIP 1-klik, dan ekspor Berita Acara Excel (.xlsx) serta PDF resmi A4 Landscape.
 
 ### D. Modul Rekonsiliasi SIMGAJI (`/laporan/rekonsiliasi-simgaji`)
 Inti dari sistem KONBELPEG dengan 6 kategori pencocokan otomatis:
@@ -230,6 +239,10 @@ Inti dari sistem KONBELPEG dengan 6 kategori pencocokan otomatis:
 | `GET` | `/laporan/rekonsiliasi-simgaji/refresh` | `RekonsiliasiSimgajiController@refreshCache` | Refresh cache perhitungan |
 | `GET` | `/laporan/rekonsiliasi-simgaji/export/excel` | `RekonsiliasiSimgajiController@exportExcel` | Ekspor Excel rekonsiliasi |
 | `GET` | `/laporan/rekonsiliasi-simgaji/export/pdf` | `RekonsiliasiSimgajiController@exportPdf` | Cetak PDF rekonsiliasi |
+| `GET` | `/laporan/perbaikan-simgaji-skpd` | `LaporanBnbaPerbaikanSimgajiController@index` | Modul Laporan BNBA Perbaikan SKPD SIMGAJI |
+| `GET` | `/laporan/perbaikan-simgaji-skpd/refresh` | `LaporanBnbaPerbaikanSimgajiController@refreshCache` | Refresh cache komparasi BNBA SKPD |
+| `GET` | `/laporan/perbaikan-simgaji-skpd/export/excel` | `LaporanBnbaPerbaikanSimgajiController@exportExcel` | Ekspor Excel Berita Acara BNBA Perbaikan |
+| `GET` | `/laporan/perbaikan-simgaji-skpd/export/pdf` | `LaporanBnbaPerbaikanSimgajiController@exportPdf` | Cetak PDF Laporan BNBA Perbaikan SKPD |
 | `GET` | `/setting/users` | `UserController@index` | Kelola akun pengguna sistem |
 | `POST` | `/setting/users` | `UserController@store` | Tambah pengguna baru |
 | `PUT` | `/setting/users/{id}` | `UserController@update` | Ubah akun pengguna |

@@ -1409,6 +1409,7 @@
                 <a href="/laporan/iwp-jamkes" class="submenu-item {{ Request::is('laporan/iwp-jamkes*') ? 'active' : '' }}">12. IWP & Jamkes BPJS</a>
                 <a href="/laporan/trace-gaji" class="submenu-item {{ Request::is('*trace-gaji*') ? 'active' : '' }}" style="{{ Request::is('*trace-gaji*') ? 'font-weight: 700;' : '' }}">13. Trace Penggajian Per Orang</a>
                 <a href="/laporan/audit-tunjangan-keluarga" class="submenu-item {{ Request::is('laporan/audit-tunjangan-keluarga*') ? 'active' : '' }}" style="{{ Request::is('laporan/audit-tunjangan-keluarga*') ? 'font-weight: 700;' : '' }}">14. Audit Tunjangan Keluarga</a>
+                <a href="/laporan/perbaikan-simgaji-skpd" class="submenu-item {{ Request::is('laporan/perbaikan-simgaji-skpd*') ? 'active' : '' }}" style="{{ Request::is('laporan/perbaikan-simgaji-skpd*') ? 'font-weight: 700;' : '' }}">15. BNBA Perbaikan SKPD SIMGAJI</a>
             </div>
             
             <div class="menu-label">Sistem & Pengaturan</div>
