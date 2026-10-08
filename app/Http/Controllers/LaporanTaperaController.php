@@ -24,28 +24,22 @@ class LaporanTaperaController extends Controller
     private function getRekapData(?string $periode, ?string $skpdFilter = null, ?string $kategoriFilter = 'all'): Collection
     {
         $gajiSub = DB::table('realisasi_gajis')
-            ->leftJoin('pegawais', 'realisasi_gajis.pegawai_id', '=', 'pegawais.id')
-            ->select('realisasi_gajis.pegawai_id')
-            ->selectRaw('
-                CASE
-                    WHEN UPPER(COALESCE(pegawais.status_pegawai, "")) LIKE "%PARUH WAKTU%"
-                         OR UPPER(COALESCE(json_extract(realisasi_gajis.raw_data, "$.kelompok_upload"), "")) LIKE "%PARUH WAKTU%"
-                    THEN "PPPK_PW"
-                    WHEN UPPER(COALESCE(pegawais.status_pegawai, "")) = "PPPK"
-                    THEN "PPPK"
-                    ELSE "PNS"
-                END as kategori,
-                COUNT(realisasi_gajis.id) as count_gaji,
-                COALESCE(SUM(realisasi_gajis.gaji_pokok), 0) as gapok,
-                COALESCE(SUM(COALESCE(json_extract(realisasi_gajis.raw_data, "$.tjistri"), 0) + COALESCE(json_extract(realisasi_gajis.raw_data, "$.tjanak"), 0)), 0) as tj_keluarga,
-                COALESCE(SUM(COALESCE(json_extract(realisasi_gajis.raw_data, "$.tjstruk"), 0) + COALESCE(json_extract(realisasi_gajis.raw_data, "$.tjfungsi"), 0) + COALESCE(json_extract(realisasi_gajis.raw_data, "$.tjumum"), 0)), 0) as tj_jabatan
-            ');
+            ->select('pegawai_id')
+            ->selectRaw('COUNT(id) as count_gaji')
+            ->selectRaw('COALESCE(SUM(gaji_pokok), 0) as gapok')
+            ->selectRaw('COALESCE(SUM(COALESCE(json_extract(raw_data, "$.tjistri"), 0) + COALESCE(json_extract(raw_data, "$.tjanak"), 0)), 0) as tj_keluarga')
+            ->selectRaw('COALESCE(SUM(COALESCE(json_extract(raw_data, "$.tjstruk"), 0) + COALESCE(json_extract(raw_data, "$.tjfungsi"), 0) + COALESCE(json_extract(raw_data, "$.tjumum"), 0)), 0) as tj_jabatan')
+            ->selectRaw('COALESCE(MAX(json_extract(raw_data, "$.kelompok_upload")), "") as kelompok_upload');
 
         if ($periode && $periode !== 'Semua Periode') {
-            $gajiSub->where('realisasi_gajis.periode', $periode);
+            $gajiSub->where('periode', $periode);
         }
 
-        $gajiSub->groupBy('realisasi_gajis.pegawai_id');
+        $gajiSub->groupBy('pegawai_id');
+
+        $isPw = '(gaji_summary.pegawai_id IS NOT NULL AND (UPPER(COALESCE(pegawais.status_pegawai, "")) LIKE "%PARUH WAKTU%" OR UPPER(COALESCE(gaji_summary.kelompok_upload, "")) LIKE "%PARUH WAKTU%"))';
+        $isPppk = '(gaji_summary.pegawai_id IS NOT NULL AND UPPER(COALESCE(pegawais.status_pegawai, "")) = "PPPK" AND UPPER(COALESCE(gaji_summary.kelompok_upload, "")) NOT LIKE "%PARUH WAKTU%")';
+        $isPns = '(gaji_summary.pegawai_id IS NOT NULL AND UPPER(COALESCE(pegawais.status_pegawai, "")) != "PPPK" AND UPPER(COALESCE(pegawais.status_pegawai, "")) NOT LIKE "%PARUH WAKTU%" AND UPPER(COALESCE(gaji_summary.kelompok_upload, "")) NOT LIKE "%PARUH WAKTU%")';
 
         $query = DB::table('unit_kerjas')
             ->leftJoin('pegawais', 'unit_kerjas.id', '=', 'pegawais.unit_kerja_id')
@@ -54,33 +48,33 @@ class LaporanTaperaController extends Controller
                 'unit_kerjas.skpd',
 
                 // Jumlah Pegawai per Kategori
-                DB::raw('COUNT(DISTINCT CASE WHEN gaji_summary.kategori = "PNS" THEN pegawais.id END) as count_pns'),
-                DB::raw('COUNT(DISTINCT CASE WHEN gaji_summary.kategori = "PPPK" THEN pegawais.id END) as count_pppk'),
-                DB::raw('COUNT(DISTINCT CASE WHEN gaji_summary.kategori = "PPPK_PW" THEN pegawais.id END) as count_pppk_pw'),
+                DB::raw("COUNT(DISTINCT CASE WHEN {$isPns} THEN pegawais.id END) as count_pns"),
+                DB::raw("COUNT(DISTINCT CASE WHEN {$isPppk} THEN pegawais.id END) as count_pppk"),
+                DB::raw("COUNT(DISTINCT CASE WHEN {$isPw} THEN pegawais.id END) as count_pppk_pw"),
                 DB::raw('COUNT(DISTINCT gaji_summary.pegawai_id) as count_total'),
 
                 // Gaji Pokok
-                DB::raw('COALESCE(SUM(CASE WHEN gaji_summary.kategori = "PNS" THEN gaji_summary.gapok ELSE 0 END), 0) as gapok_pns'),
-                DB::raw('COALESCE(SUM(CASE WHEN gaji_summary.kategori = "PPPK" THEN gaji_summary.gapok ELSE 0 END), 0) as gapok_pppk'),
-                DB::raw('COALESCE(SUM(CASE WHEN gaji_summary.kategori = "PPPK_PW" THEN gaji_summary.gapok ELSE 0 END), 0) as gapok_pppk_pw'),
+                DB::raw("COALESCE(SUM(CASE WHEN {$isPns} THEN gaji_summary.gapok ELSE 0 END), 0) as gapok_pns"),
+                DB::raw("COALESCE(SUM(CASE WHEN {$isPppk} THEN gaji_summary.gapok ELSE 0 END), 0) as gapok_pppk"),
+                DB::raw("COALESCE(SUM(CASE WHEN {$isPw} THEN gaji_summary.gapok ELSE 0 END), 0) as gapok_pppk_pw"),
                 DB::raw('COALESCE(SUM(gaji_summary.gapok), 0) as gapok_total'),
 
                 // Tunjangan Keluarga
-                DB::raw('COALESCE(SUM(CASE WHEN gaji_summary.kategori = "PNS" THEN gaji_summary.tj_keluarga ELSE 0 END), 0) as tj_keluarga_pns'),
-                DB::raw('COALESCE(SUM(CASE WHEN gaji_summary.kategori = "PPPK" THEN gaji_summary.tj_keluarga ELSE 0 END), 0) as tj_keluarga_pppk'),
-                DB::raw('COALESCE(SUM(CASE WHEN gaji_summary.kategori = "PPPK_PW" THEN gaji_summary.tj_keluarga ELSE 0 END), 0) as tj_keluarga_pppk_pw'),
+                DB::raw("COALESCE(SUM(CASE WHEN {$isPns} THEN gaji_summary.tj_keluarga ELSE 0 END), 0) as tj_keluarga_pns"),
+                DB::raw("COALESCE(SUM(CASE WHEN {$isPppk} THEN gaji_summary.tj_keluarga ELSE 0 END), 0) as tj_keluarga_pppk"),
+                DB::raw("COALESCE(SUM(CASE WHEN {$isPw} THEN gaji_summary.tj_keluarga ELSE 0 END), 0) as tj_keluarga_pppk_pw"),
                 DB::raw('COALESCE(SUM(gaji_summary.tj_keluarga), 0) as tj_keluarga_total'),
 
                 // Tunjangan Jabatan / Fungsional
-                DB::raw('COALESCE(SUM(CASE WHEN gaji_summary.kategori = "PNS" THEN gaji_summary.tj_jabatan ELSE 0 END), 0) as tj_jabatan_pns'),
-                DB::raw('COALESCE(SUM(CASE WHEN gaji_summary.kategori = "PPPK" THEN gaji_summary.tj_jabatan ELSE 0 END), 0) as tj_jabatan_pppk'),
-                DB::raw('COALESCE(SUM(CASE WHEN gaji_summary.kategori = "PPPK_PW" THEN gaji_summary.tj_jabatan ELSE 0 END), 0) as tj_jabatan_pppk_pw'),
+                DB::raw("COALESCE(SUM(CASE WHEN {$isPns} THEN gaji_summary.tj_jabatan ELSE 0 END), 0) as tj_jabatan_pns"),
+                DB::raw("COALESCE(SUM(CASE WHEN {$isPppk} THEN gaji_summary.tj_jabatan ELSE 0 END), 0) as tj_jabatan_pppk"),
+                DB::raw("COALESCE(SUM(CASE WHEN {$isPw} THEN gaji_summary.tj_jabatan ELSE 0 END), 0) as tj_jabatan_pppk_pw"),
                 DB::raw('COALESCE(SUM(gaji_summary.tj_jabatan), 0) as tj_jabatan_total'),
 
                 // Dasar Tapera
-                DB::raw('COALESCE(SUM(CASE WHEN gaji_summary.kategori = "PNS" THEN gaji_summary.gapok + gaji_summary.tj_keluarga + gaji_summary.tj_jabatan ELSE 0 END), 0) as dasar_pns'),
-                DB::raw('COALESCE(SUM(CASE WHEN gaji_summary.kategori = "PPPK" THEN gaji_summary.gapok + gaji_summary.tj_keluarga + gaji_summary.tj_jabatan ELSE 0 END), 0) as dasar_pppk'),
-                DB::raw('COALESCE(SUM(CASE WHEN gaji_summary.kategori = "PPPK_PW" THEN gaji_summary.gapok + gaji_summary.tj_keluarga + gaji_summary.tj_jabatan ELSE 0 END), 0) as dasar_pppk_pw'),
+                DB::raw("COALESCE(SUM(CASE WHEN {$isPns} THEN gaji_summary.gapok + gaji_summary.tj_keluarga + gaji_summary.tj_jabatan ELSE 0 END), 0) as dasar_pns"),
+                DB::raw("COALESCE(SUM(CASE WHEN {$isPppk} THEN gaji_summary.gapok + gaji_summary.tj_keluarga + gaji_summary.tj_jabatan ELSE 0 END), 0) as dasar_pppk"),
+                DB::raw("COALESCE(SUM(CASE WHEN {$isPw} THEN gaji_summary.gapok + gaji_summary.tj_keluarga + gaji_summary.tj_jabatan ELSE 0 END), 0) as dasar_pppk_pw"),
                 DB::raw('COALESCE(SUM(gaji_summary.gapok + gaji_summary.tj_keluarga + gaji_summary.tj_jabatan), 0) as dasar_total'),
             ]);
 
@@ -190,8 +184,8 @@ class LaporanTaperaController extends Controller
 
         $kpiStats = $kpiQuery->selectRaw('
             -- PNS
-            COUNT(DISTINCT CASE WHEN UPPER(COALESCE(pegawais.status_pegawai, "")) = "PNS" OR (pegawais.status_pegawai IS NULL AND UPPER(COALESCE(json_extract(realisasi_gajis.raw_data, "$.kelompok_upload"), "")) NOT LIKE "%PARUH WAKTU%") THEN realisasi_gajis.pegawai_id END) as pns_pegawai,
-            SUM(CASE WHEN UPPER(COALESCE(pegawais.status_pegawai, "")) = "PNS" OR (pegawais.status_pegawai IS NULL AND UPPER(COALESCE(json_extract(realisasi_gajis.raw_data, "$.kelompok_upload"), "")) NOT LIKE "%PARUH WAKTU%") THEN realisasi_gajis.gaji_pokok + COALESCE(json_extract(realisasi_gajis.raw_data, "$.tjistri"), 0) + COALESCE(json_extract(realisasi_gajis.raw_data, "$.tjanak"), 0) + COALESCE(json_extract(realisasi_gajis.raw_data, "$.tjstruk"), 0) + COALESCE(json_extract(realisasi_gajis.raw_data, "$.tjfungsi"), 0) + COALESCE(json_extract(realisasi_gajis.raw_data, "$.tjumum"), 0) ELSE 0 END) as pns_dasar,
+            COUNT(DISTINCT CASE WHEN UPPER(COALESCE(pegawais.status_pegawai, "")) != "PPPK" AND UPPER(COALESCE(pegawais.status_pegawai, "")) NOT LIKE "%PARUH WAKTU%" AND UPPER(COALESCE(json_extract(realisasi_gajis.raw_data, "$.kelompok_upload"), "")) NOT LIKE "%PARUH WAKTU%" THEN realisasi_gajis.pegawai_id END) as pns_pegawai,
+            SUM(CASE WHEN UPPER(COALESCE(pegawais.status_pegawai, "")) != "PPPK" AND UPPER(COALESCE(pegawais.status_pegawai, "")) NOT LIKE "%PARUH WAKTU%" AND UPPER(COALESCE(json_extract(realisasi_gajis.raw_data, "$.kelompok_upload"), "")) NOT LIKE "%PARUH WAKTU%" THEN realisasi_gajis.gaji_pokok + COALESCE(json_extract(realisasi_gajis.raw_data, "$.tjistri"), 0) + COALESCE(json_extract(realisasi_gajis.raw_data, "$.tjanak"), 0) + COALESCE(json_extract(realisasi_gajis.raw_data, "$.tjstruk"), 0) + COALESCE(json_extract(realisasi_gajis.raw_data, "$.tjfungsi"), 0) + COALESCE(json_extract(realisasi_gajis.raw_data, "$.tjumum"), 0) ELSE 0 END) as pns_dasar,
 
             -- PPPK FULL WAKTU
             COUNT(DISTINCT CASE WHEN UPPER(COALESCE(pegawais.status_pegawai, "")) = "PPPK" AND UPPER(COALESCE(json_extract(realisasi_gajis.raw_data, "$.kelompok_upload"), "")) NOT LIKE "%PARUH WAKTU%" THEN realisasi_gajis.pegawai_id END) as pppk_pegawai,
