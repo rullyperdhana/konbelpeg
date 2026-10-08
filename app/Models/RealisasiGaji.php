@@ -135,4 +135,23 @@ class RealisasiGaji extends Model
     {
         return round($this->dasar_tapera * 0.03);
     }
+
+    /**
+     * Get Kategori ASN (PNS, PPPK, atau PPPK PARUH WAKTU).
+     */
+    public function getKategoriAsnAttribute(): string
+    {
+        $statusPegawai = strtoupper((string) ($this->pegawai->status_pegawai ?? ''));
+        $kelompokUpload = strtoupper((string) ($this->raw_data['kelompok_upload'] ?? ''));
+
+        if (str_contains($statusPegawai, 'PARUH WAKTU') || str_contains($kelompokUpload, 'PARUH WAKTU')) {
+            return 'PPPK PARUH WAKTU';
+        }
+
+        if ($statusPegawai === 'PPPK') {
+            return 'PPPK';
+        }
+
+        return 'PNS';
+    }
 }

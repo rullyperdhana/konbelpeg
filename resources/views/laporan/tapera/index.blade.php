@@ -52,7 +52,7 @@
     /* KPI Summary Cards */
     .kpi-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         gap: 16px;
         margin-bottom: 24px;
     }
@@ -120,13 +120,26 @@
         letter-spacing: -0.02em;
     }
 
-    .kpi-subtitle {
-        font-size: 11.5px;
-        color: var(--text-muted, #64748b);
-        margin-top: 4px;
+    .kpi-breakdown-list {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: 1px dashed var(--border-color, #e2e8f0);
         display: flex;
+        flex-direction: column;
+        gap: 3px;
+        font-size: 11px;
+    }
+
+    .kpi-breakdown-item {
+        display: flex;
+        justify-content: space-between;
         align-items: center;
-        gap: 6px;
+        color: #475569;
+    }
+
+    .kpi-breakdown-item strong {
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 11.5px;
     }
 
     /* Tabs & Controls */
@@ -220,21 +233,24 @@
         border: none;
     }
 
-    .btn-excel {
-        background: #107c41;
-        color: #ffffff;
-    }
-    .btn-excel:hover {
-        background: #0b5c30;
-    }
+    .btn-excel { background: #107c41; color: #ffffff; }
+    .btn-excel:hover { background: #0b5c30; }
 
-    .btn-pdf {
-        background: #b91c1c;
-        color: #ffffff;
+    .btn-pdf { background: #b91c1c; color: #ffffff; }
+    .btn-pdf:hover { background: #991b1b; }
+
+    /* Badges */
+    .badge-status {
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 6px;
+        display: inline-block;
+        letter-spacing: 0.3px;
     }
-    .btn-pdf:hover {
-        background: #991b1b;
-    }
+    .badge-pns { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .badge-pppk { background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe; }
+    .badge-paruh { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
 
     /* Calculator Section */
     .calculator-container {
@@ -244,9 +260,7 @@
     }
 
     @media (max-width: 992px) {
-        .calculator-container {
-            grid-template-columns: 1fr;
-        }
+        .calculator-container { grid-template-columns: 1fr; }
     }
 
     .calc-card {
@@ -273,10 +287,7 @@
         margin-bottom: 20px;
     }
 
-    .form-group-calc {
-        margin-bottom: 16px;
-    }
-
+    .form-group-calc { margin-bottom: 16px; }
     .form-group-calc label {
         display: block;
         font-size: 12.5px;
@@ -285,10 +296,7 @@
         margin-bottom: 6px;
     }
 
-    .input-rupiah-wrapper {
-        position: relative;
-    }
-
+    .input-rupiah-wrapper { position: relative; }
     .input-rupiah-prefix {
         position: absolute;
         left: 12px;
@@ -326,10 +334,7 @@
         border-bottom: 1px dashed #e2e8f0;
     }
 
-    .result-row:last-child {
-        border-bottom: none;
-    }
-
+    .result-row:last-child { border-bottom: none; }
     .result-row.main-total {
         border-top: 2px solid #cbd5e1;
         border-bottom: none;
@@ -376,36 +381,35 @@
         width: 100%;
         border-collapse: collapse;
         text-align: left;
-        font-size: 13px;
+        font-size: 12.5px;
     }
 
     .table-custom th {
         background: #f8fafc;
         color: #475569;
         font-weight: 700;
-        padding: 12px 14px;
-        border-bottom: 1px solid #e2e8f0;
-        font-size: 12px;
+        padding: 10px 12px;
+        border: 1px solid #e2e8f0;
+        font-size: 11.5px;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.3px;
         vertical-align: middle;
+        white-space: nowrap;
     }
 
     .table-custom td {
-        padding: 12px 14px;
-        border-bottom: 1px solid #f1f5f9;
+        padding: 10px 12px;
+        border: 1px solid #f1f5f9;
         color: #1e293b;
         vertical-align: middle;
+        white-space: nowrap;
     }
 
-    .table-custom tr:hover td {
-        background: #f8fafc;
-    }
-
+    .table-custom tr:hover td { background: #f8fafc; }
     .table-custom .col-number {
         text-align: right;
         font-family: 'Courier New', Courier, monospace;
-        font-size: 13px;
+        font-size: 12px;
     }
 
     .table-custom tfoot td {
@@ -424,17 +428,8 @@
         margin: 12px 0 6px 0;
     }
 
-    .progress-bar-asn {
-        background: #f59e0b;
-        height: 100%;
-        width: 83.33%;
-    }
-
-    .progress-bar-pemda {
-        background: #3b82f6;
-        height: 100%;
-        width: 16.67%;
-    }
+    .progress-bar-asn { background: #f59e0b; height: 100%; width: 83.33%; }
+    .progress-bar-pemda { background: #3b82f6; height: 100%; width: 16.67%; }
 </style>
 
 <!-- Hero Section -->
@@ -446,21 +441,22 @@
             <span class="tapera-badge">PP No. 21 Tahun 2024</span>
         </h2>
         <p>
-            Perhitungan simulasi Tabungan Perumahan Rakyat (Tapera) total 3% ditanggung bersama antara <strong>Pekerja/ASN (2,5%)</strong> dan <strong>Pemberi Kerja/Pemda (0,5%)</strong>. Dihitung berdasarkan <em>Gaji Pokok + Tunjangan Keluarga + Tunjangan Jabatan/Umum</em>.
+            Perhitungan simulasi Tabungan Perumahan Rakyat (Tapera) total 3% ditanggung bersama antara <strong>Pekerja/ASN (2,5%)</strong> dan <strong>Pemberi Kerja/Pemda (0,5%)</strong>. Dilengkapi pemisahan kategori <strong>PNS</strong>, <strong>PPPK (Full Waktu)</strong>, dan <strong>PPPK (Paruh Waktu)</strong>.
         </p>
     </div>
     <div style="display: flex; gap: 8px;">
-        <a href="{{ route('laporan.tapera.export_excel', ['tab' => $tab, 'periode_filter' => $periode, 'skpd_filter' => $skpdFilter]) }}" class="btn-action btn-excel">
+        <a href="{{ route('laporan.tapera.export_excel', ['tab' => $tab, 'periode_filter' => $periode, 'skpd_filter' => $skpdFilter, 'kategori_filter' => $kategoriFilter]) }}" class="btn-action btn-excel">
             <i class="ph ph-file-xls"></i> Unduh Excel
         </a>
-        <a href="{{ route('laporan.tapera.export_pdf', ['tab' => $tab, 'periode_filter' => $periode, 'skpd_filter' => $skpdFilter]) }}" class="btn-action btn-pdf">
+        <a href="{{ route('laporan.tapera.export_pdf', ['tab' => $tab, 'periode_filter' => $periode, 'skpd_filter' => $skpdFilter, 'kategori_filter' => $kategoriFilter]) }}" class="btn-action btn-pdf">
             <i class="ph ph-file-pdf"></i> Unduh PDF
         </a>
     </div>
 </div>
 
-<!-- KPI Summary Cards (Berdasarkan Data Riil Periode Aktif) -->
+<!-- KPI Summary Cards dengan Rincian Pemisahan Status ASN -->
 <div class="kpi-grid">
+    <!-- Card 1: Total Pegawai -->
     <div class="kpi-card">
         <div class="kpi-header">
             <span class="kpi-title">Pegawai Tercover</span>
@@ -469,22 +465,30 @@
             </div>
         </div>
         <div class="kpi-value">{{ number_format($totalPegawai) }}</div>
-        <div class="kpi-subtitle">
-            <i class="ph ph-calendar"></i> Periode: {{ $periode ?: 'Semua' }}
+        <div class="kpi-breakdown-list">
+            <div class="kpi-breakdown-item"><span>PNS:</span> <strong>{{ number_format($pnsPegawai) }}</strong></div>
+            <div class="kpi-breakdown-item"><span>PPPK Full:</span> <strong>{{ number_format($pppkPegawai) }}</strong></div>
+            <div class="kpi-breakdown-item"><span>PPPK Paruh:</span> <strong>{{ number_format($pppkPwPegawai) }}</strong></div>
         </div>
     </div>
 
+    <!-- Card 2: Total Dasar Tapera -->
     <div class="kpi-card">
         <div class="kpi-header">
-            <span class="kpi-title">Total Dasar Tapera (100%)</span>
+            <span class="kpi-title">Dasar Tapera (100%)</span>
             <div class="kpi-icon" style="background: rgba(99, 102, 241, 0.12); color: #6366f1;">
                 <i class="ph ph-coins"></i>
             </div>
         </div>
         <div class="kpi-value">Rp {{ number_format($totalDasarTapera, 0, ',', '.') }}</div>
-        <div class="kpi-subtitle">Gapok + Tunj. Klrg + Tunj. Jab</div>
+        <div class="kpi-breakdown-list">
+            <div class="kpi-breakdown-item"><span>PNS:</span> <strong>Rp {{ number_format($pnsDasar, 0, ',', '.') }}</strong></div>
+            <div class="kpi-breakdown-item"><span>PPPK Full:</span> <strong>Rp {{ number_format($pppkDasar, 0, ',', '.') }}</strong></div>
+            <div class="kpi-breakdown-item"><span>PPPK Paruh:</span> <strong>Rp {{ number_format($pppkPwDasar, 0, ',', '.') }}</strong></div>
+        </div>
     </div>
 
+    <!-- Card 3: Beban Pemda 0,5% -->
     <div class="kpi-card highlight-pemda">
         <div class="kpi-header">
             <span class="kpi-title">Beban Pemda / APBD (0,5%)</span>
@@ -493,11 +497,14 @@
             </div>
         </div>
         <div class="kpi-value" style="color: #1d4ed8;">Rp {{ number_format($totalTaperaPemda, 0, ',', '.') }}</div>
-        <div class="kpi-subtitle" style="color: #2563eb;">
-            Proyeksi 1 Thn: <strong>Rp {{ number_format($totalTaperaPemda * 12, 0, ',', '.') }}</strong>
+        <div class="kpi-breakdown-list">
+            <div class="kpi-breakdown-item"><span>PNS:</span> <strong>Rp {{ number_format($pnsPemda, 0, ',', '.') }}</strong></div>
+            <div class="kpi-breakdown-item"><span>PPPK Full:</span> <strong>Rp {{ number_format($pppkPemda, 0, ',', '.') }}</strong></div>
+            <div class="kpi-breakdown-item"><span>PPPK Paruh:</span> <strong>Rp {{ number_format($pppkPwPemda, 0, ',', '.') }}</strong></div>
         </div>
     </div>
 
+    <!-- Card 4: Potongan ASN 2,5% -->
     <div class="kpi-card highlight-asn">
         <div class="kpi-header">
             <span class="kpi-title">Potongan ASN (2,5%)</span>
@@ -506,21 +513,26 @@
             </div>
         </div>
         <div class="kpi-value" style="color: #b45309;">Rp {{ number_format($totalTaperaAsn, 0, ',', '.') }}</div>
-        <div class="kpi-subtitle" style="color: #d97706;">
-            Proyeksi 1 Thn: <strong>Rp {{ number_format($totalTaperaAsn * 12, 0, ',', '.') }}</strong>
+        <div class="kpi-breakdown-list">
+            <div class="kpi-breakdown-item"><span>PNS:</span> <strong>Rp {{ number_format($pnsAsn, 0, ',', '.') }}</strong></div>
+            <div class="kpi-breakdown-item"><span>PPPK Full:</span> <strong>Rp {{ number_format($pppkAsn, 0, ',', '.') }}</strong></div>
+            <div class="kpi-breakdown-item"><span>PPPK Paruh:</span> <strong>Rp {{ number_format($pppkPwAsn, 0, ',', '.') }}</strong></div>
         </div>
     </div>
 
+    <!-- Card 5: Total Iuran 3,0% -->
     <div class="kpi-card highlight-total">
         <div class="kpi-header">
-            <span class="kpi-title">Total Setoran BP Tapera (3%)</span>
+            <span class="kpi-title">Total Iuran Tapera (3,0%)</span>
             <div class="kpi-icon" style="background: rgba(16, 185, 129, 0.15); color: #059669;">
                 <i class="ph ph-check-circle"></i>
             </div>
         </div>
         <div class="kpi-value" style="color: #047857;">Rp {{ number_format($grandTotalTapera, 0, ',', '.') }}</div>
-        <div class="kpi-subtitle" style="color: #059669;">
-            Proyeksi 1 Thn: <strong>Rp {{ number_format($grandTotalTapera * 12, 0, ',', '.') }}</strong>
+        <div class="kpi-breakdown-list">
+            <div class="kpi-breakdown-item"><span>PNS:</span> <strong>Rp {{ number_format($pnsTotal, 0, ',', '.') }}</strong></div>
+            <div class="kpi-breakdown-item"><span>PPPK Full:</span> <strong>Rp {{ number_format($pppkTotal, 0, ',', '.') }}</strong></div>
+            <div class="kpi-breakdown-item"><span>PPPK Paruh:</span> <strong>Rp {{ number_format($pppkPwTotal, 0, ',', '.') }}</strong></div>
         </div>
     </div>
 </div>
@@ -528,13 +540,13 @@
 <!-- Controls & Tabs -->
 <div class="controls-wrapper">
     <div class="tab-pills">
-        <a href="{{ route('laporan.tapera.index', ['tab' => 'kalkulator', 'periode_filter' => $periode, 'skpd_filter' => $skpdFilter]) }}" class="tab-pill {{ $tab === 'kalkulator' ? 'active' : '' }}">
-            <i class="ph ph-calculator"></i> 1. Kalkulator Simulasi Interaktif (Perseorangan)
+        <a href="{{ route('laporan.tapera.index', ['tab' => 'kalkulator', 'periode_filter' => $periode, 'skpd_filter' => $skpdFilter, 'kategori_filter' => $kategoriFilter]) }}" class="tab-pill {{ $tab === 'kalkulator' ? 'active' : '' }}">
+            <i class="ph ph-calculator"></i> 1. Kalkulator Simulasi Interaktif
         </a>
-        <a href="{{ route('laporan.tapera.index', ['tab' => 'rekap', 'periode_filter' => $periode, 'skpd_filter' => $skpdFilter]) }}" class="tab-pill {{ $tab === 'rekap' ? 'active' : '' }}">
-            <i class="ph ph-chart-bar"></i> 2. Rekapitulasi per SKPD (Data Riil)
+        <a href="{{ route('laporan.tapera.index', ['tab' => 'rekap', 'periode_filter' => $periode, 'skpd_filter' => $skpdFilter, 'kategori_filter' => $kategoriFilter]) }}" class="tab-pill {{ $tab === 'rekap' ? 'active' : '' }}">
+            <i class="ph ph-chart-bar"></i> 2. Rekapitulasi per SKPD (Pemisahan PNS & PPPK)
         </a>
-        <a href="{{ route('laporan.tapera.index', ['tab' => 'rinci', 'periode_filter' => $periode, 'skpd_filter' => $skpdFilter]) }}" class="tab-pill {{ $tab === 'rinci' ? 'active' : '' }}">
+        <a href="{{ route('laporan.tapera.index', ['tab' => 'rinci', 'periode_filter' => $periode, 'skpd_filter' => $skpdFilter, 'kategori_filter' => $kategoriFilter]) }}" class="tab-pill {{ $tab === 'rinci' ? 'active' : '' }}">
             <i class="ph ph-identification-card"></i> 3. Daftar Nominatif ASN (Rinci)
         </a>
     </div>
@@ -555,8 +567,18 @@
             </div>
 
             <div>
+                <label style="font-size: 11.5px; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px;">Pemisahan Kategori ASN:</label>
+                <select name="kategori_filter" class="form-select" onchange="this.form.submit()" style="font-weight: 600;">
+                    <option value="all" {{ $kategoriFilter === 'all' ? 'selected' : '' }}>🌟 Semua Kategori (Matriks Lengkap)</option>
+                    <option value="pns" {{ $kategoriFilter === 'pns' ? 'selected' : '' }}>🔵 Hanya PNS</option>
+                    <option value="pppk" {{ $kategoriFilter === 'pppk' ? 'selected' : '' }}>🟣 Hanya PPPK (Penuh Waktu)</option>
+                    <option value="pppk_pw" {{ $kategoriFilter === 'pppk_pw' ? 'selected' : '' }}>🟠 Hanya PPPK (Paruh Waktu)</option>
+                </select>
+            </div>
+
+            <div>
                 <label style="font-size: 11.5px; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px;">Filter SKPD / Unit Kerja:</label>
-                <select name="skpd_filter" class="form-select" onchange="this.form.submit()" style="max-width: 320px;">
+                <select name="skpd_filter" class="form-select" onchange="this.form.submit()" style="max-width: 280px;">
                     <option value="">Semua SKPD</option>
                     @foreach($filterUnitKerjas as $u)
                         <option value="{{ $u }}" {{ $skpdFilter === $u ? 'selected' : '' }}>{{ $u }}</option>
@@ -568,7 +590,7 @@
             <div>
                 <label style="font-size: 11.5px; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px;">Cari NIP / Nama:</label>
                 <div style="display: flex; gap: 4px;">
-                    <input type="text" name="search" value="{{ $search }}" placeholder="Ketik NIP atau Nama..." class="form-input" style="width: 220px;">
+                    <input type="text" name="search" value="{{ $search }}" placeholder="Ketik NIP atau Nama..." class="form-input" style="width: 200px;">
                     <button type="submit" class="btn-action" style="background: #1e3a5f; color: white;">
                         <i class="ph ph-magnifying-glass"></i>
                     </button>
@@ -767,27 +789,19 @@
         const jumlahAnak = parseInt(document.getElementById('jumlahAnak').value) || 0;
         const tjJabatan = parseFloat(document.getElementById('inputTunjJabatan').value) || 0;
 
-        // Tunjangan Suami/Istri: 10% dari gapok
         const tjPasangan = statusPasangan === 1 ? Math.round(gapok * 0.10) : 0;
-        // Tunjangan Anak: 2% per anak dari gapok
         const tjAnak = Math.round(gapok * (jumlahAnak * 0.02));
-        
-        // Dasar Perhitungan Tapera = Gapok + Tunjangan Keluarga + Tunjangan Jabatan
         const dasarTapera = gapok + tjPasangan + tjAnak + tjJabatan;
 
-        // Potongan ASN: 2,5%
         const asnBulan = Math.round(dasarTapera * 0.025);
         const asnTahun = asnBulan * 12;
 
-        // Beban Pemda: 0,5%
         const pemdaBulan = Math.round(dasarTapera * 0.005);
         const pemdaTahun = pemdaBulan * 12;
 
-        // Total 3,0%
         const totalBulan = asnBulan + pemdaBulan;
         const totalTahun = totalBulan * 12;
 
-        // Render to UI
         document.getElementById('resGapok').innerText = formatRupiah(gapok);
         document.getElementById('resTjPasangan').innerText = formatRupiah(tjPasangan);
         document.getElementById('resTjAnak').innerText = formatRupiah(tjAnak);
@@ -810,14 +824,135 @@
 </script>
 
 @elseif($tab === 'rekap')
-<!-- TAB 2: REKAPITULASI PER SKPD (DATA RIIL) -->
+<!-- TAB 2: REKAPITULASI PER SKPD (DENGAN PEMISAHAN PNS, PPPK FULL WAKTU, & PPPK PARUH WAKTU) -->
 <div class="table-container">
+    @if($kategoriFilter === 'all')
+    <!-- TAMPILAN MATRIKS LENGKAP -->
+    <table class="table-custom">
+        <thead>
+            <tr>
+                <th rowspan="2" style="width: 35px; text-align: center;">No</th>
+                <th rowspan="2" style="min-width: 220px;">Nama SKPD / Satuan Kerja</th>
+                
+                <th colspan="4" style="text-align: center; background: #f1f5f9; color: #1e293b;">Jumlah ASN</th>
+                <th colspan="4" style="text-align: center; background: #e0e7ff; color: #3730a3;">Dasar Tapera (100%)</th>
+                <th colspan="4" style="text-align: center; background: #eff6ff; color: #1e40af;">Beban Pemda / APBD (0,5%)</th>
+                <th colspan="4" style="text-align: center; background: #fffbeb; color: #b45309;">Potongan ASN (2,5%)</th>
+                <th rowspan="2" style="text-align: right; background: #ecfdf5; color: #065f46;">Total Iuran (3%)</th>
+            </tr>
+            <tr>
+                <!-- Pegawai -->
+                <th style="text-align: center; background: #f8fafc; font-size: 11px;">PNS</th>
+                <th style="text-align: center; background: #f8fafc; font-size: 11px;">PPPK</th>
+                <th style="text-align: center; background: #f8fafc; font-size: 11px;">Paruh</th>
+                <th style="text-align: center; background: #e2e8f0; font-size: 11px; font-weight: 800;">Total</th>
+
+                <!-- Dasar Tapera -->
+                <th style="text-align: right; background: #eef2ff; font-size: 11px;">PNS</th>
+                <th style="text-align: right; background: #eef2ff; font-size: 11px;">PPPK</th>
+                <th style="text-align: right; background: #eef2ff; font-size: 11px;">Paruh</th>
+                <th style="text-align: right; background: #e0e7ff; font-size: 11px; font-weight: 800;">Total</th>
+
+                <!-- Beban Pemda 0.5% -->
+                <th style="text-align: right; background: #f0f7ff; font-size: 11px; color: #1e40af;">PNS</th>
+                <th style="text-align: right; background: #f0f7ff; font-size: 11px; color: #1e40af;">PPPK</th>
+                <th style="text-align: right; background: #f0f7ff; font-size: 11px; color: #1e40af;">Paruh</th>
+                <th style="text-align: right; background: #dbeafe; font-size: 11px; font-weight: 800; color: #1d4ed8;">Total</th>
+
+                <!-- Potongan ASN 2.5% -->
+                <th style="text-align: right; background: #fffdf5; font-size: 11px; color: #b45309;">PNS</th>
+                <th style="text-align: right; background: #fffdf5; font-size: 11px; color: #b45309;">PPPK</th>
+                <th style="text-align: right; background: #fffdf5; font-size: 11px; color: #b45309;">Paruh</th>
+                <th style="text-align: right; background: #fef3c7; font-size: 11px; font-weight: 800; color: #b45309;">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($rekaps as $index => $row)
+            <tr>
+                <td style="text-align: center;">{{ $index + 1 }}</td>
+                <td style="font-weight: 600; color: #0f172a;">{{ $row->skpd ?: 'Satker Lainnya' }}</td>
+
+                <!-- Pegawai -->
+                <td style="text-align: center;">{{ number_format($row->count_pns) }}</td>
+                <td style="text-align: center;">{{ number_format($row->count_pppk) }}</td>
+                <td style="text-align: center;">{{ number_format($row->count_pppk_pw) }}</td>
+                <td style="text-align: center; font-weight: 700; background: #f8fafc;">{{ number_format($row->count_total) }}</td>
+
+                <!-- Dasar Tapera -->
+                <td class="col-number">{{ number_format($row->dasar_pns, 0, ',', '.') }}</td>
+                <td class="col-number">{{ number_format($row->dasar_pppk, 0, ',', '.') }}</td>
+                <td class="col-number">{{ number_format($row->dasar_pppk_pw, 0, ',', '.') }}</td>
+                <td class="col-number" style="font-weight: 700; background: #f8fafc;">{{ number_format($row->dasar_total, 0, ',', '.') }}</td>
+
+                <!-- Beban Pemda 0.5% -->
+                <td class="col-number" style="color: #1e40af;">{{ number_format($row->pemda_pns, 0, ',', '.') }}</td>
+                <td class="col-number" style="color: #1e40af;">{{ number_format($row->pemda_pppk, 0, ',', '.') }}</td>
+                <td class="col-number" style="color: #1e40af;">{{ number_format($row->pemda_pppk_pw, 0, ',', '.') }}</td>
+                <td class="col-number" style="font-weight: 700; color: #1d4ed8; background: #f8faff;">{{ number_format($row->pemda_total, 0, ',', '.') }}</td>
+
+                <!-- Potongan ASN 2.5% -->
+                <td class="col-number" style="color: #b45309;">{{ number_format($row->asn_pns, 0, ',', '.') }}</td>
+                <td class="col-number" style="color: #b45309;">{{ number_format($row->asn_pppk, 0, ',', '.') }}</td>
+                <td class="col-number" style="color: #b45309;">{{ number_format($row->asn_pppk_pw, 0, ',', '.') }}</td>
+                <td class="col-number" style="font-weight: 700; color: #b45309; background: #fffdf5;">{{ number_format($row->asn_total, 0, ',', '.') }}</td>
+
+                <!-- Total Iuran 3.0% -->
+                <td class="col-number" style="font-weight: 800; color: #047857; background: #f6fdfa;">{{ number_format($row->total_all, 0, ',', '.') }}</td>
+            </tr>
+            @empty
+            <tr>
+                <td colspan="19" style="text-align: center; padding: 30px; color: #64748b;">
+                    <i class="ph ph-folder-open" style="font-size: 32px; display: block; margin-bottom: 8px;"></i>
+                    Tidak ada data penggajian pada periode atau filter SKPD yang dipilih.
+                </td>
+            </tr>
+            @endforelse
+        </tbody>
+        @if($rekaps->count() > 0)
+        <tfoot>
+            <tr>
+                <td colspan="2" style="text-align: center;">GRAND TOTAL:</td>
+
+                <!-- Total Pegawai -->
+                <td style="text-align: center;">{{ number_format($rekaps->sum('count_pns')) }}</td>
+                <td style="text-align: center;">{{ number_format($rekaps->sum('count_pppk')) }}</td>
+                <td style="text-align: center;">{{ number_format($rekaps->sum('count_pppk_pw')) }}</td>
+                <td style="text-align: center; background: #e2e8f0;">{{ number_format($rekaps->sum('count_total')) }}</td>
+
+                <!-- Total Dasar -->
+                <td class="col-number">{{ number_format($rekaps->sum('dasar_pns'), 0, ',', '.') }}</td>
+                <td class="col-number">{{ number_format($rekaps->sum('dasar_pppk'), 0, ',', '.') }}</td>
+                <td class="col-number">{{ number_format($rekaps->sum('dasar_pppk_pw'), 0, ',', '.') }}</td>
+                <td class="col-number" style="background: #e0e7ff;">{{ number_format($rekaps->sum('dasar_total'), 0, ',', '.') }}</td>
+
+                <!-- Total Pemda -->
+                <td class="col-number" style="color: #1e40af;">{{ number_format($rekaps->sum('pemda_pns'), 0, ',', '.') }}</td>
+                <td class="col-number" style="color: #1e40af;">{{ number_format($rekaps->sum('pemda_pppk'), 0, ',', '.') }}</td>
+                <td class="col-number" style="color: #1e40af;">{{ number_format($rekaps->sum('pemda_pppk_pw'), 0, ',', '.') }}</td>
+                <td class="col-number" style="color: #1e40af; background: #dbeafe;">{{ number_format($rekaps->sum('pemda_total'), 0, ',', '.') }}</td>
+
+                <!-- Total ASN -->
+                <td class="col-number" style="color: #b45309;">{{ number_format($rekaps->sum('asn_pns'), 0, ',', '.') }}</td>
+                <td class="col-number" style="color: #b45309;">{{ number_format($rekaps->sum('asn_pppk'), 0, ',', '.') }}</td>
+                <td class="col-number" style="color: #b45309;">{{ number_format($rekaps->sum('asn_pppk_pw'), 0, ',', '.') }}</td>
+                <td class="col-number" style="color: #b45309; background: #fef3c7;">{{ number_format($rekaps->sum('asn_total'), 0, ',', '.') }}</td>
+
+                <!-- Grand Total All -->
+                <td class="col-number" style="color: #065f46; background: #d1fae5;">{{ number_format($rekaps->sum('total_all'), 0, ',', '.') }}</td>
+            </tr>
+        </tfoot>
+        @endif
+    </table>
+    @else
+    <!-- TAMPILAN FILTER KATEGORI TERTENTU (PNS / PPPK / PARUH WAKTU) -->
     <table class="table-custom">
         <thead>
             <tr>
                 <th style="width: 40px; text-align: center;">No</th>
                 <th>Nama SKPD / Satuan Kerja</th>
-                <th style="text-align: center;">Jml ASN</th>
+                <th style="text-align: center;">
+                    Jml @if($kategoriFilter === 'pns') PNS @elseif($kategoriFilter === 'pppk') PPPK @else PPPK Paruh @endif
+                </th>
                 <th style="text-align: right;">Gaji Pokok</th>
                 <th style="text-align: right;">Tunj. Keluarga</th>
                 <th style="text-align: right;">Tunj. Jabatan</th>
@@ -845,7 +980,7 @@
             <tr>
                 <td colspan="10" style="text-align: center; padding: 30px; color: #64748b;">
                     <i class="ph ph-folder-open" style="font-size: 32px; display: block; margin-bottom: 8px;"></i>
-                    Tidak ada data penggajian pada periode atau filter SKPD yang dipilih.
+                    Tidak ada data penggajian pada kategori ini.
                 </td>
             </tr>
             @endforelse
@@ -853,7 +988,7 @@
         @if($rekaps->count() > 0)
         <tfoot>
             <tr>
-                <td colspan="2" style="text-align: center;">GRAND TOTAL:</td>
+                <td colspan="2" style="text-align: center;">TOTAL:</td>
                 <td style="text-align: center;">{{ number_format($rekaps->sum('count_gaji')) }}</td>
                 <td class="col-number">{{ number_format($rekaps->sum('total_gapok'), 0, ',', '.') }}</td>
                 <td class="col-number">{{ number_format($rekaps->sum('total_tj_keluarga'), 0, ',', '.') }}</td>
@@ -866,6 +1001,7 @@
         </tfoot>
         @endif
     </table>
+    @endif
 </div>
 
 @elseif($tab === 'rinci')
@@ -876,6 +1012,7 @@
             <tr>
                 <th style="width: 40px; text-align: center;">No</th>
                 <th>NIP & Nama Pegawai</th>
+                <th>Kategori ASN</th>
                 <th>SKPD & Jabatan</th>
                 <th style="text-align: right;">Gaji Pokok</th>
                 <th style="text-align: right;">Tunj. Keluarga</th>
@@ -893,12 +1030,22 @@
                 $nama = $item->pegawai->nama ?? ($item->raw_data['nama'] ?? $item->raw_data['Nama'] ?? '-');
                 $skpd = $item->pegawai->unitKerja->skpd ?? ($item->raw_data['SKPD'] ?? '-');
                 $jabatan = $item->pegawai->jabatan->nama ?? ($item->raw_data['Jabatan'] ?? '-');
+                $kategori = $item->kategori_asn;
             @endphp
             <tr>
                 <td style="text-align: center;">{{ $realisasis->firstItem() + $index }}</td>
                 <td>
                     <div style="font-weight: 700; color: #0f172a;">{{ $nama }}</div>
                     <div style="font-size: 11.5px; color: #64748b; font-family: monospace;">NIP: {{ $nip }}</div>
+                </td>
+                <td>
+                    @if($kategori === 'PNS')
+                        <span class="badge-status badge-pns">PNS</span>
+                    @elseif($kategori === 'PPPK')
+                        <span class="badge-status badge-pppk">PPPK (FULL)</span>
+                    @else
+                        <span class="badge-status badge-paruh">PPPK PARUH WAKTU</span>
+                    @endif
                 </td>
                 <td>
                     <div style="font-weight: 600; color: #334155;">{{ $skpd }}</div>
@@ -914,7 +1061,7 @@
             </tr>
             @empty
             <tr>
-                <td colspan="10" style="text-align: center; padding: 30px; color: #64748b;">
+                <td colspan="11" style="text-align: center; padding: 30px; color: #64748b;">
                     <i class="ph ph-folder-open" style="font-size: 32px; display: block; margin-bottom: 8px;"></i>
                     Tidak ada data pegawai yang sesuai dengan pencarian atau filter.
                 </td>

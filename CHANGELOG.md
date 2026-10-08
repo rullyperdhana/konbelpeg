@@ -13,10 +13,11 @@ Dokumen ini mencatat seluruh riwayat pembaruan, evolusi fitur, perbaikan bug, da
     - Pilihan status pernikahan (tunjangan pasangan 10%) dan jumlah anak (0, 1, 2 anak × 2%).
     - Komputasi otomatis secara *real-time* (tanpa reload): Dasar Tapera (100%), Potongan ASN (2,5% per bulan & proyeksi 1 tahun), Beban Pemda/APBD (0,5% per bulan & proyeksi 1 tahun), dan Total Disetor ke BP Tapera (3,0%).
     - Indikator visual progres perbandingan proporsi beban ASN (83,3%) vs Pemda (16,7%).
-  - 🏢 **Tab 2: Rekapitulasi per SKPD (Berdasarkan Data Riil Belanja Gaji)**:
-    - Menghitung akumulasi kebutuhan anggaran belanja APBD dan potongan ASN dari database penggajian aktif (`realisasi_gajis`).
-    - Kolom lengkap: Jumlah ASN, Gaji Pokok, Tunj. Keluarga, Tunj. Jabatan, Total Dasar Tapera, Beban Pemda (0,5%), Potongan ASN (2,5%), dan Total Iuran (3,0%).
-    - Dilengkapi KPI Summary Cards Total Belanja APBD & baris Grand Total.
+  - 🏢 **Tab 2: Rekapitulasi per SKPD (Pemisahan PNS, PPPK Full Waktu, & PPPK Paruh Waktu)**:
+    - Menyajikan pemisahan matriks data yang jelas antara **PNS**, **PPPK (Full Waktu)**, dan **PPPK (Paruh Waktu)** untuk setiap SKPD.
+    - Kolom komparasi terpisah: Jumlah Pegawai (PNS, PPPK-Full, PPPK-Paruh, Total), Dasar Tapera (PNS, PPPK-Full, PPPK-Paruh, Total), Beban Pemda 0,5% (PNS, PPPK-Full, PPPK-Paruh, Total), Potongan ASN 2,5% (PNS, PPPK-Full, PPPK-Paruh, Total), serta Grand Total Iuran 3,0%.
+    - Dropdown filter kategori (*Semua Matriks Lengkap*, *Hanya PNS*, *Hanya PPPK Full*, *Hanya PPPK Paruh Waktu*).
+    - KPI Summary Cards dengan rincian instan porsi PNS vs PPPK Full vs PPPK Paruh Waktu.
   - 👥 **Tab 3: Daftar Nominatif ASN (Rinci By Name By NIP)**:
     - Menampilkan nominatif perseorangan seluruh ASN dengan rincian NIP, Nama, SKPD, Jabatan, komponen gaji, dan estimasi iuran Tapera.
     - Dilengkapi pencarian nama/NIP dan paginasi data.
