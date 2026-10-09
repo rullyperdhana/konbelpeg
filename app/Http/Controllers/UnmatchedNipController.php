@@ -210,7 +210,8 @@ class UnmatchedNipController extends Controller
             }
         }
 
-        $logs = $query->orderBy('created_at', 'desc')->paginate(50)->withQueryString();
+        $perPage = in_array((int) $request->input('per_page'), [25, 50, 100, 200]) ? (int) $request->input('per_page') : 50;
+        $logs = $query->orderBy('created_at', 'desc')->paginate($perPage)->withQueryString();
 
         // Pasangkan informasi SIMGAJI ke setiap baris log
         $logs->getCollection()->transform(function ($log) use ($simgajiMap) {
@@ -253,6 +254,7 @@ class UnmatchedNipController extends Controller
 
         return view('laporan.unmatched-nip.index', compact(
             'logs',
+            'perPage',
             'availablePeriodes',
             'statusOptions',
             'statusSimgajiFilter',

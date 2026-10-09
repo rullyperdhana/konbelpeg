@@ -313,13 +313,97 @@
     }
 
     .pagination-wrapper {
-        padding: 14px 20px;
+        padding: 16px 22px;
         border-top: 1px solid var(--border-color);
         display: flex;
         align-items: center;
         justify-content: space-between;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 14px;
+        background: var(--bg-surface);
+    }
+
+    .pagination-info {
+        font-size: 13px;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .pagination-info strong {
+        color: var(--text-main);
+        font-weight: 700;
+    }
+
+    .per-page-select {
+        padding: 5px 10px;
+        font-size: 12px;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        background: var(--bg-surface);
+        color: var(--text-main);
+        outline: none;
+        cursor: pointer;
+    }
+
+    .pagination-nav {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        flex-wrap: wrap;
+    }
+
+    .page-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 32px;
+        height: 32px;
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-main);
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        text-decoration: none;
+        transition: all 0.15s ease-in-out;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .page-btn:hover:not(.disabled):not(.active) {
+        background: var(--bg-surface-subtle, rgba(0, 0, 0, 0.04));
+        border-color: #2563eb;
+        color: #2563eb;
+        transform: translateY(-1px);
+    }
+
+    .page-btn.active {
+        background: #2563eb !important;
+        border-color: #2563eb !important;
+        color: #ffffff !important;
+        font-weight: 700;
+        box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+    }
+
+    .page-btn.disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+        pointer-events: none;
+        background: var(--bg-surface-subtle, rgba(0, 0, 0, 0.02));
+    }
+
+    .page-dots {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 32px;
+        font-size: 13px;
+        color: var(--text-muted);
     }
 </style>
 
@@ -563,15 +647,82 @@
         </tbody>
     </table>
     
-    @if($logs->hasPages())
     <div class="pagination-wrapper">
-        <div style="color: var(--text-muted); font-size: 13px;">
-            Menampilkan {{ $logs->firstItem() }} - {{ $logs->lastItem() }} dari {{ $logs->total() }} data
+        <div class="pagination-info">
+            <span>
+                Menampilkan <strong>{{ $logs->firstItem() ?? 0 }}</strong> - <strong>{{ $logs->lastItem() ?? 0 }}</strong> dari <strong>{{ $logs->total() }}</strong> log data
+            </span>
+            <div style="display: inline-flex; align-items: center; gap: 6px;">
+                <label for="per_page_select" style="font-size: 12px; color: var(--text-muted); margin: 0;">Per hal:</label>
+                <select id="per_page_select" class="per-page-select" onchange="location = this.value;">
+                    @foreach([25, 50, 100, 200] as $size)
+                        <option value="{{ $logs->appends(array_merge(request()->query(), ['per_page' => $size, 'page' => 1]))->url(1) }}" {{ ($perPage ?? 50) == $size ? 'selected' : '' }}>
+                            {{ $size }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
         </div>
-        <div>
-            {{ $logs->links() }}
+
+        @if($logs->hasPages())
+        <div class="pagination-nav">
+            {{-- First Page --}}
+            @if(!$logs->onFirstPage())
+                <a href="{{ $logs->appends(request()->query())->url(1) }}" class="page-btn" title="Halaman Pertama">
+                    <i class="ph-bold ph-caret-double-left"></i>
+                </a>
+                <a href="{{ $logs->appends(request()->query())->previousPageUrl() }}" class="page-btn" title="Halaman Sebelumnya">
+                    <i class="ph-bold ph-caret-left"></i> Prev
+                </a>
+            @else
+                <span class="page-btn disabled" title="Halaman Pertama"><i class="ph-bold ph-caret-double-left"></i></span>
+                <span class="page-btn disabled" title="Halaman Sebelumnya"><i class="ph-bold ph-caret-left"></i> Prev</span>
+            @endif
+
+            {{-- Sliding Window Pagination --}}
+            @php
+                $currentPage = $logs->currentPage();
+                $lastPage = $logs->lastPage();
+                $start = max(1, $currentPage - 2);
+                $end = min($lastPage, $currentPage + 2);
+            @endphp
+
+            @if($start > 1)
+                <a href="{{ $logs->appends(request()->query())->url(1) }}" class="page-btn">1</a>
+                @if($start > 2)
+                    <span class="page-dots">&hellip;</span>
+                @endif
+            @endif
+
+            @for($p = $start; $p <= $end; $p++)
+                @if($p == $currentPage)
+                    <span class="page-btn active">{{ $p }}</span>
+                @else
+                    <a href="{{ $logs->appends(request()->query())->url($p) }}" class="page-btn">{{ $p }}</a>
+                @endif
+            @endfor
+
+            @if($end < $lastPage)
+                @if($end < $lastPage - 1)
+                    <span class="page-dots">&hellip;</span>
+                @endif
+                <a href="{{ $logs->appends(request()->query())->url($lastPage) }}" class="page-btn">{{ $lastPage }}</a>
+            @endif
+
+            {{-- Next Page --}}
+            @if($logs->hasMorePages())
+                <a href="{{ $logs->appends(request()->query())->nextPageUrl() }}" class="page-btn" title="Halaman Selanjutnya">
+                    Next <i class="ph-bold ph-caret-right"></i>
+                </a>
+                <a href="{{ $logs->appends(request()->query())->url($lastPage) }}" class="page-btn" title="Halaman Terakhir">
+                    <i class="ph-bold ph-caret-double-right"></i>
+                </a>
+            @else
+                <span class="page-btn disabled" title="Halaman Selanjutnya">Next <i class="ph-bold ph-caret-right"></i></span>
+                <span class="page-btn disabled" title="Halaman Terakhir"><i class="ph-bold ph-caret-double-right"></i></span>
+            @endif
         </div>
+        @endif
     </div>
-    @endif
 </div>
 @endsection
