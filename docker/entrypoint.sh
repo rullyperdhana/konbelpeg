@@ -49,5 +49,9 @@ if [ "$APP_ENV" = "production" ]; then
     php artisan view:cache
 fi
 
+# Pastikan ulang kepemilikan dan permission seluruh file storage & cache dimiliki oleh www-data
+chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+chmod -R 775 /var/www/storage /var/www/bootstrap/cache
+
 echo "==> Inisialisasi selesai! Menjalankan proses utama: $@"
 exec "$@"
