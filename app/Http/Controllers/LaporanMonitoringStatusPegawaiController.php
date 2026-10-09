@@ -122,7 +122,7 @@ class LaporanMonitoringStatusPegawaiController extends Controller
             ->keyBy('nip');
 
         // 2. Preload Transaksi Realisasi TPP & Gaji per Pegawai
-        $tppByPegawai = RealisasiTpp::select('pegawai_id', 'periode', 'nominal_bersih', 'created_at')
+        $tppByPegawai = RealisasiTpp::select('pegawai_id', 'periode', 'total_dibayarkan', 'created_at')
             ->orderBy('id', 'desc')
             ->get()
             ->groupBy('pegawai_id');
