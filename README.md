@@ -96,9 +96,10 @@ Seringkali terjadi diskrepansi yang menyebabkan potensi kelebihan/kekurangan bay
 6. **Laporan Khusus PPPK Guru (`/laporan/pppk-guru`)**:
    - Pemantauan terisolasi belanja gaji dan TPP untuk formasi prioritas PPPK Guru Dinas Pendidikan.
    - Tersedia tampilan **Rekapitulasi** dan **Rincian Pegawai (`/laporan/pppk-guru/rinci`)** beserta ekspor Excel/PDF.
-7. **Laporan Unmatched NIP (`/laporan/unmatched-nip`)**:
-   - Mencatat transaksi pembayaran yang NIP-nya tidak ditemukan pada master pegawai.
-   - Dilengkapi identifikasi status kepegawaian (PNS / PPPK / Non-ASN) dan indikator keberadaan NIP di basis data SIMGAJI.
+7. **Laporan Log NIP Tidak Ditemukan (`/laporan/unmatched-nip`)**:
+   - Mencatat transaksi pembayaran yang NIP-nya tidak ditemukan pada master pegawai saat proses impor TPP atau Gaji.
+   - **Diagnosa Cerdas Status SIMGAJI**: Integrasi instan dengan basis data master SIMGAJI (`MST_PGW`) untuk mengidentifikasi penyebab diskrepansi NIP (Pensiun BUP, Meninggal Dunia, Pensiun Sendiri / Stop, Pindah Instansi, Aktif di SIMGAJI tapi belum di SIMPEG, atau Tidak Ditemukan).
+   - Dilengkapi identifikasi jenis pembayaran (TPP / Gaji), status pegawai (PNS / PPPK / PPPK Paruh Waktu / Pejabat Negara), kartu KPI diagnosa instan, filter status diagnosa, dan paginasi data.
 8. **Laporan Audit Tunjangan Keluarga SIMGAJI (`/laporan/audit-tunjangan-keluarga`)**:
    - Uji silang dobel tunjangan anak (klaim ganda oleh ayah & ibu yang keduanya berstatus ASN Pemprov Kalsel).
    - Uji silang pasangan saling menunjang (suami & istri masing-masing mendapat tunjangan pasangan 10%).
@@ -126,6 +127,14 @@ Seringkali terjadi diskrepansi yang menyebabkan potensi kelebihan/kekurangan bay
     - **Kalkulator Interaktif**: Simulasi mandiri perorangan dengan preset gaji pokok ASN terbaru (PP 5/2024 & Perpres 11/2024) serta live breakdown bulanan dan tahunan.
     - **Rekapitulasi per SKPD**: Estimasi kebutuhan belanja APBD dan potongan ASN se-kabupaten/kota/provinsi dari data transaksi penggajian riil (`realisasi_gajis`).
     - **Daftar Nominatif ASN**: Rincian perorangan (*By Name By NIP*) beserta ekspor resmi Excel (.xlsx) dan PDF (A4 Landscape).
+11. **Laporan Monitoring Status Pegawai & Pensiun SIMGAJI (`/laporan/monitoring-status-pegawai`)**:
+    - **Pengawasan Komprehensif Status Kepegawaian**: Menyandingkan status kepegawaian master SIMGAJI (`MST_PGW`) dengan master SIMPEG dan riwayat riil pembayaran Gaji/TPP.
+    - **Empat Tab Analisis**:
+      - **Tab 1: Rekapitulasi per SKPD**: Matriks persebaran status kepegawaian (PNS Aktif, PPPK Aktif, Pensiun BUP, Pensiun Sendiri/Stop, Meninggal Dunia, Pindah Instansi, Berhenti/Keluar, Cuti CLTN, MPP, dan Proyeksi Pensiun).
+      - **Tab 2: Nominatif Non-Aktif & Pensiun**: Rincian perseorangan (*by name by NIP*) pegawai non-aktif/purna tugas dengan filter status, pencarian instan, dan paginasi data terstruktur.
+      - **Tab 3: Proyeksi Pensiun Mendatang**: Proyeksi daftar ASN yang akan mencapai Batas Usia Pensiun (BUP 58/60 tahun) dalam 1-2 tahun ke depan untuk perencanaan formasi dan anggaran belanja pegawai.
+      - **Tab 4: Deteksi Anomali Pembayaran Pasca Pensiun / Stop**: Audit investigatif pencocokan silang antara pegawai non-aktif (pensiun/meninggal/stop dengan TMT stop <= hari ini) terhadap catatan transaksi pembayaran atau log impor NIP untuk deteksi dini potensi kelebihan bayar (*overpayment*).
+    - **Ekspor Dokumen Resmi**: Ekspor Excel (.xlsx) komprehensif berformat akuntansi dan PDF (A4 Landscape) siap cetak dengan kop dinas dan pengesahan pejabat penatausahaan keuangan.
 
 ### D. Modul Rekonsiliasi SIMGAJI (`/laporan/rekonsiliasi-simgaji`)
 Inti dari sistem KONBELPEG dengan 6 kategori pencocokan otomatis:
@@ -359,6 +368,9 @@ Dengan sistem yang telah daring (*online*) pada VPS produksi (`https://konbelpeg
 Seluruh riwayat perkembangan versi aplikasi dari awal inisiasi hingga rilis terkini didokumentasikan secara rinci pada berkas [CHANGELOG.md](CHANGELOG.md).
 
 Ringkasan versi:
+- **v2.14.0 (09 Oktober 2026)**: Modul Monitoring Status Pegawai & Pensiun SIMGAJI (`/laporan/monitoring-status-pegawai`) dengan 4 Tab Analisis (Rekapitulasi per SKPD, Nominatif Non-Aktif/Pensiun, Proyeksi Pensiun 1-2 Tahun, dan Deteksi Anomali Pembayaran Pasca Pensiun/Stop), Ekspor Excel & PDF resmi, serta Peningkatan Mesin Diagnosa Cerdas Status SIMGAJI pada Log NIP Tidak Ditemukan (`/laporan/unmatched-nip`).
+- **v2.13.0 (08 Oktober 2026)**: Modul Simulasi & Proyeksi Iuran Tapera ASN & Pemberi Kerja (PP No. 21 Tahun 2024) (`/laporan/tapera`), kalkulator interaktif live-compute, rekapitulasi per SKPD terpisah antara PNS, PPPK Penuh, dan PPPK Paruh Waktu, nominatif by NIP, serta ekspor Excel/PDF.
+- **v2.12.0 (08 Oktober 2026)**: Modul Laporan BNBA & Pemetaan Master SKPD SIMGAJI Taspen (`/laporan/perbaikan-simgaji-skpd`), matriks pemetaan 57 SKPD, rekomendasi mutasi SKPD/UPTD otomatis, dan ekspor multi-sheet.
 - **v2.11.0 (07 Oktober 2026)**: Peningkatan Keamanan & Hardening VPS: Proteksi Honeypot Anti-Bot otomatis pada login, integrasi opsional Cloudflare Turnstile, Rate Limiting ganda (Lockout 5x & IP limit 15x/menit), Security Headers Middleware (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy), Route throttling, pembersihan visual institusional login page, dan panduan mitigasi DDoS level VPS/Cloudflare.
 - **v2.10.0 (07 Oktober 2026)**: Modul Upload & Sinkronisasi Master Pegawai SIMPEG via Web Spreadsheet (`/master/pegawai-simpeg`), tombol pintas di halaman pegawai, template Excel resmi, dukungan Cloudflare reverse proxy (`trustProxies`), dan feature tests.
 - **v2.9.0 (03 Oktober 2026)**: Modul Audit Tunjangan Keluarga SIMGAJI (`/laporan/audit-tunjangan-keluarga`), uji silang dobel tunjangan anak (2%+2%), pasangan saling menunjang (10%+10%), kelebihan kuota anak (>2 anak), fitur tindak lanjut pencatatan bukti STS Kasda, dan paginasi modern.

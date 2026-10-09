@@ -1411,6 +1411,7 @@
                 <a href="/laporan/audit-tunjangan-keluarga" class="submenu-item {{ Request::is('laporan/audit-tunjangan-keluarga*') ? 'active' : '' }}" style="{{ Request::is('laporan/audit-tunjangan-keluarga*') ? 'font-weight: 700;' : '' }}">14. Audit Tunjangan Keluarga</a>
                 <a href="/laporan/perbaikan-simgaji-skpd" class="submenu-item {{ Request::is('laporan/perbaikan-simgaji-skpd*') ? 'active' : '' }}" style="{{ Request::is('laporan/perbaikan-simgaji-skpd*') ? 'font-weight: 700;' : '' }}">15. BNBA Perbaikan SKPD SIMGAJI</a>
                 <a href="/laporan/tapera" class="submenu-item {{ Request::is('laporan/tapera*') ? 'active' : '' }}" style="{{ Request::is('laporan/tapera*') ? 'font-weight: 700;' : '' }}">16. Simulasi Tapera (ASN & Pemda)</a>
+                <a href="/laporan/monitoring-status-pegawai" class="submenu-item {{ Request::is('laporan/monitoring-status-pegawai*') ? 'active' : '' }}" style="{{ Request::is('laporan/monitoring-status-pegawai*') ? 'font-weight: 700;' : '' }}">17. Monitoring Status & Pensiun</a>
             </div>
             
             <div class="menu-label">Sistem & Pengaturan</div>

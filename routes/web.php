@@ -8,6 +8,7 @@ use App\Http\Controllers\LaporanBnbaPerbaikanSimgajiController;
 use App\Http\Controllers\LaporanController;
 use App\Http\Controllers\LaporanGabunganController;
 use App\Http\Controllers\LaporanIwpJamkesController;
+use App\Http\Controllers\LaporanMonitoringStatusPegawaiController;
 use App\Http\Controllers\LaporanPegawaiController;
 use App\Http\Controllers\LaporanTaperaController;
 use App\Http\Controllers\PegawaiController;
@@ -183,6 +184,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/laporan/tapera', [LaporanTaperaController::class, 'index'])->name('laporan.tapera.index');
     Route::get('/laporan/tapera/export/excel', [LaporanTaperaController::class, 'exportExcel'])->name('laporan.tapera.export_excel');
     Route::get('/laporan/tapera/export/pdf', [LaporanTaperaController::class, 'exportPdf'])->name('laporan.tapera.export_pdf');
+
+    // Monitoring Status Pegawai & Pensiun (SIMGAJI)
+    Route::get('/laporan/monitoring-status-pegawai', [LaporanMonitoringStatusPegawaiController::class, 'index'])->name('laporan.monitoring_status.index');
+    Route::get('/laporan/monitoring-status-pegawai/refresh', [LaporanMonitoringStatusPegawaiController::class, 'refreshCache'])->name('laporan.monitoring_status.refresh');
+    Route::get('/laporan/monitoring-status-pegawai/export/excel', [LaporanMonitoringStatusPegawaiController::class, 'exportExcel'])->name('laporan.monitoring_status.export_excel');
+    Route::get('/laporan/monitoring-status-pegawai/export/pdf', [LaporanMonitoringStatusPegawaiController::class, 'exportPdf'])->name('laporan.monitoring_status.export_pdf');
 
     // Pengaturan
     Route::prefix('setting/users')->name('setting.users.')->group(function () {

@@ -2,6 +2,42 @@
 
 Dokumen ini mencatat seluruh riwayat pembaruan, evolusi fitur, perbaikan bug, dan progres pengembangan sistem **KONBELPEG (Rekonsiliasi Realisasi Belanja Pegawai & SIMGAJI)**.
 
+## 📌 [v2.14.0] - 2026-10-09
+### 🔍 Modul Monitoring Status Pegawai & Pensiun SIMGAJI Serta Diagnosa Cerdas Log NIP
+- **Modul Baru Monitoring Status Pegawai & Pensiun (`/laporan/monitoring-status-pegawai`)**:
+  - Menyajikan sistem pengawasan, audit, dan penatausahaan status kepegawaian komprehensif berbasis data master SIMGAJI (`MST_PGW`) yang disandingkan dengan basis data kepegawaian SIMPEG dan riwayat pembayaran riil (Gaji & TPP).
+  - Dilengkapi fitur caching performa tinggi serta tombol pembaruan data instan (*Refresh Data*).
+- **Empat Perspektif Analisis Lengkap (*Four-Perspective Tabs*)**:
+  - 🏢 **Tab 1: Rekapitulasi per SKPD (`tab=rekap`)**:
+    - Matriks komparasi per SKPD untuk seluruh kategori status: PNS Aktif, PPPK Aktif, Pensiun (BUP), Pensiun Sendiri / Stop Sementara, Meninggal Dunia, Pindah Instansi, Berhenti / Keluar, Cuti di Luar Tanggungan Negara (CLTN), Masa Persiapan Pensiun (MPP), serta Proyeksi Pensiun.
+    - Dilengkapi baris Grand Total dan kartu KPI Ringkasan Eksekutif (Total Pegawai Master, Total Aktif, Total Pensiun/Non-Aktif, Proyeksi Pensiun 1-2 Tahun, dan Total Anomali Terdeteksi).
+  - 👥 **Tab 2: Nominatif Non-Aktif & Pensiun (`tab=nominatif`)**:
+    - Daftar perorangan (*by name by NIP*) seluruh pegawai non-aktif/purna tugas dengan rincian NIP, Nama, Pangkat/Golru, SKPD, Kode Status (`kdstapeg`), Label Status & Badge, TMT Stop, Catatan SIMGAJI, dan konfirmasi keterdaftaran di SIMPEG.
+    - Dilengkapi pencarian instan (NIP, Nama, SKPD), filter status spesifik, dan paginasi data 50 baris per halaman.
+  - ⏳ **Tab 3: Proyeksi Pensiun Mendatang (`tab=proyeksi`)**:
+    - Mengidentifikasi ASN aktif yang diproyeksikan mencapai Batas Usia Pensiun (BUP 58 / 60 tahun) dalam kurun waktu 1 hingga 2 tahun ke depan berbasis tanggal lahir dan field `tmtstop`.
+    - Memberikan estimasi perencanaan kebutuhan formasi belanja pegawai dan antisipasi kebutuhan penggantian formasi SKPD.
+  - 🚨 **Tab 4: Deteksi Anomali Pembayaran Pasca Pensiun / Stop (`tab=anomali`)**:
+    - Fitur audit investigatif yang mendeteksi pegawai dengan status non-aktif (Pensiun BUP, Meninggal, Keluar, Pindah, Pensiun Sendiri) yang masih tercatat memiliki transaksi pembayaran gaji, histori pembayaran TPP, atau muncul pada log gagal impor NIP.
+    - Menampilkan kartu peringatan deteksi dini potensi kerugian negara / kelebihan bayar (*overpayment*), detail jenis anomali, histori periode pembayaran, dan rekomendasi konfirmasi ke SKPD terkait serta PT Taspen.
+- **Ekspor Dokumen Pelaporan Resmi**:
+  - **Ekspor Excel (.xlsx)**: File spreadsheet komprehensif multi-tabel dengan format akuntansi, styling profesional, dan formula otomatis.
+  - **Ekspor PDF Resmi (A4 Landscape)**: Format cetak resmi standar BPKAD/Pemprov Kalsel yang menyesuaikan tab aktif dengan kop dinas dan ruang tanda tangan pejabat penatausahaan keuangan.
+- **Penyempurnaan Modul Log NIP Tidak Ditemukan (`/laporan/unmatched-nip`)**:
+  - Integrasi mesin diagnosa cerdas status SIMGAJI (`MST_PGW`) pada setiap NIP yang gagal diimpor saat upload data realisasi TPP atau Gaji.
+  - Badge klasifikasi status: *Pensiun (BUP)*, *Pensiun Sendiri / Stop*, *Meninggal Dunia*, *Pindah Instansi*, *Aktif di SIMGAJI*, atau *Tidak Ditemukan di SIMGAJI*.
+  - Penjelasan diagnosa otomatis dan rekomendasi tindakan administratif (misal: "Pegawai telah purna tugas (BUP), masuk file TPP kemungkinan rapel/susulan hak sebelum pensiun" atau "Pegawai aktif di SIMGAJI namun belum terdaftar di SIMPEG").
+  - 6 Kartu KPI Diagnosa di bagian header (Total Log, Pensiun BUP, Meninggal Dunia, Aktif SIMGAJI, Tidak Terdaftar, Status Lainnya).
+  - Filter interaktif berdasarkan Diagnosa Status SIMGAJI.
+- **Navigasi & Tautan Antarmuka**:
+  - Penambahan menu `17. Monitoring Status & Pensiun` pada sidebar kelompok menu Laporan & Realisasi.
+  - Penambahan kartu navigasi Laporan Monitoring Status Pegawai & Pensiun di Pusat Laporan (`/laporan`).
+- **Pengujian Otomatis (*Feature Tests*)**:
+  - `tests/Feature/LaporanMonitoringStatusPegawaiTest.php`: 8 pengujian fitur lengkap mencakup autentikasi, render 4 tab, filter status, ekspor Excel, ekspor PDF, dan refresh cache (100% lulus).
+  - `tests/Feature/UnmatchedNipTest.php`: 5 pengujian fitur log NIP terverifikasi lulus.
+
+---
+
 ## 📌 [v2.13.0] - 2026-10-08
 ### 🏠 Modul Simulasi & Proyeksi Iuran Tapera ASN & Pemberi Kerja (PP No. 21 Tahun 2024)
 - **Modul Baru Simulasi & Proyeksi Tapera (`/laporan/tapera`)**:

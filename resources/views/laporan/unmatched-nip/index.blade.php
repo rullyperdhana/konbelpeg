@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('title', 'Log NIP Tidak Ditemukan')
-@section('page_title', 'Laporan NIP Tidak Ditemukan Saat Upload')
+@section('page_title', 'Laporan NIP Tidak Ditemukan & Diagnosa SIMGAJI')
 
 @section('content')
 <style>
@@ -41,7 +41,7 @@
         background: var(--bg-surface);
         border: 1px solid var(--border-color);
         border-radius: 10px;
-        padding: 6px 14px;
+        padding: 8px 14px;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -51,15 +51,35 @@
 
     .stat-pill strong {
         color: var(--text-main);
-        font-size: 13.5px;
+        font-size: 14px;
     }
 
-    .stat-pill.pns strong {
-        color: var(--luno-primary-text);
+    .stat-pill.pensiun {
+        border-left: 4px solid #ef4444;
+    }
+    .stat-pill.pensiun strong {
+        color: #dc2626;
     }
 
-    .stat-pill.pppk strong {
-        color: var(--success-text);
+    .stat-pill.meninggal {
+        border-left: 4px solid #475569;
+    }
+    .stat-pill.meninggal strong {
+        color: #334155;
+    }
+
+    .stat-pill.aktif-simgaji {
+        border-left: 4px solid #2563eb;
+    }
+    .stat-pill.aktif-simgaji strong {
+        color: #2563eb;
+    }
+
+    .stat-pill.anomali {
+        border-left: 4px solid #f59e0b;
+    }
+    .stat-pill.anomali strong {
+        color: #d97706;
     }
 
     .filter-card {
@@ -127,7 +147,7 @@
         padding: 12px 14px;
         border-bottom: 1px solid var(--border-color);
         color: var(--text-main);
-        vertical-align: middle;
+        vertical-align: top;
     }
 
     .table-container tbody tr:hover {
@@ -161,8 +181,8 @@
     }
 
     .badge-status-paruh {
-        background: var(--warning-light);
-        color: var(--warning-text);
+        background: rgba(245, 158, 11, 0.12);
+        color: #d97706;
         padding: 4px 10px;
         border-radius: 6px;
         font-size: 11px;
@@ -174,25 +194,126 @@
     }
 
     .badge-status-pejabat {
-        background: rgba(168, 85, 247, 0.12);
-        color: #9333ea;
+        background: rgba(139, 92, 246, 0.12);
+        color: #7c3aed;
         padding: 4px 10px;
         border-radius: 6px;
         font-size: 11px;
         font-weight: 700;
-        border: 1px solid rgba(168, 85, 247, 0.25);
+        border: 1px solid rgba(139, 92, 246, 0.25);
         display: inline-flex;
         align-items: center;
         gap: 4px;
     }
-    :root.dark-mode .badge-status-pejabat {
-        color: #c084fc;
-        background: rgba(168, 85, 247, 0.2);
+
+    .badge-gaji {
+        background: rgba(14, 165, 233, 0.12);
+        color: #0284c7;
+        font-weight: 700;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        border: 1px solid rgba(14, 165, 233, 0.25);
+    }
+
+    .badge-tpp {
+        background: rgba(168, 85, 247, 0.12);
+        color: #9333ea;
+        font-weight: 700;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        border: 1px solid rgba(168, 85, 247, 0.25);
+    }
+
+    /* Badges Status SIMGAJI */
+    .badge-pensiun {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #f87171;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 11px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .badge-meninggal {
+        background: #f1f5f9;
+        color: #334155;
+        border: 1px solid #cbd5e1;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 11px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .badge-pindah {
+        background: #dbeafe;
+        color: #1e40af;
+        border: 1px solid #93c5fd;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 11px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .badge-stop {
+        background: #ffedd5;
+        color: #9a3412;
+        border: 1px solid #fdba74;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 11px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .badge-aktif-simgaji {
+        background: #e0f2fe;
+        color: #0369a1;
+        border: 1px solid #7dd3fc;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 11px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .badge-tidak-terdaftar {
+        background: #f3f4f6;
+        color: #6b7280;
+        border: 1px solid #d1d5db;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-weight: 700;
+        font-size: 11px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .diagnosa-box {
+        font-size: 12px;
+        color: var(--text-muted);
+        line-height: 1.45;
+        margin-top: 4px;
     }
 
     .pagination-wrapper {
         padding: 14px 20px;
-        background: var(--bg-surface-subtle);
         border-top: 1px solid var(--border-color);
         display: flex;
         align-items: center;
@@ -206,24 +327,38 @@
     <div class="unmatched-title">
         <h2>
             <i class="ph ph-warning-circle" style="color: var(--danger-text);"></i>
-            Log NIP Tidak Ditemukan Saat Upload
+            Log NIP Tidak Ditemukan & Diagnosa SIMGAJI
         </h2>
-        <p>Daftar pegawai yang tercantum di file penggajian/TPP namun belum terdaftar di Master Data Pegawai.</p>
+        <p>Analisis cerdas data NIP tidak cocok saat impor TPP/Gaji yang disandingkan otomatis dengan Master Database SIMGAJI.</p>
     </div>
 
     <!-- Quick Stats Pills -->
     <div class="stat-badge-group">
         <div class="stat-pill">
-            <span style="color: var(--text-muted);">Total NIP Gagal:</span>
+            <span style="color: var(--text-muted);">Total Gagal:</span>
             <strong>{{ number_format($countTotal, 0, ',', '.') }}</strong>
         </div>
-        <div class="stat-pill pns">
-            <span style="color: var(--text-muted);">PNS:</span>
-            <strong>{{ number_format($countPns, 0, ',', '.') }}</strong>
+        <div class="stat-pill pensiun" title="Pegawai terkonfirmasi Pensiun di SIMGAJI">
+            <i class="ph-bold ph-calendar-x" style="color: #ef4444;"></i>
+            <span style="color: var(--text-muted);">Terindikasi Pensiun:</span>
+            <strong>{{ number_format($countPensiun, 0, ',', '.') }}</strong>
         </div>
-        <div class="stat-pill pppk">
-            <span style="color: var(--text-muted);">PPPK:</span>
-            <strong>{{ number_format($countPppk, 0, ',', '.') }}</strong>
+        @if($countMeninggal > 0)
+        <div class="stat-pill meninggal" title="Pegawai terkonfirmasi Meninggal Dunia di SIMGAJI">
+            <i class="ph-bold ph-heart-break" style="color: #475569;"></i>
+            <span style="color: var(--text-muted);">Meninggal:</span>
+            <strong>{{ number_format($countMeninggal, 0, ',', '.') }}</strong>
+        </div>
+        @endif
+        <div class="stat-pill aktif-simgaji" title="Pegawai aktif di SIMGAJI namun belum terdata di Master SIMPEG aplikasi">
+            <i class="ph-bold ph-user-plus" style="color: #2563eb;"></i>
+            <span style="color: var(--text-muted);">Aktif SIMGAJI (Belum Sync):</span>
+            <strong>{{ number_format($countAktifSimgaji, 0, ',', '.') }}</strong>
+        </div>
+        <div class="stat-pill anomali" title="NIP tidak ditemukan di SIMGAJI maupun Master SIMPEG">
+            <i class="ph-bold ph-question" style="color: #f59e0b;"></i>
+            <span style="color: var(--text-muted);">NIP Tidak Dikenal:</span>
+            <strong>{{ number_format($countTidakTerdaftar, 0, ',', '.') }}</strong>
         </div>
     </div>
 </div>
@@ -243,10 +378,20 @@
                value="{{ request('search') }}" 
                placeholder="Cari NIP atau Nama..." 
                class="filter-input" 
-               style="width: 200px;">
+               style="width: 180px;">
+
+        <!-- Filter Status Diagnosa SIMGAJI -->
+        <select name="status_simgaji" class="filter-select" style="font-weight: 600;">
+            <option value="semua">-- Semua Diagnosa SIMGAJI --</option>
+            <option value="pensiun" {{ request('status_simgaji') == 'pensiun' ? 'selected' : '' }}>🛑 Terindikasi Pensiun</option>
+            <option value="meninggal" {{ request('status_simgaji') == 'meninggal' ? 'selected' : '' }}>⚰️ Meninggal Dunia</option>
+            <option value="pindah" {{ request('status_simgaji') == 'pindah' ? 'selected' : '' }}>🔄 Pindah Instansi</option>
+            <option value="aktif_simgaji" {{ request('status_simgaji') == 'aktif_simgaji' ? 'selected' : '' }}>⚠️ Aktif SIMGAJI (Belum Sync)</option>
+            <option value="tidak_terdaftar" {{ request('status_simgaji') == 'tidak_terdaftar' ? 'selected' : '' }}>❓ NIP Tidak Dikenal</option>
+        </select>
 
         <select name="status_pegawai" class="filter-select">
-            <option value="">-- Semua Status Pegawai --</option>
+            <option value="">-- Status Pegawai --</option>
             @foreach($statusOptions as $st)
                 <option value="{{ $st }}" {{ request('status_pegawai') == $st ? 'selected' : '' }}>{{ $st }}</option>
             @endforeach
@@ -260,7 +405,7 @@
         </select>
         
         <select name="jenis_file" class="filter-select">
-            <option value="">-- Semua Jenis Laporan --</option>
+            <option value="">-- Jenis Laporan --</option>
             <option value="Gaji" {{ request('jenis_file') == 'Gaji' ? 'selected' : '' }}>Gaji (DBF/Excel)</option>
             <option value="TPP" {{ request('jenis_file') == 'TPP' ? 'selected' : '' }}>TPP (Excel)</option>
         </select>
@@ -269,7 +414,7 @@
             <i class="ph ph-funnel"></i> Filter
         </button>
 
-        @if(request('search') || request('status_pegawai') || request('periode') || request('jenis_file'))
+        @if(request('search') || request('status_simgaji') || request('status_pegawai') || request('periode') || request('jenis_file'))
             <a href="/laporan/unmatched-nip" style="background: var(--bg-surface-subtle); color: var(--text-muted); border: 1px solid var(--border-color); padding: 8px 14px; border-radius: 8px; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
                 <i class="ph ph-arrow-counter-clockwise"></i> Reset
             </a>
@@ -292,61 +437,123 @@
     <table>
         <thead>
             <tr>
-                <th style="width: 50px; text-align: center;">No</th>
-                <th>NIP</th>
-                <th>Nama di File Upload</th>
-                <th>Status Pegawai</th>
-                <th>Jenis Laporan</th>
-                <th>Periode</th>
-                <th>Waktu Gagal</th>
-                <th>Keterangan</th>
+                <th style="width: 45px; text-align: center;">No</th>
+                <th style="min-width: 170px;">NIP & Identitas</th>
+                <th style="min-width: 130px;">Kategori File</th>
+                <th style="min-width: 140px;">Status di SIMGAJI</th>
+                <th style="min-width: 250px;">Diagnosa Penyebab & Catatan SIMGAJI</th>
+                <th style="min-width: 120px;">Periode & Waktu</th>
             </tr>
         </thead>
         <tbody>
             @forelse($logs as $index => $log)
+            @php
+                $sg = $log->simgaji;
+            @endphp
             <tr>
                 <td style="text-align: center; color: var(--text-muted); font-size: 12px;">{{ $logs->firstItem() + $index }}</td>
-                <td style="font-weight: 700; color: var(--danger-text); font-family: monospace; font-size: 13px;">
-                    {{ $log->nip }}
-                </td>
-                <td style="font-weight: 600;">{{ $log->nama ?: '-' }}</td>
                 <td>
-                    @if($log->status_pegawai === 'PNS')
-                        <span class="badge-status-pns">
-                            <i class="ph ph-shield-check"></i> PNS
-                        </span>
-                    @elseif($log->status_pegawai === 'PPPK')
-                        <span class="badge-status-pppk">
-                            <i class="ph ph-identification-badge"></i> PPPK
-                        </span>
-                    @elseif($log->status_pegawai === 'PPPK PARUH WAKTU')
-                        <span class="badge-status-paruh">
-                            <i class="ph ph-clock"></i> PPPK Paruh Waktu
-                        </span>
-                    @elseif($log->status_pegawai === 'Pejabat Negara')
-                        <span class="badge-status-pejabat">
-                            <i class="ph ph-crown"></i> Pejabat Negara
-                        </span>
-                    @elseif($log->status_pegawai)
-                        <span class="badge" style="background: var(--bg-surface-subtle); color: var(--text-main); border: 1px solid var(--border-color);">
-                            {{ $log->status_pegawai }}
-                        </span>
-                    @else
-                        <span style="color: var(--text-muted);">-</span>
+                    <div style="font-weight: 700; color: var(--danger-text); font-family: monospace; font-size: 13.5px; letter-spacing: 0.02em;">
+                        {{ $log->nip }}
+                    </div>
+                    <div style="font-weight: 600; font-size: 13px; color: var(--text-main); margin-top: 2px;">
+                        {{ $log->nama ?: ($sg['nama'] ?? 'Tanpa Nama') }}
+                    </div>
+                    @if($sg && !empty($sg['skpd_nama']))
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px; display: flex; align-items: center; gap: 4px;">
+                            <i class="ph ph-buildings"></i> {{ $sg['skpd_nama'] }}
+                        </div>
                     @endif
                 </td>
                 <td>
-                    <span class="badge {{ $log->jenis_file == 'Gaji' ? 'badge-gaji' : 'badge-tpp' }}">
-                        {{ $log->jenis_file }}
-                    </span>
+                    <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+                        <span class="badge {{ $log->jenis_file == 'Gaji' ? 'badge-gaji' : 'badge-tpp' }}">
+                            {{ $log->jenis_file }}
+                        </span>
+                        @if($log->status_pegawai === 'PNS')
+                            <span class="badge-status-pns">
+                                <i class="ph ph-shield-check"></i> PNS
+                            </span>
+                        @elseif($log->status_pegawai === 'PPPK')
+                            <span class="badge-status-pppk">
+                                <i class="ph ph-identification-badge"></i> PPPK
+                            </span>
+                        @elseif($log->status_pegawai === 'PPPK PARUH WAKTU')
+                            <span class="badge-status-paruh">
+                                <i class="ph ph-clock"></i> PPPK Paruh Waktu
+                            </span>
+                        @elseif($log->status_pegawai === 'Pejabat Negara')
+                            <span class="badge-status-pejabat">
+                                <i class="ph ph-crown"></i> Pejabat Negara
+                            </span>
+                        @endif
+                    </div>
                 </td>
-                <td><strong style="color: var(--text-main);">{{ $log->periode }}</strong></td>
-                <td style="color: var(--text-muted); font-size: 12.5px;">{{ $log->created_at->format('d M Y, H:i') }}</td>
-                <td style="color: var(--text-muted); font-size: 12.5px;">{{ $log->keterangan }}</td>
+                <td>
+                    @if($sg)
+                        <div>
+                            <span class="{{ $sg['badge_class'] ?? 'badge-aktif-simgaji' }}">
+                                @if(($sg['status_key'] ?? '') === 'pensiun')
+                                    <i class="ph-bold ph-calendar-x"></i>
+                                @elseif(($sg['status_key'] ?? '') === 'meninggal')
+                                    <i class="ph-bold ph-heart-break"></i>
+                                @elseif(($sg['status_key'] ?? '') === 'pindah')
+                                    <i class="ph-bold ph-arrows-left-right"></i>
+                                @elseif(($sg['status_key'] ?? '') === 'aktif_simgaji')
+                                    <i class="ph-bold ph-check-circle"></i>
+                                @else
+                                    <i class="ph-bold ph-info"></i>
+                                @endif
+                                {{ $sg['status_label'] }}
+                            </span>
+                        </div>
+                        @if(!empty($sg['tmtstop']))
+                            <div style="font-size: 11px; color: #dc2626; font-weight: 600; margin-top: 4px;">
+                                TMT Stop: {{ date('d-m-Y', strtotime($sg['tmtstop'])) }}
+                            </div>
+                        @endif
+                        <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">
+                            Kode: {{ $sg['kdstapeg'] ?? '-' }}
+                        </div>
+                    @else
+                        <span class="badge-tidak-terdaftar">
+                            <i class="ph-bold ph-question"></i> Tidak Ditemukan di SIMGAJI
+                        </span>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">
+                            Bukan NIP aktif/arsip SIMGAJI
+                        </div>
+                    @endif
+                </td>
+                <td>
+                    @if($sg)
+                        <div style="font-weight: 600; color: var(--text-main); font-size: 12.5px;">
+                            {{ $sg['diagnosa'] }}
+                        </div>
+                        @if(!empty($sg['catatan']))
+                            <div style="font-size: 11.5px; background: var(--bg-surface-subtle); border-radius: 6px; padding: 4px 8px; margin-top: 4px; color: var(--text-muted); border: 1px dashed var(--border-color);">
+                                <i class="ph ph-note"></i> <strong>Catatan SIMGAJI:</strong> {{ $sg['catatan'] }}
+                            </div>
+                        @endif
+                    @else
+                        <div style="color: #d97706; font-weight: 600; font-size: 12.5px;">
+                            NIP tidak terdaftar di SIMGAJI maupun Master SIMPEG aplikasi.
+                        </div>
+                        <div class="diagnosa-box">
+                            Kemungkinan kesalahan penulisan NIP pada file upload atau pegawai baru yang belum diinput ke database manapun.
+                        </div>
+                    @endif
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; font-style: italic;">
+                        Pesan asli: {{ $log->keterangan }}
+                    </div>
+                </td>
+                <td style="color: var(--text-muted); font-size: 12px;">
+                    <div><strong style="color: var(--text-main);">{{ $log->periode }}</strong></div>
+                    <div style="margin-top: 4px;">{{ $log->created_at->format('d M Y, H:i') }}</div>
+                </td>
             </tr>
             @empty
             <tr>
-                <td colspan="8" style="text-align: center; padding: 48px 24px; color: var(--text-muted);">
+                <td colspan="6" style="text-align: center; padding: 48px 24px; color: var(--text-muted);">
                     <i class="ph ph-check-circle" style="font-size: 48px; color: var(--success-text); margin-bottom: 12px; display: block;"></i>
                     <strong style="font-size: 15px; color: var(--text-main); display: block; margin-bottom: 4px;">Tidak Ada NIP Gagal</strong>
                     Seluruh NIP pada filter ini telah cocok dan terdaftar di Master Data Pegawai.
@@ -358,19 +565,13 @@
     
     @if($logs->hasPages())
     <div class="pagination-wrapper">
-        <div style="color: var(--text-muted); font-size: 13.5px;">
-            Menampilkan {{ $logs->firstItem() ?? 0 }} - {{ $logs->lastItem() ?? 0 }} dari {{ $logs->total() }} data
+        <div style="color: var(--text-muted); font-size: 13px;">
+            Menampilkan {{ $logs->firstItem() }} - {{ $logs->lastItem() }} dari {{ $logs->total() }} data
         </div>
-        <div style="display: flex; gap: 8px;">
-            @if(!$logs->onFirstPage())
-                <a href="{{ $logs->appends(request()->query())->previousPageUrl() }}" style="padding: 6px 12px; border: 1px solid var(--border-color); background: var(--bg-surface); border-radius: 6px; text-decoration: none; color: var(--text-main); font-size: 13px; font-weight: 500;">&laquo; Prev</a>
-            @endif
-            @if($logs->hasMorePages())
-                <a href="{{ $logs->appends(request()->query())->nextPageUrl() }}" style="padding: 6px 12px; border: 1px solid var(--border-color); background: var(--bg-surface); border-radius: 6px; text-decoration: none; color: var(--text-main); font-size: 13px; font-weight: 500;">Next &raquo;</a>
-            @endif
+        <div>
+            {{ $logs->links() }}
         </div>
     </div>
     @endif
 </div>
-
 @endsection

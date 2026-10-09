@@ -161,5 +161,14 @@
         <p>Kalkulator simulasi interaktif & rekapitulasi proyeksi iuran Tapera (PP No. 21 Tahun 2024): 2,5% potongan ASN dan 0,5% beban Pemda/APBD per SKPD & nominatif.</p>
         <a href="/laporan/tapera" class="btn-report" style="background: #0e7490;">Buka Laporan</a>
     </div>
+
+    <div class="report-card">
+        <div class="report-icon" style="background: rgba(220, 38, 38, 0.12); color: #dc2626;">
+            <i class="ph ph-chart-donut"></i>
+        </div>
+        <h3>Monitoring Status Pegawai & Pensiun</h3>
+        <p>Pengawasan komprehensif data pegawai pensiun (BUP/APS), meninggal, pindah, keluar, proyeksi pensiun mendatang, serta audit anomali penggajian pasca TMT Stop.</p>
+        <a href="/laporan/monitoring-status-pegawai" class="btn-report" style="background: #dc2626;">Buka Laporan</a>
+    </div>
 </div>
 @endsection
