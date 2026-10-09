@@ -1680,10 +1680,10 @@
                     <div class="timeline-item">
                         <div class="timeline-badge">v2.6.0</div>
                         <div class="timeline-content">
-                            <h4 style="margin: 0 0 6px 0; font-size: 13.5px; font-weight: 700; color: var(--text-main);">Sistem Autentikasi &amp; Containerisasi Docker VPS</h4>
+                            <h4 style="margin: 0 0 6px 0; font-size: 13.5px; font-weight: 700; color: var(--text-main);">Sistem Autentikasi &amp; Deployment Server VPS</h4>
                             <ul style="margin: 0; padding-left: 18px; font-size: 12px; color: var(--text-muted); line-height: 1.6;">
                                 <li>Autentikasi sesi multi-user berbasis peran (Role-based access).</li>
-                                <li>Konfigurasi Docker VPS (PHP 8.4-FPM, Nginx, MySQL 8).</li>
+                                <li>Konfigurasi Deployment Server VPS (PHP 8.4, Nginx, MySQL 8).</li>
                             </ul>
                         </div>
                     </div>

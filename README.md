@@ -376,7 +376,7 @@ Ringkasan versi:
 - **v2.9.0 (03 Oktober 2026)**: Modul Audit Tunjangan Keluarga SIMGAJI (`/laporan/audit-tunjangan-keluarga`), uji silang dobel tunjangan anak (2%+2%), pasangan saling menunjang (10%+10%), kelebihan kuota anak (>2 anak), fitur tindak lanjut pencatatan bukti STS Kasda, dan paginasi modern.
 - **v2.8.0 (02 Oktober 2026)**: Integrasi DBF Riwayat Keluarga (`KEL`), atribut finansial master pegawai (NIK, No. Rekening, Bank Penyalur), modul Trace Penggajian Personal (`/laporan/trace-gaji`), penambahan status pegawai pada Unmatched NIP, dan optimasi sinkronisasi database.
 - **v2.7.0 (29 September 2026)**: Modul Rekonsiliasi IWP & BPJS Kesehatan (`/laporan/iwp-jamkes`), sistem 2 Tab Master SKPD Induk vs UPTD, dan cetak PDF resmi.
-- **v2.6.0 (29 September 2026)**: Sistem Autentikasi Pengguna (`/login`, `/setting/users`) dan Containerisasi Docker VPS (PHP 8.4-FPM, Nginx, MySQL 8).
+- **v2.6.0 (29 September 2026)**: Sistem Autentikasi Pengguna (`/login`, `/setting/users`) dan Konfigurasi Deployment Server VPS (PHP 8.4, Nginx, MySQL 8).
 - **v2.5.0 (09 September 2026)**: Modul Penyelarasan SKPD & UPTD SIMGAJI vs SIMPEG (`/laporan/penyelarasan-unit-kerja`).
 - **v2.4.0 (04 September 2026)**: Integrasi database `HIS_GPOK`, pendeteksi status SK Terjadwal vs Belum Diinput, sub-filter status SK, dan antarmuka manajemen DBF ganda (`/master/simgaji-dbf`) dengan fitur auto-detect.
 - **v2.3.0 (03-04 September 2026)**: Ekuivalensi cerdas angka Romawi PPPK (`IX` == `9`), filter status pensiun (Aktif vs Pensiun BUP/Janda/Duda), dan perbaikan ekspor Excel/PDF.

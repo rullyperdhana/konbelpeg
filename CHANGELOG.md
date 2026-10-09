@@ -222,7 +222,7 @@ Dokumen ini mencatat seluruh riwayat pembaruan, evolusi fitur, perbaikan bug, da
 ---
 
 ## 📌 [v2.6.0] - 2026-09-29
-### 🔐 Sistem Autentikasi Pengguna & Containerisasi Docker untuk VPS
+### 🔐 Sistem Autentikasi Pengguna & Infrastruktur Deployment VPS
 - **Sistem Autentikasi & Keamanan (Login / Logout)**:
   - Implementasi `AuthController` dengan validasi ketat dan proteksi *Rate Limiting* (anti brute-force).
   - Halaman login modern (`/login`) dengan palet LUNO Admin, dukungan Dark/Light mode, Phosphor icons, toggle lihat kata sandi, dan tombol *Isi Otomatis* untuk kemudahan development.
@@ -230,12 +230,10 @@ Dokumen ini mencatat seluruh riwayat pembaruan, evolusi fitur, perbaikan bug, da
   - Profil pengguna dinamis pada topbar layout dengan menu dropdown dan tombol *Logout* terproteksi CSRF.
   - Seeder akun default (`UserSeeder`): `admin@pemda.go.id` / `password`.
   - Pengujian otomatis (*Feature Tests*): `tests/Feature/AuthTest.php` (8 pengujian lolos, 22 assertions).
-- **Infrastruktur Docker & Deployment VPS**:
-  - `Dockerfile` multi-stage berbasis PHP 8.4-FPM Bookworm lengkap dengan ekstensi `gd`, `zip`, `pdo_mysql`, `mbstring`, `opcache`, dan `pcntl`.
-  - `docker-compose.yml` terintegrasi dengan 3 layanan: PHP-FPM (`app`), Web Server Nginx (`webserver`), dan MySQL 8.0 (`db`) dengan volume persisten.
-  - Konfigurasi Nginx (`docker/nginx/default.conf`) dan PHP (`docker/php/local.ini`) dioptimalkan untuk berkas besar: batas upload 100MB (aman untuk DBF SIMGAJI besar seperti `HIS_GPOK.DBF` 42MB) dan timeout 300 detik.
-  - Skrip inisialisasi otomatis (`docker/entrypoint.sh`): cek koneksi database, symbolic link storage, auto-migrate, auto-seed admin, dan optimasi cache production.
-  - Template konfigurasi `.env.docker.example` dan panduan lengkap `DOCKER_DEPLOYMENT_GUIDE.md`.
+- **Infrastruktur & Optimalisasi Server VPS**:
+  - Konfigurasi environment produksi (PHP 8.4, Nginx, MySQL 8).
+  - Konfigurasi upload berkas besar: batas upload 100MB (aman untuk DBF SIMGAJI besar seperti `HIS_GPOK.DBF` 42MB) dan timeout proses 300 detik.
+  - Inisialisasi otomatis: symbolic link storage, migrasi database, dan seed data admin awal.
 
 ---
 
