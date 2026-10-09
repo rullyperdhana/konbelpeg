@@ -131,198 +131,479 @@
     </div>
 </div>
 
-<!-- Modal Tambah -->
+<style>
+    /* Styling Modal Modern Pegawai (Edit & Tambah) */
+    .pegawai-modal-dialog {
+        max-width: 900px !important;
+        width: 95% !important;
+        max-height: 90vh !important;
+        display: flex !important;
+        flex-direction: column !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        border-radius: 16px !important;
+        box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35) !important;
+        border: 1px solid var(--border-color) !important;
+        background: var(--bg-surface) !important;
+    }
+
+    .pegawai-modal-header {
+        padding: 18px 24px;
+        background: var(--bg-surface);
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .pegawai-modal-header .header-info {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .pegawai-modal-header .header-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        flex-shrink: 0;
+    }
+
+    .pegawai-modal-header .header-icon.edit-icon {
+        background: rgba(37, 99, 235, 0.1);
+        color: #2563eb;
+    }
+
+    .pegawai-modal-header .header-icon.add-icon {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+
+    .pegawai-modal-header h3 {
+        margin: 0;
+        font-size: 16.5px;
+        font-weight: 700;
+        color: var(--text-main);
+    }
+
+    .pegawai-modal-header p {
+        margin: 2px 0 0;
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+
+    .pegawai-modal-body {
+        padding: 22px 24px;
+        overflow-y: auto;
+        max-height: calc(90vh - 145px);
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    .pegawai-card-section {
+        background: var(--bg-surface);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 16px 20px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+
+    .pegawai-card-title {
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--text-main);
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 8px;
+        border-bottom: 1px dashed var(--border-color);
+    }
+
+    .pegawai-card-title span.badge-sec {
+        font-size: 10.5px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 6px;
+        background: var(--bg-surface-secondary, #f1f5f9);
+        color: var(--text-muted);
+    }
+
+    .pegawai-grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px 18px;
+    }
+
+    .pegawai-grid-4 {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px 16px;
+    }
+
+    .pegawai-form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .pegawai-form-group.span-full {
+        grid-column: 1 / -1;
+    }
+
+    .pegawai-form-label {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .pegawai-form-label .req {
+        color: #ef4444;
+        font-weight: bold;
+    }
+
+    .pegawai-input {
+        width: 100%;
+        padding: 9px 13px;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 13px;
+        background: var(--bg-surface);
+        color: var(--text-main);
+        box-sizing: border-box;
+        transition: all 0.2s ease;
+    }
+
+    .pegawai-input:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        outline: none;
+    }
+
+    .pegawai-modal-footer {
+        padding: 16px 24px;
+        background: var(--bg-surface-secondary, #f8fafc);
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 12px;
+        flex-shrink: 0;
+    }
+
+    @media (max-width: 768px) {
+        .pegawai-grid-2,
+        .pegawai-grid-4 {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+        }
+        .pegawai-modal-body {
+            padding: 16px !important;
+        }
+    }
+</style>
+
+<!-- Modal Tambah Pegawai -->
 <div class="modal-overlay" id="addModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Tambah Pegawai</h3>
-            <button class="btn-close" onclick="closeModal('addModal')">&times;</button>
-        </div>
-        <form action="/pegawai" method="POST">
-            @csrf
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>NIP *</label>
-                    <input type="text" name="nip" required placeholder="NIP 18 Digit">
+    <div class="modal-content pegawai-modal-dialog">
+        <div class="pegawai-modal-header">
+            <div class="header-info">
+                <div class="header-icon add-icon">
+                    <i class="ph-bold ph-user-plus"></i>
                 </div>
-                <div class="form-group">
-                    <label>Nama Lengkap *</label>
-                    <input type="text" name="nama" required>
-                </div>
-                <div class="form-group">
-                    <label>Tempat Lahir</label>
-                    <input type="text" name="tempat_lahir">
-                </div>
-                <div class="form-group">
-                    <label>Tanggal Lahir</label>
-                    <input type="date" name="tgl_lahir">
-                </div>
-                <div class="form-group">
-                    <label>Jenis Kelamin</label>
-                    <select name="jk">
-                        <option value="">- Pilih -</option>
-                        <option value="LAKI-LAKI">LAKI-LAKI</option>
-                        <option value="PEREMPUAN">PEREMPUAN</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Agama</label>
-                    <input type="text" name="agama">
-                </div>
-                <div class="form-group">
-                    <label>Status Pegawai</label>
-                    <select name="status_pegawai">
-                        <option value="">- Pilih -</option>
-                        <option value="PNS">PNS</option>
-                        <option value="PPPK">PPPK</option>
-                        <option value="CPNS">CPNS</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Golongan Ruang</label>
-                    <input type="text" name="golru" placeholder="Misal: IV/e">
-                </div>
-                
-                <div class="form-group">
-                    <label>NIK (No. KTP)</label>
-                    <input type="text" name="nik" placeholder="16 digit NIK">
-                </div>
-                <div class="form-group">
-                    <label>No. Rekening</label>
-                    <input type="text" name="no_rekening" placeholder="Nomor Rekening">
-                </div>
-                <div class="form-group">
-                    <label>Bank Penyalur</label>
-                    <input type="text" name="nama_bank" placeholder="Misal: Bank Kalsel">
-                </div>
-                <div class="form-group">
-                    <label>NPWP</label>
-                    <input type="text" name="npwp" placeholder="Nomor NPWP">
-                </div>
-                
-                <div class="form-group full">
-                    <label>Unit Kerja (SKPD)</label>
-                    <select name="unit_kerja_id">
-                        <option value="">- Pilih Unit Kerja -</option>
-                        @foreach($unitKerjas as $uk)
-                            <option value="{{ $uk->id }}">{{ $uk->skpd }} {{ $uk->upt ? ' - '.$uk->upt : '' }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                
-                <div class="form-group full">
-                    <label>Jabatan</label>
-                    <select name="jabatan_id">
-                        <option value="">- Pilih Jabatan -</option>
-                        @foreach($jabatans as $jab)
-                            <option value="{{ $jab->id }}">{{ $jab->nama }} ({{ $jab->jenis }})</option>
-                        @endforeach
-                    </select>
+                <div>
+                    <h3>Tambah Pegawai Baru</h3>
+                    <p>Daftarkan pegawai ke basis data master kepegawaian SIMPEG BKD.</p>
                 </div>
             </div>
-            
-            <div style="text-align: right; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
-                <button type="button" class="btn-edit" onclick="closeModal('addModal')" style="margin-right: 8px;">Batal</button>
-                <button type="submit" class="btn-primary">Simpan Data</button>
+            <button type="button" class="btn-close" onclick="closeModal('addModal')">&times;</button>
+        </div>
+
+        <form action="/pegawai" method="POST" style="display: flex; flex-direction: column; overflow: hidden; margin: 0;">
+            @csrf
+            <div class="pegawai-modal-body">
+                <!-- Seksi 1: Data Pokok Kepegawaian -->
+                <div class="pegawai-card-section">
+                    <div class="pegawai-card-title">
+                        <span><i class="ph ph-identification-badge" style="color: #2563eb; margin-right: 4px;"></i> Identitas Pokok & Status Kepegawaian</span>
+                        <span class="badge-sec">BKD SIMPEG</span>
+                    </div>
+                    <div class="pegawai-grid-2">
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">NIP <span class="req">*</span></label>
+                            <input type="text" name="nip" required placeholder="18 Digit NIP Pegawai" class="pegawai-input" style="font-family: monospace; font-weight: 600;">
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Nama Lengkap & Gelar <span class="req">*</span></label>
+                            <input type="text" name="nama" required placeholder="Nama lengkap beserta gelar resmi" class="pegawai-input" style="font-weight: 600;">
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Status Pegawai</label>
+                            <select name="status_pegawai" class="pegawai-input">
+                                <option value="">- Pilih Status Kepegawaian -</option>
+                                <option value="PNS">PNS (Pegawai Negeri Sipil)</option>
+                                <option value="PPPK">PPPK (Pegawai Pemerintah dg Perjanjian Kerja)</option>
+                                <option value="CPNS">CPNS (Calon Pegawai Negeri Sipil)</option>
+                            </select>
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Golongan Ruang (Golru)</label>
+                            <input type="text" name="golru" placeholder="Misal: IV/b, III/a, atau IX" class="pegawai-input" style="font-weight: 600;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seksi 2: Kelahiran & Biodata -->
+                <div class="pegawai-card-section">
+                    <div class="pegawai-card-title">
+                        <span><i class="ph ph-calendar-blank" style="color: #059669; margin-right: 4px;"></i> Biodata & Kelahiran</span>
+                        <span class="badge-sec">Demografi</span>
+                    </div>
+                    <div class="pegawai-grid-4">
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Tempat Lahir</label>
+                            <input type="text" name="tempat_lahir" placeholder="Kab/Kota Kelahiran" class="pegawai-input">
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Tanggal Lahir</label>
+                            <input type="date" name="tgl_lahir" class="pegawai-input">
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Jenis Kelamin</label>
+                            <select name="jk" class="pegawai-input">
+                                <option value="">- Pilih -</option>
+                                <option value="LAKI-LAKI">LAKI-LAKI</option>
+                                <option value="PEREMPUAN">PEREMPUAN</option>
+                            </select>
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Agama</label>
+                            <input type="text" name="agama" placeholder="Agama" class="pegawai-input">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seksi 3: Identitas Kependudukan & Perbankan (SIMGAJI) -->
+                <div class="pegawai-card-section">
+                    <div class="pegawai-card-title">
+                        <span><i class="ph ph-bank" style="color: #d97706; margin-right: 4px;"></i> Kependudukan & Rekening Penggajian</span>
+                        <span class="badge-sec">SIMGAJI Taspen</span>
+                    </div>
+                    <div class="pegawai-grid-2">
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">NIK (No. KTP)</label>
+                            <input type="text" name="nik" placeholder="16 digit NIK Kependudukan" class="pegawai-input" style="font-family: monospace;">
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">NPWP</label>
+                            <input type="text" name="npwp" placeholder="Nomor Pokok Wajib Pajak" class="pegawai-input" style="font-family: monospace;">
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Nomor Rekening</label>
+                            <input type="text" name="no_rekening" placeholder="Nomor Rekening Penggajian" class="pegawai-input" style="font-family: monospace; color: #0284c7; font-weight: 600;">
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Bank Penyalur</label>
+                            <input type="text" name="nama_bank" placeholder="Misal: Bank Kalsel" class="pegawai-input">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seksi 4: Penempatan SKPD & Jabatan -->
+                <div class="pegawai-card-section">
+                    <div class="pegawai-card-title">
+                        <span><i class="ph ph-buildings" style="color: #7c3aed; margin-right: 4px;"></i> Penempatan SKPD & Jabatan Definitif</span>
+                        <span class="badge-sec">Unit Kerja</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 14px;">
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Unit Kerja (SKPD / UPTD)</label>
+                            <select name="unit_kerja_id" class="pegawai-input">
+                                <option value="">- Pilih Unit Kerja (SKPD) -</option>
+                                @foreach($unitKerjas as $uk)
+                                    <option value="{{ $uk->id }}">{{ $uk->skpd }}{{ $uk->upt ? ' - '.$uk->upt : '' }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Jabatan Pegawai</label>
+                            <select name="jabatan_id" class="pegawai-input">
+                                <option value="">- Pilih Formasi Jabatan -</option>
+                                @foreach($jabatans as $jab)
+                                    <option value="{{ $jab->id }}">{{ $jab->nama }} ({{ $jab->jenis }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pegawai-modal-footer">
+                <button type="button" class="btn" onclick="closeModal('addModal')" style="padding: 9px 18px; border: 1px solid var(--border-color); background: var(--bg-surface); border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--text-main); cursor: pointer;">
+                    Batal
+                </button>
+                <button type="submit" class="btn btn-primary" style="padding: 9px 22px; border-radius: 8px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="ph-bold ph-plus-circle"></i> Simpan Data Pegawai
+                </button>
             </div>
         </form>
     </div>
 </div>
 
-<!-- Modal Edit -->
+<!-- Modal Edit Pegawai -->
 <div class="modal-overlay" id="editModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Edit Pegawai</h3>
-            <button class="btn-close" onclick="closeModal('editModal')">&times;</button>
-        </div>
-        <form id="editForm" method="POST">
-            @csrf
-            @method('PUT')
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>NIP *</label>
-                    <input type="text" name="nip" id="edit_nip" required>
+    <div class="modal-content pegawai-modal-dialog">
+        <div class="pegawai-modal-header">
+            <div class="header-info">
+                <div class="header-icon edit-icon">
+                    <i class="ph-bold ph-user-gear"></i>
                 </div>
-                <div class="form-group">
-                    <label>Nama Lengkap *</label>
-                    <input type="text" name="nama" id="edit_nama" required>
-                </div>
-                <div class="form-group">
-                    <label>Tempat Lahir</label>
-                    <input type="text" name="tempat_lahir" id="edit_tempat_lahir">
-                </div>
-                <div class="form-group">
-                    <label>Tanggal Lahir</label>
-                    <input type="date" name="tgl_lahir" id="edit_tgl_lahir">
-                </div>
-                <div class="form-group">
-                    <label>Jenis Kelamin</label>
-                    <select name="jk" id="edit_jk">
-                        <option value="">- Pilih -</option>
-                        <option value="LAKI-LAKI">LAKI-LAKI</option>
-                        <option value="PEREMPUAN">PEREMPUAN</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Agama</label>
-                    <input type="text" name="agama" id="edit_agama">
-                </div>
-                <div class="form-group">
-                    <label>Status Pegawai</label>
-                    <select name="status_pegawai" id="edit_status_pegawai">
-                        <option value="">- Pilih -</option>
-                        <option value="PNS">PNS</option>
-                        <option value="PPPK">PPPK</option>
-                        <option value="CPNS">CPNS</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Golongan Ruang</label>
-                    <input type="text" name="golru" id="edit_golru">
-                </div>
-                
-                <div class="form-group">
-                    <label>NIK (No. KTP)</label>
-                    <input type="text" name="nik" id="edit_nik" placeholder="16 digit NIK">
-                </div>
-                <div class="form-group">
-                    <label>No. Rekening</label>
-                    <input type="text" name="no_rekening" id="edit_no_rekening" placeholder="Nomor Rekening">
-                </div>
-                <div class="form-group">
-                    <label>Bank Penyalur</label>
-                    <input type="text" name="nama_bank" id="edit_nama_bank" placeholder="Misal: Bank Kalsel">
-                </div>
-                <div class="form-group">
-                    <label>NPWP</label>
-                    <input type="text" name="npwp" id="edit_npwp" placeholder="Nomor NPWP">
-                </div>
-                
-                <div class="form-group full">
-                    <label>Unit Kerja (SKPD)</label>
-                    <select name="unit_kerja_id" id="edit_unit_kerja_id">
-                        <option value="">- Pilih Unit Kerja -</option>
-                        @foreach($unitKerjas as $uk)
-                            <option value="{{ $uk->id }}">{{ $uk->skpd }} {{ $uk->upt ? ' - '.$uk->upt : '' }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                
-                <div class="form-group full">
-                    <label>Jabatan</label>
-                    <select name="jabatan_id" id="edit_jabatan_id">
-                        <option value="">- Pilih Jabatan -</option>
-                        @foreach($jabatans as $jab)
-                            <option value="{{ $jab->id }}">{{ $jab->nama }} ({{ $jab->jenis }})</option>
-                        @endforeach
-                    </select>
+                <div>
+                    <h3>Edit Data Pegawai</h3>
+                    <p>Perbarui identitas kepegawaian, biodata, perbankan, dan jabatan pegawai.</p>
                 </div>
             </div>
-            
-            <div style="text-align: right; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
-                <button type="button" class="btn-edit" onclick="closeModal('editModal')" style="margin-right: 8px;">Batal</button>
-                <button type="submit" class="btn-primary">Update Data</button>
+            <button type="button" class="btn-close" onclick="closeModal('editModal')">&times;</button>
+        </div>
+
+        <form id="editForm" method="POST" style="display: flex; flex-direction: column; overflow: hidden; margin: 0;">
+            @csrf
+            @method('PUT')
+            <div class="pegawai-modal-body">
+                <!-- Seksi 1: Data Pokok Kepegawaian -->
+                <div class="pegawai-card-section">
+                    <div class="pegawai-card-title">
+                        <span><i class="ph ph-identification-badge" style="color: #2563eb; margin-right: 4px;"></i> Identitas Pokok & Status Kepegawaian</span>
+                        <span class="badge-sec">BKD SIMPEG</span>
+                    </div>
+                    <div class="pegawai-grid-2">
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">NIP <span class="req">*</span></label>
+                            <input type="text" name="nip" id="edit_nip" required class="pegawai-input" style="font-family: monospace; font-weight: 600;" placeholder="NIP 18 Digit">
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Nama Lengkap & Gelar <span class="req">*</span></label>
+                            <input type="text" name="nama" id="edit_nama" required class="pegawai-input" style="font-weight: 600;" placeholder="Nama Lengkap">
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Status Pegawai</label>
+                            <select name="status_pegawai" id="edit_status_pegawai" class="pegawai-input">
+                                <option value="">- Pilih Status Kepegawaian -</option>
+                                <option value="PNS">PNS (Pegawai Negeri Sipil)</option>
+                                <option value="PPPK">PPPK (Pegawai Pemerintah dg Perjanjian Kerja)</option>
+                                <option value="CPNS">CPNS (Calon Pegawai Negeri Sipil)</option>
+                            </select>
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Golongan Ruang (Golru)</label>
+                            <input type="text" name="golru" id="edit_golru" class="pegawai-input" style="font-weight: 600;" placeholder="Misal: IV/b, III/a, atau IX">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seksi 2: Kelahiran & Biodata -->
+                <div class="pegawai-card-section">
+                    <div class="pegawai-card-title">
+                        <span><i class="ph ph-calendar-blank" style="color: #059669; margin-right: 4px;"></i> Biodata & Kelahiran</span>
+                        <span class="badge-sec">Demografi</span>
+                    </div>
+                    <div class="pegawai-grid-4">
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Tempat Lahir</label>
+                            <input type="text" name="tempat_lahir" id="edit_tempat_lahir" class="pegawai-input" placeholder="Kota Lahir">
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Tanggal Lahir</label>
+                            <input type="date" name="tgl_lahir" id="edit_tgl_lahir" class="pegawai-input">
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Jenis Kelamin</label>
+                            <select name="jk" id="edit_jk" class="pegawai-input">
+                                <option value="">- Pilih -</option>
+                                <option value="LAKI-LAKI">LAKI-LAKI</option>
+                                <option value="PEREMPUAN">PEREMPUAN</option>
+                            </select>
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Agama</label>
+                            <input type="text" name="agama" id="edit_agama" class="pegawai-input" placeholder="Agama">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seksi 3: Identitas Kependudukan & Perbankan (SIMGAJI) -->
+                <div class="pegawai-card-section">
+                    <div class="pegawai-card-title">
+                        <span><i class="ph ph-bank" style="color: #d97706; margin-right: 4px;"></i> Kependudukan & Rekening Penggajian</span>
+                        <span class="badge-sec">SIMGAJI Taspen</span>
+                    </div>
+                    <div class="pegawai-grid-2">
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">NIK (No. KTP)</label>
+                            <input type="text" name="nik" id="edit_nik" class="pegawai-input" style="font-family: monospace;" placeholder="16 digit NIK">
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">NPWP</label>
+                            <input type="text" name="npwp" id="edit_npwp" class="pegawai-input" style="font-family: monospace;" placeholder="Nomor NPWP">
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Nomor Rekening</label>
+                            <input type="text" name="no_rekening" id="edit_no_rekening" class="pegawai-input" style="font-family: monospace; color: #0284c7; font-weight: 600;" placeholder="Nomor Rekening">
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Bank Penyalur</label>
+                            <input type="text" name="nama_bank" id="edit_nama_bank" class="pegawai-input" placeholder="Misal: Bank Kalsel">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seksi 4: Penempatan SKPD & Jabatan -->
+                <div class="pegawai-card-section">
+                    <div class="pegawai-card-title">
+                        <span><i class="ph ph-buildings" style="color: #7c3aed; margin-right: 4px;"></i> Penempatan SKPD & Jabatan Definitif</span>
+                        <span class="badge-sec">Unit Kerja</span>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 14px;">
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Unit Kerja (SKPD / UPTD)</label>
+                            <select name="unit_kerja_id" id="edit_unit_kerja_id" class="pegawai-input">
+                                <option value="">- Pilih Unit Kerja -</option>
+                                @foreach($unitKerjas as $uk)
+                                    <option value="{{ $uk->id }}">{{ $uk->skpd }}{{ $uk->upt ? ' - '.$uk->upt : '' }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="pegawai-form-group">
+                            <label class="pegawai-form-label">Jabatan Pegawai</label>
+                            <select name="jabatan_id" id="edit_jabatan_id" class="pegawai-input">
+                                <option value="">- Pilih Jabatan -</option>
+                                @foreach($jabatans as $jab)
+                                    <option value="{{ $jab->id }}">{{ $jab->nama }} ({{ $jab->jenis }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pegawai-modal-footer">
+                <button type="button" class="btn" onclick="closeModal('editModal')" style="padding: 9px 18px; border: 1px solid var(--border-color); background: var(--bg-surface); border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--text-main); cursor: pointer;">
+                    Batal
+                </button>
+                <button type="submit" class="btn btn-primary" style="padding: 9px 22px; border-radius: 8px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="ph-bold ph-floppy-disk"></i> Simpan Perubahan
+                </button>
             </div>
         </form>
     </div>

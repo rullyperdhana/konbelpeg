@@ -1233,6 +1233,9 @@
             align-items: center;
             justify-content: center;
             z-index: 100;
+            overflow-y: auto;
+            padding: 24px 16px;
+            box-sizing: border-box;
         }
 
         .modal-overlay.active {
