@@ -89,11 +89,12 @@ class SyncPegawaiSimpeg extends Command
                     $row = [];
                     foreach ($rawRow as $k => $v) {
                         $cleanKey = strtoupper(trim((string) $k));
+                        $cleanKey = trim($cleanKey, "\xEF\xBB\xBF\'\" \t\n\r\0\x0B");
                         $cleanKey = str_replace([' ', '-', '.'], '_', $cleanKey);
                         if ($v instanceof \DateTimeInterface) {
                             $row[$cleanKey] = $v;
                         } elseif (is_string($v)) {
-                            $row[$cleanKey] = trim($v);
+                            $row[$cleanKey] = trim($v, "'\" \t\n\r\0\x0B");
                         } else {
                             $row[$cleanKey] = $v;
                         }
@@ -140,7 +141,7 @@ class SyncPegawaiSimpeg extends Command
                     // Tanggal Lahir
                     $tglLahir = null;
                     $rawTglLahir = $row['TGL_LAHIR'] ?? null;
-                    if (! empty($rawTglLahir)) {
+                    if (! empty($rawTglLahir) && $rawTglLahir !== '-') {
                         if ($rawTglLahir instanceof \DateTimeInterface) {
                             $tglLahir = $rawTglLahir->format('Y-m-d');
                         } elseif (is_numeric($rawTglLahir) && (int) $rawTglLahir > 1000) {
@@ -178,6 +179,42 @@ class SyncPegawaiSimpeg extends Command
                         }
                     }
 
+                    // TMT Jabatan
+                    $tmtJabatan = null;
+                    $rawTmtJabatan = $row['TMT_JABATAN'] ?? null;
+                    if (! empty($rawTmtJabatan) && $rawTmtJabatan !== '-') {
+                        if ($rawTmtJabatan instanceof \DateTimeInterface) {
+                            $tmtJabatan = $rawTmtJabatan->format('d-m-Y');
+                        } elseif (is_numeric($rawTmtJabatan) && (int) $rawTmtJabatan > 1000) {
+                            try {
+                                $tmtJabatan = Carbon::instance(Date::excelToDateTimeObject($rawTmtJabatan))->format('d-m-Y');
+                            } catch (\Throwable $e) {
+                                $tmtJabatan = (string) $rawTmtJabatan;
+                            }
+                        } else {
+                            $tmtJabatan = trim((string) $rawTmtJabatan);
+                        }
+                    }
+
+                    // Inferensi Cerdas Jenis Pegawai
+                    $jenisPegawai = null;
+                    if (! empty($row['JENIS'])) {
+                        $jenisPegawai = trim((string) $row['JENIS']);
+                    } else {
+                        $jabUpper = strtoupper($namaJabatan ?? '');
+                        $skpdUpper = strtoupper($skpd ?? '');
+                        $uptUpper = strtoupper($upt ?? '');
+                        if (str_contains($jabUpper, 'GURU') || str_contains($jabUpper, 'PENGAWAS SEKOLAH')) {
+                            $jenisPegawai = 'GURU';
+                        } elseif (str_contains($skpdUpper, 'PENDIDIKAN') && (str_contains($uptUpper, 'SMA') || str_contains($uptUpper, 'SMK') || str_contains($uptUpper, 'SLB') || str_contains($uptUpper, 'SEKOLAH'))) {
+                            $jenisPegawai = 'TENDIK';
+                        } elseif (str_contains($skpdUpper, 'KESEHATAN') || str_contains($skpdUpper, 'RUMAH SAKIT') || str_contains($skpdUpper, 'RSUD') || str_contains($jabUpper, 'DOKTER') || str_contains($jabUpper, 'PERAWAT') || str_contains($jabUpper, 'BIDAN') || str_contains($jabUpper, 'APOTEKER')) {
+                            $jenisPegawai = 'KESEHATAN';
+                        } else {
+                            $jenisPegawai = 'TEKNIS';
+                        }
+                    }
+
                     $pegawaiData = [
                         'nama' => ! empty($row['NAMA']) ? trim((string) $row['NAMA']) : null,
                         'tempat_lahir' => ! empty($row['TEMPAT_LAHIR']) ? trim((string) $row['TEMPAT_LAHIR']) : null,
@@ -187,6 +224,7 @@ class SyncPegawaiSimpeg extends Command
                         'status_pegawai' => ! empty($row['STATUS']) ? trim((string) $row['STATUS']) : null,
                         'golru' => ! empty($row['GOLRU']) ? trim((string) $row['GOLRU']) : null,
                         'tmt_golru' => $tmtGolru,
+                        'tmt_jabatan' => $tmtJabatan,
                         'masa_kerja_tahun' => isset($row['MK_THN']) && is_numeric($row['MK_THN']) ? (int) $row['MK_THN'] : null,
                         'masa_kerja_bulan' => isset($row['MK_BLN']) && is_numeric($row['MK_BLN']) ? (int) $row['MK_BLN'] : null,
                         'tk_ijazah' => ! empty($row['TK_IJAZAH']) ? trim((string) $row['TK_IJAZAH']) : null,
@@ -195,6 +233,10 @@ class SyncPegawaiSimpeg extends Command
                         'jabatan_id' => $jabatanId,
                         'unit_kerja_id' => $unitKerjaId,
                     ];
+
+                    if (! empty($row['JENIS'])) {
+                        $pegawaiData['jenis_pegawai'] = $jenisPegawai;
+                    }
 
                     if (isset($pegawaiMap[$nip])) {
                         if ($mode === 'insert_only') {
@@ -208,6 +250,7 @@ class SyncPegawaiSimpeg extends Command
                         }
                     } else {
                         $pegawaiData['nip'] = $nip;
+                        $pegawaiData['jenis_pegawai'] = $jenisPegawai;
                         $newId = DB::table('pegawais')->insertGetId($pegawaiData);
                         $pegawaiMap[$nip] = $newId;
                         $insertedCount++;
@@ -278,6 +321,11 @@ class SyncPegawaiSimpeg extends Command
                     return $p;
                 }
             }
+        }
+
+        // Prioritaskan file terbaru di root jika ada
+        if (file_exists(base_path('data_simpeg_11.csv'))) {
+            return base_path('data_simpeg_11.csv');
         }
 
         // Fallback ke file bawaan di root

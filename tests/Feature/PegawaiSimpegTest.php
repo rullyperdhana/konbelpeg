@@ -188,4 +188,48 @@ class PegawaiSimpegTest extends TestCase
             @unlink($tempPath);
         }
     }
+
+    public function test_user_can_upload_and_sync_csv_with_single_quotes_and_modern_format(): void
+    {
+        $user = User::factory()->create();
+
+        // Buat file CSV dengan BOM, tanda kutip tunggal, dan kolom persis data_simpeg_11.csv
+        $csvContent = "\xEF\xBB\xBFNIP,NAMA,TEMPAT_LAHIR,TGL_LAHIR,JK,STATUS,GOLRU,TMT_GOLRU,JABATAN,ESELON,JENIS_JABATAN,TMT_JABATAN,SKPD,UPT,SATKER,MK_THN,MK_BLN,TK_IJAZAH,NM_PENDIDIKAN,TH_LULUS\n"
+            ."199112012025212103,\"ERIKA DESYANA HEFNY, SKM\",BANJARMASIN,'01-12-1991,PEREMPUAN,PPPK PARUH WAKTU,-,'-,ADMINISTRATOR KESEHATAN AHLI PERTAMA,PENGAWAS,FUNGSIONAL,'01-11-2025,DINAS KESEHATAN,UPTD BALAI PELATIHAN KESEHATAN,SEKSI PENGENDALIAN MUTU,-,-,S-1,Kesehatan Masyarakat,2013\n";
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'test_simpeg_csv_').'.csv';
+        file_put_contents($tempPath, $csvContent);
+
+        $uploadedFile = new UploadedFile(
+            $tempPath,
+            'data_simpeg_11_test.csv',
+            'text/csv',
+            null,
+            true
+        );
+
+        $response = $this->actingAs($user)->post(route('master.pegawai_simpeg.upload'), [
+            'file' => $uploadedFile,
+            'mode' => 'upsert',
+            'keterangan' => 'Uji Coba CSV SIMPEG',
+            'auto_sync' => true,
+        ]);
+
+        $response->assertRedirect(route('master.pegawai_simpeg.index'));
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('pegawais', [
+            'nip' => '199112012025212103',
+            'nama' => 'ERIKA DESYANA HEFNY, SKM',
+            'status_pegawai' => 'PPPK PARUH WAKTU',
+            'golru' => '-',
+            'tgl_lahir' => '1991-12-01',
+            'tmt_jabatan' => '01-11-2025',
+            'jenis_pegawai' => 'KESEHATAN',
+        ]);
+
+        if (file_exists($tempPath)) {
+            @unlink($tempPath);
+        }
+    }
 }

@@ -2,6 +2,17 @@
 
 Dokumen ini mencatat seluruh riwayat pembaruan, evolusi fitur, perbaikan bug, dan progres pengembangan sistem **KONBELPEG (Rekonsiliasi Realisasi Belanja Pegawai & SIMGAJI)**.
 
+## 📌 [v2.15.1] - 2026-10-14
+### ⚡ Peningkatan Parser CSV SIMPEG Modern, Normalisasi Kutip Tunggal, dan Penambahan TMT Jabatan
+- **Dukungan Format CSV SIMPEG Modern (`data_simpeg_11.csv`)**:
+  - Penambahan migrasi kolom `tmt_jabatan` pada tabel `pegawais` untuk mendokumentasikan riwayat pengangkatan/TMT jabatan kepegawaian.
+  - Normalisasi cerdas tanda kutip tunggal (`'`) hasil ekspor SIASN/SIMPEG pada seluruh kolom string, tanggal (`TGL_LAHIR`), golongan, masa kerja, dan TMT.
+  - Mekanisme preservasi kolom `agama` agar tidak tertimpa nilai kosong saat berkas CSV baru tidak menyertakan kolom agama.
+  - Inferensi cerdas jenis pegawai (`GURU`, `KESEHATAN`, `TENDIK`, `TEKNIS`) untuk pegawai baru yang belum terdaftar di database.
+  - Peningkatan perintah CLI `php artisan simpeg:sync` dan `php artisan import:pegawai` serta pengujian otomatis *feature tests* (**7 tests passed, 25 assertions**).
+
+---
+
 ## 📌 [v2.15.0] - 2026-10-14
 ### 🏛️ Penyelarasan Master Kode & Satker SIMGAJI Resmi (62 SKPD & 551 Satker), Kamus Satker BNBA, dan Ekspor Multi-Sheet
 - **Integrasi Master Data Resmi SIMGAJI (`kode_skpd_satker_simgaji.xlsx`)**:
