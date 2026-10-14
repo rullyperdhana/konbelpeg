@@ -2,6 +2,31 @@
 
 Dokumen ini mencatat seluruh riwayat pembaruan, evolusi fitur, perbaikan bug, dan progres pengembangan sistem **KONBELPEG (Rekonsiliasi Realisasi Belanja Pegawai & SIMGAJI)**.
 
+## 📌 [v2.15.0] - 2026-10-14
+### 🏛️ Penyelarasan Master Kode & Satker SIMGAJI Resmi (62 SKPD & 551 Satker), Kamus Satker BNBA, dan Ekspor Multi-Sheet
+- **Integrasi Master Data Resmi SIMGAJI (`kode_skpd_satker_simgaji.xlsx`)**:
+  - Mengintegrasikan basis data master resmi SIMGAJI Taspen yang memuat **62 Kode SKPD Resmi** dan **551 Satuan Kerja (Satker)** lengkap (UPTD, Balai, Rumah Sakit, Biro, serta seluruh SMA/SMK/SLB se-Kalsel).
+  - Dilengkapi mekanisme auto-cache berbasis `filemtime` yang secara dinamis menyelaraskan kamus data begitu file Excel diperbarui di server.
+- **Tiga Perspektif Analisis & Pemetaan Lengkap (*Triple-Perspective Navigation*)**:
+  - 👥 **Tab 1: Data BNBA Pegawai (`tab=bnba`)**:
+    - Penyajian nama resmi Satker SIMGAJI pada kolom *Kondisi SIMGAJI (Eksisting)* menggantikan kode acak mentah.
+    - Rekomendasi mutasi penempatan Satker SIMGAJI otomatis berbasis kecerdasan pencocokan token nama sekolah/unit kerja SIMPEG ke kode satker SIMGAJI.
+  - 🏢 **Tab 2: Matriks Pemetaan Master SKPD (`tab=master_skpd`)**:
+    - Menampilkan seluruh **62 Kode SKPD Master SIMGAJI** (meningkat dari 57 kode) bersanding dengan SKPD acuan resmi SIMPEG.
+    - Penambahan kolom **Jumlah Satker Terdaftar** untuk tiap SKPD dan status keaktifan (`SESUAI`, `ADA_SELISIH`, `CABANG_DISDIK`, dan `0 PEGAWAI`).
+  - 🌳 **Tab 3: Matriks Master Satker SIMGAJI (`tab=master_satker`)**:
+    - Modul inventarisasi 551 Satker resmi SIMGAJI dengan pencarian cepat, filter SKPD, filter status keaktifan (Aktif vs 0 Pegawai), dan pemetaan ke unit kerja/UPTD dominan SIMPEG.
+- **Penyempurnaan Ekspor Dokumen Resmi**:
+  - **Ekspor Excel Multi-Sheet (.xlsx)**:
+    - *Sheet 1*: Master SKPD SIMGAJI (62 SKPD + Jumlah Satker).
+    - *Sheet 2*: Master Satker SIMGAJI (551 Satker + Status & Dominan UPT).
+    - *Sheet 3*: BNBA Usulan Perbaikan Pegawai (memuat nama satker eksisting & rekomendasi satker rujukan).
+  - **Ekspor Dokumen PDF Resmi (A4 Landscape)**: Format cetak resmi ber-kop instansi dan pengesahan pejabat yang mendukung pencetakan untuk Tab BNBA, Tab Master SKPD, dan Tab Master Satker.
+- **Pengujian Otomatis (*Feature Tests*)**:
+  - Pengujian `tests/Feature/LaporanBnbaPerbaikanSimgajiTest.php` diperluas dengan 10 test case lengkap mencakup autentikasi, navigasi 3 tab, filter status, pencarian, dan cetak PDF (10/10 passed, 27 assertions).
+
+---
+
 ## 📌 [v2.14.0] - 2026-10-09
 ### 🔍 Modul Monitoring Status Pegawai & Pensiun SIMGAJI Serta Diagnosa Cerdas Log NIP
 - **Modul Baru Monitoring Status Pegawai & Pensiun (`/laporan/monitoring-status-pegawai`)**:

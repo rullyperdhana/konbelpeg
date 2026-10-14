@@ -60,8 +60,19 @@ class LaporanBnbaPerbaikanSimgajiTest extends TestCase
         $response = $this->actingAs($user)->get('/laporan/perbaikan-simgaji-skpd?tab=master_skpd');
 
         $response->assertStatus(200);
-        $response->assertSee('Matriks Pemetaan 57 Master SKPD SIMGAJI vs SIMPEG');
+        $response->assertSee('Master SKPD SIMGAJI vs SIMPEG');
         $response->assertSee('DINAS PENDIDIKAN DAN KEBUDAYAAN');
+    }
+
+    public function test_authenticated_user_can_access_master_satker_tab(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get('/laporan/perbaikan-simgaji-skpd?tab=master_satker');
+
+        $response->assertStatus(200);
+        $response->assertSee('Daftar Master 551 Satuan Kerja (Satker) SIMGAJI');
+        $response->assertSee('Total Master: 551 Satker');
     }
 
     public function test_refresh_cache_redirects_back_with_success(): void
@@ -89,6 +100,16 @@ class LaporanBnbaPerbaikanSimgajiTest extends TestCase
         $user = User::factory()->create();
 
         $response = $this->actingAs($user)->get('/laporan/perbaikan-simgaji-skpd/export/pdf?tab=master_skpd');
+
+        $response->assertStatus(200);
+        $response->assertHeader('Content-Type', 'application/pdf');
+    }
+
+    public function test_export_pdf_master_satker_returns_pdf_document(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get('/laporan/perbaikan-simgaji-skpd/export/pdf?tab=master_satker');
 
         $response->assertStatus(200);
         $response->assertHeader('Content-Type', 'application/pdf');

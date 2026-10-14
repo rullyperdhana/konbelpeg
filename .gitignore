@@ -34,6 +34,7 @@ Thumbs.db
 *.csv
 *.tsv
 *.ods
+!kode_skpd_satker_simgaji.xlsx
 
 # Database & Data dumps (confidential)
 *.sqlite

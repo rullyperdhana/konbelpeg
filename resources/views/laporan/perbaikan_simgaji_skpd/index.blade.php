@@ -12,6 +12,7 @@
         border-bottom: 2px solid var(--border-color);
         margin-bottom: 20px;
         padding-bottom: 0;
+        overflow-x: auto;
     }
     .custom-tab-item {
         padding: 10px 18px;
@@ -26,6 +27,7 @@
         gap: 8px;
         transition: all 0.2s ease;
         border-radius: 8px 8px 0 0;
+        white-space: nowrap;
     }
     .custom-tab-item:hover {
         color: var(--luno-primary);
@@ -121,7 +123,10 @@
                 <i class="ph-bold ph-shield-check"></i> ACUAN RESMI: SIMPEG / KONBELPEG
             </span>
             <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: #059669; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px;">
-                <i class="ph-bold ph-database"></i> 57 KODE MASTER SKPD SIMGAJI
+                <i class="ph-bold ph-database"></i> {{ $summary['total_skpd_simgaji'] ?? 62 }} KODE MASTER SKPD
+            </span>
+            <span class="badge" style="background: rgba(4, 120, 87, 0.1); color: #047857; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px;">
+                <i class="ph-bold ph-tree-structure"></i> {{ $summary['total_satker_simgaji'] ?? 551 }} MASTER SATKER SIMGAJI
             </span>
             <span class="badge" style="background: rgba(124, 58, 237, 0.1); color: #7c3aed; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 6px;">
                 <i class="ph-bold ph-user-list"></i> FORMAT BNBA PER PEGAWAI
@@ -131,14 +136,14 @@
             Laporan BNBA & Pemetaan Master SKPD SIMGAJI
         </h2>
         <p style="color: var(--text-muted); font-size: 13.5px; margin: 0;">
-            Instrumen sinkronisasi kode & penulisan nama SKPD SIMGAJI Taspen serta daftar perseorangan (BNBA) berdasarkan data master SIMPEG.
+            Instrumen sinkronisasi kode & penulisan nama SKPD / Satker SIMGAJI Taspen serta daftar nominatif perseorangan (BNBA) berdasarkan data master SIMPEG.
         </p>
         <div style="margin-top: 10px; display: inline-flex; align-items: center; gap: 8px; padding: 5px 14px; background: rgba(76, 53, 222, 0.06); border-radius: 999px; font-size: 12px; color: var(--luno-primary); border: 1px solid var(--luno-primary-border);">
             <i class="ph-bold ph-database"></i> Database Aktif: <strong>{{ $activeDbf['filename'] ?? '-' }}</strong> &bull; Pembaruan Terakhir: {{ $cachedAt ?? '-' }}
         </div>
     </div>
     <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-        <a href="{{ route('laporan.perbaikan_simgaji_skpd.refresh') }}" class="btn btn-export" title="Kalkulasi ulang pemetaan data dari DBF aktif">
+        <a href="{{ route('laporan.perbaikan_simgaji_skpd.refresh') }}" class="btn btn-export" title="Kalkulasi ulang pemetaan data dari DBF aktif dan file Excel Master">
             <i class="ph-bold ph-arrows-clockwise"></i> Refresh Cache
         </a>
 
@@ -146,12 +151,12 @@
         <div style="width: 1px; height: 26px; background: var(--border-color); margin: 0 4px;"></div>
 
         <!-- Ekspor Excel Sesuai Filter -->
-        <a href="{{ route('laporan.perbaikan_simgaji_skpd.export_excel', ['scope' => 'perbaikan', 'status' => $statusFilter, 'kategori' => $kategori, 'skpd' => $skpdFilter, 'skpd_simgaji' => $simgajiFilter, 'search' => $search]) }}" class="btn btn-export" style="color: #059669; border-color: rgba(16, 185, 129, 0.4); font-weight: 600;" title="Unduh Berita Acara Perbaikan (Hanya yang selisih + Sheet Master SKPD)">
+        <a href="{{ route('laporan.perbaikan_simgaji_skpd.export_excel', ['scope' => 'perbaikan', 'status' => $statusFilter, 'kategori' => $kategori, 'skpd' => $skpdFilter, 'skpd_simgaji' => $simgajiFilter, 'search' => $search]) }}" class="btn btn-export" style="color: #059669; border-color: rgba(16, 185, 129, 0.4); font-weight: 600;" title="Unduh Berita Acara Perbaikan (Hanya yang selisih + Sheet Master SKPD & Satker)">
             <i class="ph-bold ph-file-xls" style="font-size: 16px; color: #10b981;"></i> Ekspor Excel (Perbaikan)
         </a>
 
         <!-- Ekspor Excel Full Pemetaan -->
-        <a href="{{ route('laporan.perbaikan_simgaji_skpd.export_excel', ['scope' => 'full']) }}" class="btn btn-export" style="color: #1e40af; border-color: rgba(30, 64, 175, 0.4); font-weight: 600;" title="Unduh Full Pemetaan seluruh pegawai aktif SIMGAJI dan 57 Master SKPD">
+        <a href="{{ route('laporan.perbaikan_simgaji_skpd.export_excel', ['scope' => 'full']) }}" class="btn btn-export" style="color: #1e40af; border-color: rgba(30, 64, 175, 0.4); font-weight: 600;" title="Unduh Full Pemetaan seluruh pegawai aktif SIMGAJI, 62 Master SKPD, dan 551 Satker">
             <i class="ph-bold ph-file-arrow-down" style="font-size: 16px; color: #1e40af;"></i> Ekspor Full Pemetaan
         </a>
 
@@ -187,16 +192,23 @@
     </a>
     <a href="{{ route('laporan.perbaikan_simgaji_skpd.index', array_merge(request()->query(), ['tab' => 'master_skpd', 'page' => 1])) }}" class="custom-tab-item {{ $tab === 'master_skpd' ? 'active' : '' }}">
         <i class="ph-bold ph-buildings"></i>
-        <span>2. Matriks Pemetaan Master SKPD (57 SKPD SIMGAJI)</span>
+        <span>2. Matriks Pemetaan Master SKPD ({{ count($skpdMappings) }} SKPD SIMGAJI)</span>
         <span class="badge" style="background: #0f172a; color: #ffffff; font-size: 11px; padding: 2px 7px; border-radius: 999px;">
-            57 SKPD
+            {{ count($skpdMappings) }} SKPD
+        </span>
+    </a>
+    <a href="{{ route('laporan.perbaikan_simgaji_skpd.index', array_merge(request()->query(), ['tab' => 'master_satker', 'page' => 1])) }}" class="custom-tab-item {{ $tab === 'master_satker' ? 'active' : '' }}">
+        <i class="ph-bold ph-tree-structure"></i>
+        <span>3. Matriks Master Satker ({{ $summary['total_satker_simgaji'] ?? 551 }} Satker SIMGAJI)</span>
+        <span class="badge" style="background: #047857; color: #ffffff; font-size: 11px; padding: 2px 7px; border-radius: 999px;">
+            {{ $summary['total_satker_simgaji'] ?? 551 }} Satker
         </span>
     </a>
 </div>
 
 @if($tab === 'master_skpd')
     <!-- ======================================================== -->
-    <!-- TAB 2: MATRIKS PEMETAAN MASTER SKPD (57 SKPD SIMGAJI) -->
+    <!-- TAB 2: MATRIKS PEMETAAN MASTER SKPD (62 SKPD SIMGAJI) -->
     <!-- ======================================================== -->
     <div style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.05), rgba(30, 64, 175, 0.05)); border: 1px solid rgba(15, 23, 42, 0.15); border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 14px;">
         <div style="width: 36px; height: 36px; border-radius: 8px; background: #0f172a; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; margin-top: 2px;">
@@ -204,7 +216,7 @@
         </div>
         <div style="font-size: 13px; line-height: 1.55; color: var(--text-main);">
             <strong style="color: #0f172a; font-size: 13.5px;">Petunjuk Perbaikan Master Kode & Nama SKPD SIMGAJI:</strong><br>
-            Tabel di bawah ini memetakan seluruh <strong>57 Kode SKPD</strong> yang ada pada database SIMGAJI Taspen terhadap nama resmi SKPD di <strong>SIMPEG Pemprov Kalsel</strong>. Gunakan kolom <em>Rekomendasi Standardisasi Nama</em> sebagai rujukan perbaikan penulisan instansi di SIMGAJI agar tidak terjadi selisih nomenklatur saat rekonsiliasi keuangan.
+            Tabel di bawah ini memetakan seluruh <strong>{{ count($skpdMappings) }} Kode SKPD</strong> dari file master SIMGAJI Taspen terhadap nama resmi SKPD di <strong>SIMPEG Pemprov Kalsel</strong>. Gunakan kolom <em>Rekomendasi Standardisasi Nama</em> sebagai rujukan perbaikan penulisan instansi di SIMGAJI agar tidak terjadi selisih nomenklatur saat rekonsiliasi keuangan.
         </div>
     </div>
 
@@ -212,15 +224,15 @@
         <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; background: var(--bg-surface);">
             <div>
                 <h3 style="margin: 0 0 4px 0; font-size: 15px; font-weight: 700; color: var(--text-main);">
-                    Matriks Pemetaan 57 Master SKPD SIMGAJI vs SIMPEG
+                    Matriks Pemetaan {{ count($skpdMappings) }} Master SKPD SIMGAJI vs SIMPEG
                 </h3>
                 <p style="margin: 0; font-size: 12.5px; color: var(--text-muted);">
-                    Menyandingkan seluruh kode SKPD eksisting di SIMGAJI dengan nama resmi acuan SIMPEG.
+                    Menyandingkan seluruh kode SKPD eksisting di SIMGAJI dengan nama resmi acuan SIMPEG beserta jumlah Satker terdaftar.
                 </p>
             </div>
             <div>
                 <span class="badge" style="background: #1e40af; color: #ffffff; padding: 5px 12px; font-size: 12px; border-radius: 6px;">
-                    Total: 57 Kode SKPD SIMGAJI
+                    Total: {{ count($skpdMappings) }} Kode SKPD SIMGAJI
                 </span>
             </div>
         </div>
@@ -230,13 +242,14 @@
                 <thead>
                     <tr style="background: #0f172a; color: #ffffff;">
                         <th style="width: 45px; text-align: center; padding: 10px;">No</th>
-                        <th style="width: 100px; text-align: center; padding: 10px;">Kode SIMGAJI</th>
+                        <th style="width: 90px; text-align: center; padding: 10px;">Kode SIMGAJI</th>
                         <th style="padding: 10px;">Nama SKPD di SIMGAJI (Eksisting)</th>
+                        <th style="width: 105px; text-align: center; padding: 10px;">Jumlah Satker</th>
                         <th style="padding: 10px;">Nama Resmi Acuan (SIMPEG)</th>
-                        <th style="width: 90px; text-align: right; padding: 10px;">Total Pegawai</th>
-                        <th style="width: 85px; text-align: right; padding: 10px;">Sesuai</th>
-                        <th style="width: 85px; text-align: right; padding: 10px;">Selisih</th>
-                        <th style="width: 130px; text-align: center; padding: 10px;">Status Keselarasan</th>
+                        <th style="width: 85px; text-align: right; padding: 10px;">Total Pegawai</th>
+                        <th style="width: 75px; text-align: right; padding: 10px;">Sesuai</th>
+                        <th style="width: 75px; text-align: right; padding: 10px;">Selisih</th>
+                        <th style="width: 120px; text-align: center; padding: 10px;">Status</th>
                         <th style="padding: 10px;">Rekomendasi Standardisasi / Tindakan SIMGAJI</th>
                     </tr>
                 </thead>
@@ -252,6 +265,11 @@
                             </td>
                             <td style="font-weight: 600; color: var(--text-main);">
                                 {{ $m['nama_simgaji'] }}
+                            </td>
+                            <td style="text-align: center;">
+                                <span class="badge" style="background: rgba(4, 120, 87, 0.1); color: #047857; font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 6px;">
+                                    {{ $m['total_satker'] ?? 0 }} Satker
+                                </span>
                             </td>
                             <td style="font-weight: 700; color: #1e40af;">
                                 {{ $m['nama_simpeg_dominan'] }}
@@ -278,6 +296,10 @@
                                     <span class="badge" style="background: #fee2e2; color: #991b1b; font-size: 10px; font-weight: 700; padding: 2px 7px;">
                                         <i class="ph-bold ph-warning"></i> ADA SELISIH
                                     </span>
+                                @elseif($m['status_nama'] === 'NON_AKTIF')
+                                    <span class="badge" style="background: #f1f5f9; color: #64748b; font-size: 10px; font-weight: 700; padding: 2px 7px;">
+                                        <i class="ph-bold ph-minus-circle"></i> 0 PEGAWAI
+                                    </span>
                                 @else
                                     <span class="badge" style="background: #f1f5f9; color: #475569; font-size: 10px; font-weight: 700; padding: 2px 7px;">
                                         {{ $m['status_nama'] }}
@@ -290,7 +312,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                            <td colspan="10" style="text-align: center; padding: 30px; color: var(--text-muted);">
                                 Data master SKPD tidak tersedia.
                             </td>
                         </tr>
@@ -298,6 +320,233 @@
                 </tbody>
             </table>
         </div>
+    </div>
+
+@elseif($tab === 'master_satker')
+    <!-- ======================================================== -->
+    <!-- TAB 3: MATRIKS MASTER SATKER SIMGAJI (551 SATKER) -->
+    <!-- ======================================================== -->
+    <div style="background: linear-gradient(135deg, rgba(4, 120, 87, 0.05), rgba(30, 64, 175, 0.05)); border: 1px solid rgba(4, 120, 87, 0.2); border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 14px;">
+        <div style="width: 36px; height: 36px; border-radius: 8px; background: #047857; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; margin-top: 2px;">
+            <i class="ph-bold ph-tree-structure"></i>
+        </div>
+        <div style="font-size: 13px; line-height: 1.55; color: var(--text-main);">
+            <strong style="color: #047857; font-size: 13.5px;">Master Data Satuan Kerja (Satker) SIMGAJI Taspen:</strong><br>
+            Tabel di bawah ini memuat seluruh <strong>{{ $summary['total_satker_simgaji'] ?? 551 }} Satker SIMGAJI</strong> dari file master <code>kode_skpd_satker_simgaji.xlsx</code> yang mencakup UPTD, Balai, Rumah Sakit, Biro, Bagian, serta seluruh SMAN/SMKN/SLBN di 13 Kabupaten/Kota.
+        </div>
+    </div>
+
+    <!-- Filter Bar Satker -->
+    <div class="card" style="margin-bottom: 24px; padding: 18px 20px;">
+        <form method="GET" action="{{ route('laporan.perbaikan_simgaji_skpd.index') }}" style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
+            <input type="hidden" name="tab" value="master_satker">
+
+            <!-- Filter SKPD SIMGAJI -->
+            <div style="flex: 1.5; min-width: 240px;">
+                <label style="display: block; font-size: 12px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                    <i class="ph-bold ph-buildings"></i> Filter SKPD SIMGAJI
+                </label>
+                <select name="satker_skpd" class="form-control" style="width: 100%; height: 38px; font-size: 12.5px;" onchange="this.form.submit()">
+                    <option value="semua">Semua SKPD ({{ count($filterOptions['all_master_skpds'] ?? []) }})</option>
+                    @foreach($filterOptions['all_master_skpds'] ?? [] as $kd => $nm)
+                        <option value="{{ $kd }}" {{ $satkerSkpd === $kd ? 'selected' : '' }}>[{{ $kd }}] {{ $nm }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- Filter Status Keaktifan -->
+            <div style="flex: 1; min-width: 180px;">
+                <label style="display: block; font-size: 12px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                    <i class="ph-bold ph-toggle-left"></i> Status Keaktifan
+                </label>
+                <select name="status_satker" class="form-control" style="width: 100%; height: 38px; font-size: 12.5px;" onchange="this.form.submit()">
+                    <option value="semua" {{ $statusSatker === 'semua' ? 'selected' : '' }}>Semua Satker (551)</option>
+                    <option value="aktif" {{ $statusSatker === 'aktif' ? 'selected' : '' }}>🟢 Memiliki Pegawai Aktif ({{ $summary['total_satker_aktif'] ?? 0 }})</option>
+                    <option value="0_pegawai" {{ $statusSatker === '0_pegawai' ? 'selected' : '' }}>⚪ 0 Pegawai Aktif</option>
+                </select>
+            </div>
+
+            <!-- Search Box Satker -->
+            <div style="flex: 1.5; min-width: 220px;">
+                <label style="display: block; font-size: 12px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                    <i class="ph-bold ph-magnifying-glass"></i> Cari Kode / Nama Satker
+                </label>
+                <input type="text" name="satker_search" class="form-control" placeholder="Cari Kode Satker atau Nama Satker/Sekolah..." value="{{ $satkerSearch }}" style="width: 100%; height: 38px; font-size: 12.5px;">
+            </div>
+
+            <!-- Tombol Aksi Filter -->
+            <div style="display: flex; gap: 8px;">
+                <button type="submit" class="btn btn-primary" style="height: 38px; padding: 0 16px;">
+                    <i class="ph-bold ph-magnifying-glass"></i> Cari
+                </button>
+                @if($satkerSkpd !== 'semua' || $statusSatker !== 'semua' || $satkerSearch !== '')
+                    <a href="{{ route('laporan.perbaikan_simgaji_skpd.index', ['tab' => 'master_satker']) }}" class="btn btn-export" style="height: 38px; color: var(--danger-text); padding: 0 14px;" title="Reset filter satker">
+                        <i class="ph-bold ph-arrow-counter-clockwise"></i> Reset
+                    </a>
+                @endif
+            </div>
+        </form>
+    </div>
+
+    <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 30px;">
+        <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; background: var(--bg-surface);">
+            <div>
+                <h3 style="margin: 0 0 4px 0; font-size: 15px; font-weight: 700; color: var(--text-main);">
+                    Daftar Master 551 Satuan Kerja (Satker) SIMGAJI
+                </h3>
+                <p style="margin: 0; font-size: 12.5px; color: var(--text-muted);">
+                    Menampilkan <strong>{{ number_format($satkerMappings->count(), 0, ',', '.') }}</strong> dari total <strong>{{ number_format($satkerFilteredTotal, 0, ',', '.') }}</strong> Satker pada filter saat ini.
+                </p>
+            </div>
+            <div>
+                <span class="badge" style="background: #047857; color: #ffffff; padding: 5px 12px; font-size: 12px; border-radius: 6px;">
+                    Total Master: 551 Satker
+                </span>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table" style="font-size: 12px;">
+                <thead>
+                    <tr style="background: #064e3b; color: #ffffff;">
+                        <th style="width: 45px; text-align: center; padding: 10px;">No</th>
+                        <th style="width: 80px; text-align: center; padding: 10px;">Kd SKPD</th>
+                        <th style="width: 220px; padding: 10px;">Nama SKPD SIMGAJI</th>
+                        <th style="width: 140px; text-align: center; padding: 10px;">Kode Satker</th>
+                        <th style="padding: 10px;">Nama Satker Resmi SIMGAJI</th>
+                        <th style="width: 100px; text-align: right; padding: 10px;">Pegawai Aktif</th>
+                        <th style="padding: 10px;">Dominan Unit / UPT SIMPEG</th>
+                        <th style="width: 110px; text-align: center; padding: 10px;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @php $noSat = $satkerMappings->firstItem() ?? 1; @endphp
+                    @forelse($satkerMappings as $sat)
+                        <tr style="border-bottom: 1px solid var(--border-color);">
+                            <td style="text-align: center; color: var(--text-muted);">{{ $noSat++ }}</td>
+                            <td style="text-align: center;">
+                                <span class="badge" style="background: #0f172a; color: #ffffff; font-family: monospace; font-size: 11px; padding: 2px 6px;">
+                                    {{ $sat['kdskpd'] }}
+                                </span>
+                            </td>
+                            <td style="font-size: 11.5px; color: var(--text-main);">
+                                {{ $sat['nmskpd'] }}
+                            </td>
+                            <td style="text-align: center; font-family: monospace; font-weight: 700;">
+                                <span class="badge" style="background: rgba(4, 120, 87, 0.12); color: #047857; font-size: 11px; padding: 3px 8px; border-radius: 4px;">
+                                    {{ $sat['kdsatker'] }}
+                                </span>
+                            </td>
+                            <td style="font-weight: 700; color: var(--text-main);">
+                                {{ $sat['nmsatker'] }}
+                            </td>
+                            <td style="text-align: right; font-weight: 700; font-family: monospace;">
+                                {{ number_format($sat['total_pegawai'], 0, ',', '.') }}
+                            </td>
+                            <td style="font-size: 11.5px; color: #1e40af; font-weight: 600;">
+                                {{ $sat['dominan_simpeg_upt'] }}
+                            </td>
+                            <td style="text-align: center;">
+                                @if($sat['status'] === 'AKTIF')
+                                    <span class="badge" style="background: #d1fae5; color: #065f46; font-size: 10px; font-weight: 700; padding: 2px 7px;">
+                                        <i class="ph-bold ph-check-circle"></i> AKTIF
+                                    </span>
+                                @else
+                                    <span class="badge" style="background: #f1f5f9; color: #94a3b8; font-size: 10px; font-weight: 600; padding: 2px 7px;">
+                                        0 PEGAWAI
+                                    </span>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                                Data Satker tidak ditemukan untuk kriteria filter ini.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        @if($satkerMappings->total() > 0)
+            <div class="pagination-container">
+                <div class="pagination-info">
+                    <i class="ph-bold ph-list-numbers" style="color: #047857; font-size: 16px;"></i>
+                    <span>
+                        Menampilkan <strong>{{ $satkerMappings->firstItem() ?? 0 }}</strong> s/d <strong>{{ $satkerMappings->lastItem() ?? 0 }}</strong> dari total <strong>{{ number_format($satkerMappings->total(), 0, ',', '.') }}</strong> Satker (Halaman {{ $satkerMappings->currentPage() }} dari {{ $satkerMappings->lastPage() }})
+                    </span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted);">
+                        <span>Per hal:</span>
+                        <select onchange="window.location.href = this.value;" class="form-control" style="height: 32px; padding: 2px 8px; font-size: 12px; width: 75px;">
+                            @foreach([25, 50, 100, 250, 500] as $size)
+                                <option value="{{ $satkerMappings->appends(array_merge(request()->query(), ['per_page' => $size, 'page' => 1]))->url(1) }}" {{ $perPage == $size ? 'selected' : '' }}>{{ $size }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    @if($satkerMappings->hasPages())
+                        <div class="pagination-nav">
+                            @if(!$satkerMappings->onFirstPage())
+                                <a href="{{ $satkerMappings->appends(request()->query())->url(1) }}" class="page-btn" title="Halaman Pertama">
+                                    <i class="ph-bold ph-caret-double-left"></i>
+                                </a>
+                                <a href="{{ $satkerMappings->appends(request()->query())->previousPageUrl() }}" class="page-btn" title="Halaman Sebelumnya">
+                                    <i class="ph-bold ph-caret-left"></i> Prev
+                                </a>
+                            @else
+                                <span class="page-btn disabled"><i class="ph-bold ph-caret-double-left"></i></span>
+                                <span class="page-btn disabled"><i class="ph-bold ph-caret-left"></i> Prev</span>
+                            @endif
+
+                            @php
+                                $cPage = $satkerMappings->currentPage();
+                                $lPage = $satkerMappings->lastPage();
+                                $sPage = max(1, $cPage - 2);
+                                $ePage = min($lPage, $cPage + 2);
+                            @endphp
+
+                            @if($sPage > 1)
+                                <a href="{{ $satkerMappings->appends(request()->query())->url(1) }}" class="page-btn">1</a>
+                                @if($sPage > 2)
+                                    <span class="page-dots">&hellip;</span>
+                                @endif
+                            @endif
+
+                            @for($p = $sPage; $p <= $ePage; $p++)
+                                @if($p == $cPage)
+                                    <span class="page-btn active" style="background: #047857 !important; border-color: #047857 !important;">{{ $p }}</span>
+                                @else
+                                    <a href="{{ $satkerMappings->appends(request()->query())->url($p) }}" class="page-btn">{{ $p }}</a>
+                                @endif
+                            @endfor
+
+                            @if($ePage < $lPage)
+                                @if($ePage < $lPage - 1)
+                                    <span class="page-dots">&hellip;</span>
+                                @endif
+                                <a href="{{ $satkerMappings->appends(request()->query())->url($lPage) }}" class="page-btn">{{ $lPage }}</a>
+                            @endif
+
+                            @if($satkerMappings->hasMorePages())
+                                <a href="{{ $satkerMappings->appends(request()->query())->nextPageUrl() }}" class="page-btn" title="Halaman Selanjutnya">
+                                    Next <i class="ph-bold ph-caret-right"></i>
+                                </a>
+                                <a href="{{ $satkerMappings->appends(request()->query())->url($lPage) }}" class="page-btn" title="Halaman Terakhir">
+                                    <i class="ph-bold ph-caret-double-right"></i>
+                                </a>
+                            @else
+                                <span class="page-btn disabled">Next <i class="ph-bold ph-caret-right"></i></span>
+                                <span class="page-btn disabled"><i class="ph-bold ph-caret-double-right"></i></span>
+                            @endif
+                        </div>
+                    @endif
+                </div>
+            </div>
+        @endif
     </div>
 
 @else
@@ -313,7 +562,7 @@
         <div style="font-size: 13px; line-height: 1.55; color: var(--text-main);">
             <strong style="color: #1e40af; font-size: 13.5px;">Ketentuan Acuan Perbaikan Data SIMGAJI Taspen:</strong><br>
             1. <strong>Master SIMPEG / KONBELPEG</strong> adalah acuan tunggal kebenaran penempatan SKPD, UPTD, dan Jabatan pegawai Pemerintah Daerah.<br>
-            2. Gunakan pilihan filter <strong>Status Data</strong> di bawah untuk beralih antara <em>Hanya Perlu Perbaikan (118 Data)</em> atau <em>Semua Pegawai SIMGAJI (14.231 Data Full Pemetaan)</em>.<br>
+            2. Seluruh nama Satker pada kolom <em>Kondisi SIMGAJI (Eksisting)</em> kini telah disinkronkan langsung dari file master <strong>kode_skpd_satker_simgaji.xlsx</strong>.<br>
             3. Berkas ekspor Excel dapat langsung dilampirkan sebagai <strong>Lampiran Berita Acara Usulan Perbaikan Data Penggajian ke PT Taspen</strong>.
         </div>
     </div>
@@ -403,7 +652,7 @@
     </div>
     @endif
 
-    <!-- Filter Bar -->
+    <!-- Filter Bar BNBA -->
     <div class="card" style="margin-bottom: 24px; padding: 18px 20px;">
         <form method="GET" action="{{ route('laporan.perbaikan_simgaji_skpd.index') }}" style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
             <input type="hidden" name="tab" value="bnba">
@@ -474,7 +723,7 @@
                 <label style="display: block; font-size: 12px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
                     <i class="ph-bold ph-magnifying-glass"></i> Pencarian
                 </label>
-                <input type="text" name="search" class="form-control" placeholder="Cari NIP, Nama, atau Jabatan..." value="{{ $search }}" style="width: 100%; height: 38px; font-size: 12.5px;">
+                <input type="text" name="search" class="form-control" placeholder="Cari NIP, Nama, atau Satker..." value="{{ $search }}" style="width: 100%; height: 38px; font-size: 12.5px;">
             </div>
 
             <!-- Tombol Aksi Filter -->
@@ -523,7 +772,7 @@
                         <th colspan="3" style="text-align: center; border-right: 1px solid rgba(255,255,255,0.2); background: #065f46; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
                             <i class="ph-bold ph-shield-check"></i> Acuan Resmi SIMPEG
                         </th>
-                        <th rowspan="2" style="text-align: center; background: #312e81; vertical-align: middle; padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; min-width: 280px;">
+                        <th rowspan="2" style="text-align: center; background: #312e81; vertical-align: middle; padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; min-width: 290px;">
                             <i class="ph-bold ph-wrench"></i> Rekomendasi Tindakan
                         </th>
                     </tr>
@@ -536,11 +785,11 @@
 
                         <th style="width: 80px; text-align: center;">Kd SKPD</th>
                         <th style="min-width: 190px;">SKPD SIMGAJI</th>
-                        <th style="min-width: 110px; border-right: 1px solid var(--border-color);">Satker SIMGAJI</th>
+                        <th style="min-width: 200px; border-right: 1px solid var(--border-color);">Satker SIMGAJI (Resmi)</th>
 
                         <th style="width: 90px; text-align: center;">Kd Rekomendasi</th>
                         <th style="min-width: 200px;">SKPD Resmi (SIMPEG)</th>
-                        <th style="min-width: 150px; border-right: 1px solid var(--border-color);">UPTD / Satker SIMPEG</th>
+                        <th style="min-width: 160px; border-right: 1px solid var(--border-color);">UPTD / Satker SIMPEG</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -611,10 +860,17 @@
 
                             <!-- SIMGAJI: Satker / Inputer -->
                             <td style="border-right: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
-                                <div>Satker: <span style="font-family: monospace; font-weight: 600;">{{ $row['kdsatker_simgaji'] }}</span></div>
-                                @if($row['inputer_simgaji'] !== '-')
-                                    <div style="font-size: 10px; color: var(--text-light);">Inputer: {{ $row['inputer_simgaji'] }}</div>
-                                @endif
+                                <div style="font-weight: 700; color: var(--text-main); font-size: 11.5px; line-height: 1.35;">
+                                    {{ $row['nmsatker_simgaji'] ?? '-' }}
+                                </div>
+                                <div style="margin-top: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                    <span class="badge" style="background: rgba(15, 23, 42, 0.08); font-family: monospace; font-size: 10px; padding: 1px 6px; border-radius: 4px;">
+                                        Kd: {{ $row['kdsatker_simgaji'] }}
+                                    </span>
+                                    @if($row['inputer_simgaji'] !== '-')
+                                        <span style="font-size: 10px; color: var(--text-light);">Inputer: {{ $row['inputer_simgaji'] }}</span>
+                                    @endif
+                                </div>
                             </td>
 
                             <!-- SIMPEG: Kode Rekomendasi -->
@@ -677,6 +933,11 @@
                                 <div style="font-size: 11.5px; line-height: 1.4; color: var(--text-main); font-weight: 500;">
                                     {{ $row['rekomendasi'] }}
                                 </div>
+                                @if(!empty($row['satker_rekomendasi']) && $row['satker_rekomendasi'] !== '-' && $row['kdsatker_rekomendasi'] !== '-')
+                                    <div style="margin-top: 4px; padding: 4px 8px; background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10b981; border-radius: 4px; font-size: 10.5px; color: #065f46;">
+                                        <strong>Rujukan Satker SIMGAJI:</strong> {{ $row['satker_rekomendasi'] }} <code style="font-family: monospace; font-size: 10px; background: rgba(0,0,0,0.06); padding: 1px 4px; border-radius: 3px;">{{ $row['kdsatker_rekomendasi'] }}</code>
+                                    </div>
+                                @endif
                                 <div style="font-size: 10.5px; color: var(--text-light); margin-top: 3px;">
                                     {{ $row['keterangan'] }}
                                 </div>
@@ -724,7 +985,6 @@
 
                     @if($items->hasPages())
                         <div class="pagination-nav">
-                            {{-- First Page --}}
                             @if(!$items->onFirstPage())
                                 <a href="{{ $items->appends(request()->query())->url(1) }}" class="page-btn" title="Halaman Pertama">
                                     <i class="ph-bold ph-caret-double-left"></i>
@@ -737,7 +997,6 @@
                                 <span class="page-btn disabled" title="Halaman Sebelumnya"><i class="ph-bold ph-caret-left"></i> Prev</span>
                             @endif
 
-                            {{-- Sliding Window Pagination --}}
                             @php
                                 $currentPage = $items->currentPage();
                                 $lastPage = $items->lastPage();
@@ -767,7 +1026,6 @@
                                 <a href="{{ $items->appends(request()->query())->url($lastPage) }}" class="page-btn">{{ $lastPage }}</a>
                             @endif
 
-                            {{-- Next Page --}}
                             @if($items->hasMorePages())
                                 <a href="{{ $items->appends(request()->query())->nextPageUrl() }}" class="page-btn" title="Halaman Selanjutnya">
                                     Next <i class="ph-bold ph-caret-right"></i>

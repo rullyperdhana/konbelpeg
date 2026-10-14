@@ -108,20 +108,22 @@ Seringkali terjadi diskrepansi yang menyebabkan potensi kelebihan/kekurangan bay
    - Filter status penyelesaian (Semua, Pending/Belum Selesai, Sudah Selesai via STS) dan kartu KPI setoran kasda.
    - Ekspor Microsoft Excel (.xlsx) dan PDF resmi.
 9. **Laporan BNBA & Pemetaan Master SKPD SIMGAJI (`/laporan/perbaikan-simgaji-skpd`)**:
-   - **Dual-Tab Perspective**:
-     - **Tab 1: Nominatif BNBA Pegawai**: Rincian perorangan (*By Name By Address*) untuk usulan perbaikan kode/penempatan SKPD di aplikasi SIMGAJI Taspen berbasis acuan data definitif **SIMPEG / KONBELPEG** (*single source of truth*).
-     - **Tab 2: Matriks Pemetaan Master SKPD SIMGAJI (57 SKPD)**: Pemetaan komprehensif seluruh 57 entitas kode SKPD SIMGAJI terhadap SKPD resmi SIMPEG, dilengkapi jumlah pegawai, status pemetaan (Sesuai, Anomali/Beda Nomenklatur, Perlu Sinkronisasi), dan rekomendasi teknis.
+   - **Integrasi Master Data SIMGAJI (`kode_skpd_satker_simgaji.xlsx`)**: Berbasis data master resmi SIMGAJI Taspen yang memuat 62 Kode SKPD Resmi dan 551 Satuan Kerja (Satker) lengkap dengan mekanisme auto-cache berbasis `filemtime`.
+   - **Triple-Perspective Tabs**:
+     - **Tab 1: Data BNBA Pegawai**: Rincian perorangan (*By Name By Address*) untuk usulan perbaikan kode/penempatan SKPD & Satker di aplikasi SIMGAJI Taspen berbasis acuan data definitif **SIMPEG / KONBELPEG** (*single source of truth*), dilengkapi nama resmi Satker SIMGAJI dan rekomendasi rujukan kode Satker SIMGAJI otomatis.
+     - **Tab 2: Matriks Pemetaan Master SKPD SIMGAJI (62 SKPD)**: Pemetaan komprehensif seluruh 62 entitas kode SKPD SIMGAJI terhadap SKPD resmi SIMPEG, dilengkapi jumlah Satker terdaftar per instansi, total pegawai, status pemetaan (Sesuai, Ada Selisih, Cabang Disdik, 0 Pegawai), dan rekomendasi teknis.
+     - **Tab 3: Matriks Master Satker SIMGAJI (551 Satker)**: Inventarisasi 551 Satker resmi SIMGAJI (UPTD, Balai, Rumah Sakit, Biro, SMAN/SMKN/SLBN) dilengkapi filter SKPD, status keaktifan (Aktif vs 0 Pegawai), pencarian instan, dan pemetaan ke unit kerja/UPTD dominan SIMPEG.
    - **Klasifikasi Selisih & Rekomendasi Aksi Otomatis**:
-     - **Beda SKPD Induk**: Deteksi mutasi pegawai antar-SKPD beserta instruksi mutasi kode SKPD SIMGAJI.
-     - **Beda Cabang Disdik**: Deteksi ketidaksesuaian penempatan cabang wilayah Disdik (kode 070-082) terhadap sekolah/unit kerja riil.
-     - **Beda UPTD / Satker**: Penyelarasan penempatan satker/UPTD pada SKPD induk yang sama.
+     - **Beda SKPD Induk**: Deteksi mutasi pegawai antar-SKPD beserta instruksi mutasi kode SKPD & rujukan Satker SIMGAJI.
+     - **Beda Cabang Disdik**: Deteksi ketidaksesuaian penempatan cabang wilayah Disdik (kode 070-082) terhadap sekolah/unit kerja riil beserta rujukan Satker sekolah di SIMGAJI.
+     - **Beda UPTD / Satker**: Penyelarasan penempatan satker/UPTD pada SKPD induk yang sama ke Satker resmi SIMGAJI.
      - **Belum Terdaftar di SIMPEG**: Mengidentifikasi NIP aktif pada penggajian SIMGAJI yang belum tercatat pada basis data kepegawaian SIMPEG.
    - **Filter Status & Pencarian Cepat**:
      - Filter status data: *Perlu Perbaikan* (default), *Sudah Sesuai*, *Belum Terdaftar di SIMPEG*, dan *Semua Data*.
-     - Filter Kategori Selisih, SKPD Resmi SIMPEG, SKPD SIMGAJI, serta pencarian instan (NIP, Nama, Jabatan) dan tombol salin NIP 1-klik.
+     - Filter Kategori Selisih, SKPD Resmi SIMPEG, SKPD SIMGAJI, serta pencarian instan (NIP, Nama, Satker) dan tombol salin NIP 1-klik.
    - **Ekspor Dokumen Cerdas & Siap Cetak**:
-     - **Excel Multi-Sheet (.xlsx)**: Sheet 1 memuat Matriks Pemetaan 57 Master SKPD, Sheet 2 memuat Daftar Nominatif BNBA Pegawai.
-     - **PDF Resmi (A4 Landscape)**: Menghasilkan dokumen resmi ber-kop instansi dan tanda tangan pejabat penatausahaan keuangan yang menyesuaikan tab aktif (Matriks Master SKPD atau Nominatif BNBA).
+     - **Excel Multi-Sheet (.xlsx)**: Sheet 1 memuat Matriks 62 Master SKPD, Sheet 2 memuat Matriks 551 Master Satker, Sheet 3 memuat Daftar Nominatif BNBA Pegawai Lengkap dengan rujukan Satker SIMGAJI.
+     - **PDF Resmi (A4 Landscape)**: Menghasilkan dokumen resmi ber-kop instansi dan tanda tangan pejabat penatausahaan keuangan yang menyesuaikan tab aktif (Matriks Master SKPD, Matriks Master Satker, atau Nominatif BNBA).
 10. **Laporan Simulasi & Proyeksi Tapera ASN & Pemda (`/laporan/tapera`)**:
     - **Simulasi Berdasarkan PP No. 25/2020 jo. PP No. 21/2024**: Menghitung simpanan Tapera total 3,0% (0,5% beban APBD Pemda dan 2,5% potongan ASN) berbasis *Gaji Pokok + Tunjangan Keluarga + Tunjangan Jabatan/Fungsional/Umum*.
     - **Kalkulator Interaktif**: Simulasi mandiri perorangan dengan preset gaji pokok ASN terbaru (PP 5/2024 & Perpres 11/2024) serta live breakdown bulanan dan tahunan.
@@ -368,6 +370,7 @@ Dengan sistem yang telah daring (*online*) pada VPS produksi (`https://konbelpeg
 Seluruh riwayat perkembangan versi aplikasi dari awal inisiasi hingga rilis terkini didokumentasikan secara rinci pada berkas [CHANGELOG.md](CHANGELOG.md).
 
 Ringkasan versi:
+- **v2.15.0 (14 Oktober 2026)**: Integrasi Master Kode SKPD & Satker Resmi SIMGAJI Taspen (`kode_skpd_satker_simgaji.xlsx` memuat 62 SKPD & 551 Satker), navigasi 3 Tab Analisis (BNBA Pegawai dengan nama Satker riil & rekomendasi mutasi satker, Matriks 62 Master SKPD, dan Matriks 551 Master Satker SIMGAJI), ekspor Excel 3-sheet komprehensif, dan ekspor PDF resmi landscape.
 - **v2.14.0 (09 Oktober 2026)**: Modul Monitoring Status Pegawai & Pensiun SIMGAJI (`/laporan/monitoring-status-pegawai`) dengan 4 Tab Analisis (Rekapitulasi per SKPD, Nominatif Non-Aktif/Pensiun, Proyeksi Pensiun 1-2 Tahun, dan Deteksi Anomali Pembayaran Pasca Pensiun/Stop), Ekspor Excel & PDF resmi, serta Peningkatan Mesin Diagnosa Cerdas Status SIMGAJI pada Log NIP Tidak Ditemukan (`/laporan/unmatched-nip`).
 - **v2.13.0 (08 Oktober 2026)**: Modul Simulasi & Proyeksi Iuran Tapera ASN & Pemberi Kerja (PP No. 21 Tahun 2024) (`/laporan/tapera`), kalkulator interaktif live-compute, rekapitulasi per SKPD terpisah antara PNS, PPPK Penuh, dan PPPK Paruh Waktu, nominatif by NIP, serta ekspor Excel/PDF.
 - **v2.12.0 (08 Oktober 2026)**: Modul Laporan BNBA & Pemetaan Master SKPD SIMGAJI Taspen (`/laporan/perbaikan-simgaji-skpd`), matriks pemetaan 57 SKPD, rekomendasi mutasi SKPD/UPTD otomatis, dan ekspor multi-sheet.

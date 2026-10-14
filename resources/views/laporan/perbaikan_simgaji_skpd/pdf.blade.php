@@ -2,7 +2,15 @@
 <html lang="id">
 <head>
     <meta charset="utf-8">
-    <title>{{ ($tab ?? '') === 'master_skpd' ? 'Matriks Pemetaan Master SKPD SIMGAJI' : 'Laporan BNBA Perbaikan SKPD SIMGAJI' }}</title>
+    <title>
+        @if(($tab ?? '') === 'master_skpd')
+            Matriks Pemetaan Master SKPD SIMGAJI
+        @elseif(($tab ?? '') === 'master_satker')
+            Matriks Master Satker SIMGAJI
+        @else
+            Laporan BNBA Perbaikan SKPD SIMGAJI
+        @endif
+    </title>
     <style>
         @page {
             margin: 1.2cm 1cm 1.2cm 1cm;
@@ -111,11 +119,13 @@
         <h1>PEMERINTAH PROVINSI KALIMANTAN SELATAN &bull; BADAN KEUANGAN DAN ASET DAERAH</h1>
         @if(($tab ?? '') === 'master_skpd')
             <h2>MATRIKS PEMETAAN MASTER KODE & NAMA SKPD SIMGAJI TASPEN VS SIMPEG (ACUAN RESMI)</h2>
+        @elseif(($tab ?? '') === 'master_satker')
+            <h2>MATRIKS MASTER DATA SATUAN KERJA (SATKER) SIMGAJI TASPEN (551 SATKER)</h2>
         @else
             <h2>LAPORAN NOMINATIF BY NAME BY ADDRESS (BNBA) PEMETAAN & USULAN PERBAIKAN SKPD SIMGAJI</h2>
         @endif
         <p>
-            Acuan Dasar Kebenaran: <strong>SIMPEG / KONBELPEG</strong> &bull; Database SIMGAJI: <strong>{{ $activeFile['filename'] ?? '-' }}</strong> &bull; Waktu Cetak: {{ $printedAt }}
+            Acuan Dasar Kebenaran: <strong>SIMPEG & File Master SIMGAJI</strong> &bull; Database DBF Aktif: <strong>{{ $activeFile['filename'] ?? '-' }}</strong> &bull; Waktu Cetak: {{ $printedAt }}
         </p>
     </div>
 
@@ -136,13 +146,14 @@
             <thead>
                 <tr>
                     <th style="width: 25px; text-align: center;">No</th>
-                    <th style="width: 55px; text-align: center;">Kode SIMGAJI</th>
-                    <th style="width: 180px;">Nama SKPD di SIMGAJI (Eksisting)</th>
-                    <th style="width: 180px;">Nama Resmi Acuan (SIMPEG)</th>
-                    <th style="width: 50px; text-align: right;">Total Pgw</th>
-                    <th style="width: 45px; text-align: right;">Sesuai</th>
-                    <th style="width: 45px; text-align: right;">Selisih</th>
-                    <th style="width: 80px; text-align: center;">Status</th>
+                    <th style="width: 50px; text-align: center;">Kode SIMGAJI</th>
+                    <th style="width: 160px;">Nama SKPD di SIMGAJI (Eksisting)</th>
+                    <th style="width: 60px; text-align: center;">Jumlah Satker</th>
+                    <th style="width: 160px;">Nama Resmi Acuan (SIMPEG)</th>
+                    <th style="width: 45px; text-align: right;">Total Pgw</th>
+                    <th style="width: 40px; text-align: right;">Sesuai</th>
+                    <th style="width: 40px; text-align: right;">Selisih</th>
+                    <th style="width: 75px; text-align: center;">Status</th>
                     <th>Rekomendasi Standardisasi / Tindakan SIMGAJI</th>
                 </tr>
             </thead>
@@ -152,6 +163,7 @@
                         <td class="center">{{ $loop->iteration }}</td>
                         <td class="center"><strong>{{ $m['kdskpd'] }}</strong></td>
                         <td>{{ $m['nama_simgaji'] }}</td>
+                        <td class="center"><strong>{{ $m['total_satker'] ?? 0 }} Satker</strong></td>
                         <td style="font-weight: bold; color: #065f46;">{{ $m['nama_simpeg_dominan'] }}</td>
                         <td class="right"><strong>{{ number_format($m['total_pegawai'], 0, ',', '.') }}</strong></td>
                         <td class="right" style="color: #059669;">{{ number_format($m['total_sesuai'], 0, ',', '.') }}</td>
@@ -165,6 +177,8 @@
                                 <span class="badge badge-purple">CABANG DISDIK</span>
                             @elseif($m['status_nama'] === 'ADA_SELISIH')
                                 <span class="badge badge-danger">ADA SELISIH</span>
+                            @elseif($m['status_nama'] === 'NON_AKTIF')
+                                <span class="badge" style="background: #f1f5f9; color: #64748b;">0 PEGAWAI</span>
                             @else
                                 <span class="badge badge-warning">{{ $m['status_nama'] }}</span>
                             @endif
@@ -173,8 +187,65 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" class="center" style="padding: 20px;">
+                        <td colspan="10" class="center" style="padding: 20px;">
                             Data master SKPD tidak tersedia.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+
+    @elseif(($tab ?? '') === 'master_satker')
+        <!-- TABEL MASTER SATKER (551 SATKER) -->
+        <table style="width: 100%; border: none; margin-bottom: 6px; font-size: 8px;">
+            <tr style="background: none;">
+                <td style="border: none; padding: 0;">
+                    <strong>Total Satker Ditampilkan:</strong> {{ count($satkerMappings ?? []) }} Satker
+                    @if($isLimited ?? false)
+                        &bull; <span style="color: #dc2626; font-weight: bold;">(Dibatasi 500 data pertama untuk cetak PDF)</span>
+                    @endif
+                </td>
+                <td style="border: none; padding: 0; text-align: right;">
+                    Dicetak melalui Sistem Rekonsiliasi Realisasi Belanja Pegawai (KONBELPEG)
+                </td>
+            </tr>
+        </table>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 25px; text-align: center;">No</th>
+                    <th style="width: 45px; text-align: center;">Kd SKPD</th>
+                    <th style="width: 170px;">Nama SKPD SIMGAJI</th>
+                    <th style="width: 95px; text-align: center;">Kode Satker</th>
+                    <th style="width: 220px;">Nama Satker Resmi SIMGAJI</th>
+                    <th style="width: 55px; text-align: right;">Pegawai</th>
+                    <th>Dominan Unit / UPT SIMPEG</th>
+                    <th style="width: 60px; text-align: center;">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($satkerMappings ?? [] as $sat)
+                    <tr>
+                        <td class="center">{{ $loop->iteration }}</td>
+                        <td class="center"><strong>{{ $sat['kdskpd'] }}</strong></td>
+                        <td>{{ $sat['nmskpd'] }}</td>
+                        <td class="center" style="font-family: monospace; font-weight: bold; color: #047857;">{{ $sat['kdsatker'] }}</td>
+                        <td><strong>{{ $sat['nmsatker'] }}</strong></td>
+                        <td class="right"><strong>{{ number_format($sat['total_pegawai'], 0, ',', '.') }}</strong></td>
+                        <td style="color: #1e40af;">{{ $sat['dominan_simpeg_upt'] }}</td>
+                        <td class="center">
+                            @if($sat['status'] === 'AKTIF')
+                                <span class="badge badge-success">AKTIF</span>
+                            @else
+                                <span class="badge" style="background: #f1f5f9; color: #94a3b8;">0 PGW</span>
+                            @endif
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="8" class="center" style="padding: 20px;">
+                            Data master Satker tidak ditemukan.
                         </td>
                     </tr>
                 @endforelse
@@ -214,14 +285,14 @@
                 <tr>
                     <th style="width: 25px; text-align: center;">No</th>
                     <th style="width: 105px;">NIP / Golru</th>
-                    <th style="width: 130px;">Nama Pegawai</th>
-                    <th style="width: 120px;">Jabatan SIMPEG</th>
-                    <th style="width: 45px; text-align: center;">Kd SIMGAJI</th>
-                    <th style="width: 135px;">SKPD SIMGAJI (Eksisting)</th>
-                    <th style="width: 110px;">Satker / Inputer</th>
-                    <th style="width: 135px;">SKPD Resmi (SIMPEG)</th>
-                    <th style="width: 45px; text-align: center;">Kd Rek.</th>
-                    <th style="width: 135px;">UPTD / Satker Resmi</th>
+                    <th style="width: 125px;">Nama Pegawai</th>
+                    <th style="width: 110px;">Jabatan SIMPEG</th>
+                    <th style="width: 40px; text-align: center;">Kd SKPD</th>
+                    <th style="width: 130px;">SKPD SIMGAJI (Eksisting)</th>
+                    <th style="width: 130px;">Satker SIMGAJI (Resmi)</th>
+                    <th style="width: 130px;">SKPD Resmi (SIMPEG)</th>
+                    <th style="width: 40px; text-align: center;">Kd Rek.</th>
+                    <th style="width: 125px;">UPTD / Satker Resmi</th>
                     <th>Rekomendasi Tindakan SIMGAJI</th>
                 </tr>
             </thead>
@@ -242,8 +313,8 @@
                         <td class="center" style="font-weight: bold; color: #dc2626;">{{ $row['kdskpd_simgaji'] }}</td>
                         <td>{{ $row['skpd_simgaji'] }}</td>
                         <td>
-                            <span style="font-size: 7.5px;">Satker: {{ $row['kdsatker_simgaji'] }}</span><br>
-                            <span style="color: #64748b; font-size: 7px;">Inputer: {{ $row['inputer_simgaji'] }}</span>
+                            <strong style="font-size: 7.5px;">{{ $row['nmsatker_simgaji'] ?? $row['kdsatker_simgaji'] }}</strong><br>
+                            <span style="color: #64748b; font-size: 7px;">Kd: {{ $row['kdsatker_simgaji'] }} &bull; {{ $row['inputer_simgaji'] }}</span>
                         </td>
                         <!-- SIMPEG -->
                         <td style="font-weight: bold; color: #065f46;">{{ $row['skpd_simpeg'] }}</td>
@@ -266,6 +337,9 @@
                             @endif
                             <br>
                             <span style="font-weight: bold; font-size: 7.5px;">{{ $row['rekomendasi'] }}</span>
+                            @if(!empty($row['satker_rekomendasi']) && $row['satker_rekomendasi'] !== '-' && $row['kdsatker_rekomendasi'] !== '-')
+                                <br><span style="color: #047857; font-size: 7px;">Satker Rek.: {{ $row['satker_rekomendasi'] }} ({{ $row['kdsatker_rekomendasi'] }})</span>
+                            @endif
                         </td>
                     </tr>
                 @empty
