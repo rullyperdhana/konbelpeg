@@ -769,7 +769,7 @@
                         <th colspan="3" style="text-align: center; border-right: 1px solid rgba(255,255,255,0.2); background: #0f172a; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
                             <i class="ph-bold ph-database"></i> Kondisi SIMGAJI (Eksisting)
                         </th>
-                        <th colspan="3" style="text-align: center; border-right: 1px solid rgba(255,255,255,0.2); background: #065f46; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <th colspan="4" style="text-align: center; border-right: 1px solid rgba(255,255,255,0.2); background: #065f46; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;">
                             <i class="ph-bold ph-shield-check"></i> Acuan Resmi SIMPEG
                         </th>
                         <th rowspan="2" style="text-align: center; background: #312e81; vertical-align: middle; padding: 8px 12px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; min-width: 290px;">
@@ -788,8 +788,9 @@
                         <th style="min-width: 200px; border-right: 1px solid var(--border-color);">Satker SIMGAJI (Resmi)</th>
 
                         <th style="width: 90px; text-align: center;">Kd Rekomendasi</th>
-                        <th style="min-width: 200px;">SKPD Resmi (SIMPEG)</th>
-                        <th style="min-width: 160px; border-right: 1px solid var(--border-color);">UPTD / Satker SIMPEG</th>
+                        <th style="min-width: 190px;">SKPD Resmi (SIMPEG)</th>
+                        <th style="min-width: 170px;">UPTD Resmi (SIMPEG)</th>
+                        <th style="min-width: 170px; border-right: 1px solid var(--border-color);">Satker / Sub Unit (SIMPEG)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -891,13 +892,23 @@
                                 </div>
                             </td>
 
-                            <!-- SIMPEG: UPTD / Satker -->
-                            <td style="border-right: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
-                                @if($row['upt_simpeg'] !== '-')
-                                    <div style="font-weight: 600; color: var(--text-main);">{{ $row['upt_simpeg'] }}</div>
+                            <!-- SIMPEG: UPTD Resmi -->
+                            <td>
+                                @if(!empty($row['upt_simpeg']) && $row['upt_simpeg'] !== '-')
+                                    <div style="font-weight: 600; color: var(--text-main); font-size: 11.5px;">
+                                        <i class="ph-bold ph-buildings" style="color: #059669; font-size: 12px; margin-right: 2px;"></i> {{ $row['upt_simpeg'] }}
+                                    </div>
+                                @else
+                                    <span style="color: var(--text-muted); font-size: 11px;">Induk SKPD (-)</span>
                                 @endif
-                                @if($row['satker_simpeg'] !== '-' && $row['satker_simpeg'] !== $row['upt_simpeg'])
-                                    <div style="font-size: 10.5px; color: var(--text-light);">{{ $row['satker_simpeg'] }}</div>
+                            </td>
+
+                            <!-- SIMPEG: Satker / Sub Unit Resmi -->
+                            <td style="border-right: 1px solid var(--border-color); font-size: 11px; color: var(--text-muted);">
+                                @if(!empty($row['satker_simpeg']) && $row['satker_simpeg'] !== '-')
+                                    <div style="color: var(--text-main); font-weight: 500;">{{ $row['satker_simpeg'] }}</div>
+                                @else
+                                    <span style="color: var(--text-muted);">-</span>
                                 @endif
                             </td>
 
@@ -945,7 +956,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="11" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+                            <td colspan="12" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
                                 <div style="font-size: 36px; margin-bottom: 8px; color: #10b981;">
                                     <i class="ph-bold ph-check-circle"></i>
                                 </div>

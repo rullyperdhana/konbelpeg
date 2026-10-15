@@ -292,7 +292,7 @@
                     <th style="width: 130px;">Satker SIMGAJI (Resmi)</th>
                     <th style="width: 130px;">SKPD Resmi (SIMPEG)</th>
                     <th style="width: 40px; text-align: center;">Kd Rek.</th>
-                    <th style="width: 125px;">UPTD / Satker Resmi</th>
+                    <th style="width: 125px;">UPTD &amp; Satker SIMPEG</th>
                     <th>Rekomendasi Tindakan SIMGAJI</th>
                 </tr>
             </thead>
@@ -319,7 +319,16 @@
                         <!-- SIMPEG -->
                         <td style="font-weight: bold; color: #065f46;">{{ $row['skpd_simpeg'] }}</td>
                         <td class="center" style="font-weight: bold; color: #047857;">{{ $row['kdskpd_rekomendasi'] }}</td>
-                        <td>{{ $row['upt_simpeg'] !== '-' ? $row['upt_simpeg'] : 'Induk SKPD' }}</td>
+                        <td style="font-size: 7.5px;">
+                            @if(!empty($row['upt_simpeg']) && $row['upt_simpeg'] !== '-')
+                                <strong>UPTD:</strong> {{ $row['upt_simpeg'] }}<br>
+                            @else
+                                <span style="color: #64748b;">UPTD: Induk SKPD</span><br>
+                            @endif
+                            @if(!empty($row['satker_simpeg']) && $row['satker_simpeg'] !== '-' && $row['satker_simpeg'] !== $row['upt_simpeg'])
+                                <span style="color: #334155;">Satker: {{ $row['satker_simpeg'] }}</span>
+                            @endif
+                        </td>
                         <!-- Rekomendasi -->
                         <td>
                             @if($jenis === 'Beda SKPD Induk')

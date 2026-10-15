@@ -937,6 +937,7 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
                     || str_contains(strtolower($item['nama'] ?? ''), $sLower)
                     || str_contains(strtolower($item['skpd_simpeg'] ?? ''), $sLower)
                     || str_contains(strtolower($item['upt_simpeg'] ?? ''), $sLower)
+                    || str_contains(strtolower($item['satker_simpeg'] ?? ''), $sLower)
                     || str_contains(strtolower($item['skpd_simgaji'] ?? ''), $sLower)
                     || str_contains(strtolower($item['kdskpd_simgaji'] ?? ''), $sLower)
                     || str_contains(strtolower($item['kdsatker_simgaji'] ?? ''), $sLower)
@@ -1049,6 +1050,7 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
                     || str_contains(strtolower($item['nama'] ?? ''), $sLower)
                     || str_contains(strtolower($item['skpd_simpeg'] ?? ''), $sLower)
                     || str_contains(strtolower($item['upt_simpeg'] ?? ''), $sLower)
+                    || str_contains(strtolower($item['satker_simpeg'] ?? ''), $sLower)
                     || str_contains(strtolower($item['skpd_simgaji'] ?? ''), $sLower)
                     || str_contains(strtolower($item['kdskpd_simgaji'] ?? ''), $sLower)
                     || str_contains(strtolower($item['kdsatker_simgaji'] ?? ''), $sLower)
@@ -1171,7 +1173,7 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
             'Kode Satker SIMGAJI',
             'Nama Satker Resmi SIMGAJI',
             'Total Pegawai Aktif (DBF)',
-            'Dominan Unit / UPT SIMPEG',
+            'Dominan UPTD SIMPEG',
             'Status Keaktifan',
         ];
 
@@ -1261,7 +1263,8 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
             'Kode Rekomendasi SKPD',
             'Kode Rekomendasi Satker',
             'Satker Rekomendasi (SIMGAJI)',
-            'UPTD / Satker Resmi (SIMPEG)',
+            'UPTD Resmi (SIMPEG)',
+            'Satker / Sub Unit Resmi (SIMPEG)',
             'Status / Jenis Selisih',
             'Rekomendasi Tindakan Perbaikan SIMGAJI',
         ];
@@ -1305,7 +1308,8 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
                 $row['kdskpd_rekomendasi'],
                 $row['kdsatker_rekomendasi'] ?? '-',
                 $row['satker_rekomendasi'] ?? '-',
-                $row['upt_simpeg'],
+                $row['upt_simpeg'] ?? '-',
+                $row['satker_simpeg'] ?? '-',
                 $row['jenis_selisih'],
                 $row['rekomendasi'],
             ];
@@ -1400,6 +1404,7 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
                     || str_contains(strtolower($item['nama'] ?? ''), $sLower)
                     || str_contains(strtolower($item['skpd_simpeg'] ?? ''), $sLower)
                     || str_contains(strtolower($item['upt_simpeg'] ?? ''), $sLower)
+                    || str_contains(strtolower($item['satker_simpeg'] ?? ''), $sLower)
                     || str_contains(strtolower($item['skpd_simgaji'] ?? ''), $sLower)
                     || str_contains(strtolower($item['kdskpd_simgaji'] ?? ''), $sLower)
                     || str_contains(strtolower($item['kdsatker_simgaji'] ?? ''), $sLower)

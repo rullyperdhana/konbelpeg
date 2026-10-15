@@ -2,6 +2,23 @@
 
 Dokumen ini mencatat seluruh riwayat pembaruan, evolusi fitur, perbaikan bug, dan progres pengembangan sistem **KONBELPEG (Rekonsiliasi Realisasi Belanja Pegawai & SIMGAJI)**.
 
+## 📌 [v2.15.2] - 2026-10-15
+### 🏢 Pemisahan Kolom UPTD dan Satker / Sub Unit SIMPEG pada Ekspor Dokumen & Antarmuka BNBA
+- **Pemisahan Kolom Mandiri UPTD vs Satker pada Ekspor Excel (`.xlsx`)**:
+  - Pada **Sheet 3 (Data BNBA Pegawai)**: Kolom yang sebelumnya digabung kini dipisah tegas menjadi dua kolom tersendiri:
+    - **Kolom 16**: `UPTD Resmi (SIMPEG)` (memuat nama UPTD mandiri seperti Balai, RSUD, SMA/SMK/SLB).
+    - **Kolom 17**: `Satker / Sub Unit Resmi (SIMPEG)` (memuat nama seksi, subbag, bidang, atau unit kerja internal di bawahnya).
+  - Pada **Sheet 2 (Master Satker)**: Mempertegas penamaan kolom menjadi `Dominan UPTD SIMPEG`.
+- **Penyempurnaan Antarmuka Tabel Web (`/laporan/perbaikan-simgaji-skpd`)**:
+  - Header *Acuan Resmi SIMPEG* kini memuat 4 sub-kolom terpisah (`Kd Rekomendasi`, `SKPD Resmi`, `UPTD Resmi`, dan `Satker / Sub Unit`).
+  - Penambahan ikon gedung visual dan penyesuaian lebar kolom agar informasi berjenjang mudah dibaca oleh verifikator.
+- **Penyempurnaan Format Cetak PDF Resmi (A4 Landscape)**:
+  - Format cetak PDF kini merinci kedua tingkatan organisasi secara berjenjang (`UPTD: ...` dan `Satker: ...`).
+- **Peningkatan Mesin Pencarian (*Smart Search*)**:
+  - Fitur pencarian pada halaman web, ekspor Excel, dan cetak PDF kini otomatis mencocokkan kata kunci pada kolom `satker_simpeg`.
+
+---
+
 ## 📌 [v2.15.1] - 2026-10-14
 ### ⚡ Peningkatan Parser CSV SIMPEG Modern, Normalisasi Kutip Tunggal, dan Penambahan TMT Jabatan
 - **Dukungan Format CSV SIMPEG Modern (`data_simpeg_11.csv`)**:
