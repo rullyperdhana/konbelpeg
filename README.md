@@ -109,10 +109,11 @@ Seringkali terjadi diskrepansi yang menyebabkan potensi kelebihan/kekurangan bay
    - Ekspor Microsoft Excel (.xlsx) dan PDF resmi.
 9. **Laporan BNBA & Pemetaan Master SKPD SIMGAJI (`/laporan/perbaikan-simgaji-skpd`)**:
    - **Integrasi Master Data SIMGAJI (`kode_skpd_satker_simgaji.xlsx`)**: Berbasis data master resmi SIMGAJI Taspen yang memuat 62 Kode SKPD Resmi dan 551 Satuan Kerja (Satker) lengkap dengan mekanisme auto-cache berbasis `filemtime`.
-   - **Triple-Perspective Tabs**:
-     - **Tab 1: Data BNBA Pegawai**: Rincian perorangan (*By Name By Address*) untuk usulan perbaikan kode/penempatan SKPD & Satker di aplikasi SIMGAJI Taspen berbasis acuan data definitif **SIMPEG / KONBELPEG** (*single source of truth*), dilengkapi nama resmi Satker SIMGAJI dan rekomendasi rujukan kode Satker SIMGAJI otomatis.
+   - **Four-Perspective Tabs (4 Tab Analisis)**:
+     - **Tab 1: Data BNBA Pegawai (`tab=bnba`)**: Rincian perorangan (*By Name By Address*) untuk usulan perbaikan kode/penempatan SKPD & Satker di aplikasi SIMGAJI Taspen berbasis acuan data definitif **SIMPEG / KONBELPEG** (*single source of truth*), dilengkapi nama resmi Satker SIMGAJI dan rekomendasi rujukan kode Satker SIMGAJI otomatis.
      - **Tab 2: Matriks Pemetaan Master SKPD SIMGAJI (62 SKPD)**: Pemetaan komprehensif seluruh 62 entitas kode SKPD SIMGAJI terhadap SKPD resmi SIMPEG, dilengkapi jumlah Satker terdaftar per instansi, total pegawai, status pemetaan (Sesuai, Ada Selisih, Cabang Disdik, 0 Pegawai), dan rekomendasi teknis.
      - **Tab 3: Matriks Master Satker SIMGAJI (551 Satker)**: Inventarisasi 551 Satker resmi SIMGAJI (UPTD, Balai, Rumah Sakit, Biro, SMAN/SMKN/SLBN) dilengkapi filter SKPD, status keaktifan (Aktif vs 0 Pegawai), pencarian instan, dan pemetaan ke unit kerja/UPTD dominan SIMPEG.
+     - **Tab 4: BNBA SIMPEG Lengkap + SIMGAJI (`tab=simpeg_lengkap`)**: Menyajikan basis data master kepegawaian SIMPEG lengkap (seluruh 20.662 pegawai) yang disandingkan langsung dengan 4 kolom resmi SIMGAJI (**Kd SKPD**, **Nama SKPD SIMGAJI**, **Kode Satker**, **Nama Satker Resmi SIMGAJI**), kartu metrik status SIMGAJI (Aktif di SIMGAJI vs Belum Ada), filter dinamis, dan pencarian cepat.
    - **Klasifikasi Selisih & Rekomendasi Aksi Otomatis**:
      - **Beda SKPD Induk**: Deteksi mutasi pegawai antar-SKPD beserta instruksi mutasi kode SKPD & rujukan Satker SIMGAJI.
      - **Beda Cabang Disdik**: Deteksi ketidaksesuaian penempatan cabang wilayah Disdik (kode 070-082) terhadap sekolah/unit kerja riil beserta rujukan Satker sekolah di SIMGAJI.
@@ -123,6 +124,7 @@ Seringkali terjadi diskrepansi yang menyebabkan potensi kelebihan/kekurangan bay
      - Filter Kategori Selisih, SKPD Resmi SIMPEG, SKPD SIMGAJI, serta pencarian instan (NIP, Nama, Satker) dan tombol salin NIP 1-klik.
    - **Ekspor Dokumen Cerdas & Siap Cetak**:
      - **Excel Multi-Sheet (.xlsx)**: Sheet 1 memuat Matriks 62 Master SKPD, Sheet 2 memuat Matriks 551 Master Satker, Sheet 3 memuat Daftar Nominatif BNBA Pegawai Lengkap dengan rujukan Satker SIMGAJI.
+     - **Excel SIMPEG Lengkap + SIMGAJI (.xlsx)**: Ekspor mandiri 33 kolom data kepegawaian lengkap SIMPEG yang diperkaya 4 data master SIMGAJI dengan proteksi teks numerik dan respons streaming hemat memori (`streamDownload`).
      - **PDF Resmi (A4 Landscape)**: Menghasilkan dokumen resmi ber-kop instansi dan tanda tangan pejabat penatausahaan keuangan yang menyesuaikan tab aktif (Matriks Master SKPD, Matriks Master Satker, atau Nominatif BNBA).
 10. **Laporan Simulasi & Proyeksi Tapera ASN & Pemda (`/laporan/tapera`)**:
     - **Simulasi Berdasarkan PP No. 25/2020 jo. PP No. 21/2024**: Menghitung simpanan Tapera total 3,0% (0,5% beban APBD Pemda dan 2,5% potongan ASN) berbasis *Gaji Pokok + Tunjangan Keluarga + Tunjangan Jabatan/Fungsional/Umum*.
@@ -264,6 +266,7 @@ Inti dari sistem KONBELPEG dengan 6 kategori pencocokan otomatis:
 | `GET` | `/laporan/perbaikan-simgaji-skpd` | `LaporanBnbaPerbaikanSimgajiController@index` | Modul Laporan BNBA Perbaikan SKPD SIMGAJI |
 | `GET` | `/laporan/perbaikan-simgaji-skpd/refresh` | `LaporanBnbaPerbaikanSimgajiController@refreshCache` | Refresh cache komparasi BNBA SKPD |
 | `GET` | `/laporan/perbaikan-simgaji-skpd/export/excel` | `LaporanBnbaPerbaikanSimgajiController@exportExcel` | Ekspor Excel Berita Acara BNBA Perbaikan |
+| `GET` | `/laporan/perbaikan-simgaji-skpd/export/simpeg-lengkap` | `LaporanBnbaPerbaikanSimgajiController@exportSimpegLengkap` | Ekspor Excel BNBA SIMPEG Lengkap + 4 Kolom SIMGAJI |
 | `GET` | `/laporan/perbaikan-simgaji-skpd/export/pdf` | `LaporanBnbaPerbaikanSimgajiController@exportPdf` | Cetak PDF Laporan BNBA Perbaikan SKPD |
 | `GET` | `/laporan/tapera` | `LaporanTaperaController@index` | Modul Simulasi & Proyeksi Tapera ASN & Pemda (PP 21/2024) |
 | `GET` | `/laporan/tapera/export/excel` | `LaporanTaperaController@exportExcel` | Ekspor Excel Simulasi & Proyeksi Tapera |
