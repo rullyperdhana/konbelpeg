@@ -134,4 +134,29 @@ class LaporanBnbaPerbaikanSimgajiTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('RUSLENA');
     }
+
+    public function test_authenticated_user_can_access_simpeg_lengkap_tab(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get('/laporan/perbaikan-simgaji-skpd?tab=simpeg_lengkap');
+
+        $response->assertStatus(200);
+        $response->assertSee('Laporan BNBA Pegawai SIMPEG Lengkap Disandingkan Data SIMGAJI');
+        $response->assertSee('Kd SKPD');
+        $response->assertSee('Nama SKPD SIMGAJI');
+        $response->assertSee('Kode Satker');
+        $response->assertSee('Nama Satker Resmi SIMGAJI');
+        $response->assertSee('RUSLENA');
+    }
+
+    public function test_authenticated_user_can_export_simpeg_lengkap_excel(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get('/laporan/perbaikan-simgaji-skpd/export/simpeg-lengkap');
+
+        $response->assertStatus(200);
+        $response->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    }
 }

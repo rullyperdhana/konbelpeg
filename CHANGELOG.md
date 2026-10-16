@@ -2,6 +2,26 @@
 
 Dokumen ini mencatat seluruh riwayat pembaruan, evolusi fitur, perbaikan bug, dan progres pengembangan sistem **KONBELPEG (Rekonsiliasi Realisasi Belanja Pegawai & SIMGAJI)**.
 
+## 📌 [v2.16.0] - 2026-10-17
+### 📑 Modul Laporan BNBA SIMPEG Lengkap & Integrasi 4 Kolom Master SIMGAJI
+- **Tab Baru 4: BNBA SIMPEG Lengkap + SIMGAJI (`tab=simpeg_lengkap`)**:
+  - Menyajikan basis data master profil seluruh pegawai SIMPEG (Identitas, NIK, Status Pegawai, Jenis Pegawai, Golru/Pangkat, TMT Golru, Masa Kerja Tahun/Bulan, Jabatan, Eselon, Jenis Jabatan, TMT Jabatan, Pendidikan Terakhir, Unit Kerja SKPD/UPTD/Satker, Rekening, Bank, NPWP, No Karpeg, TTL, JK, dan Agama).
+  - Mengintegrasikan 4 atribut acuan dari sistem penggajian SIMGAJI Taspen secara real-time:
+    1. **Kd SKPD**: Kode SKPD eksisting di database DBF SIMGAJI Taspen.
+    2. **Nama SKPD SIMGAJI**: Nomenklatur nama SKPD resmi SIMGAJI (dari master 62 SKPD).
+    3. **Kode Satker**: Kode satuan kerja penggajian di SIMGAJI.
+    4. **Nama Satker Resmi SIMGAJI**: Nomenklatur resmi satker (dari master 551 satker).
+  - Status Keselarasan & Keaktifan: Pendeteksi otomatis pegawai yang aktif di SIMGAJI, pensiun/stop, maupun yang belum terdaftar di SIMGAJI (misal PPPK Paruh Waktu atau pegawai baru).
+- **Fitur Ekspor Excel Khusus (`/laporan/perbaikan-simgaji-skpd/export/simpeg-lengkap`)**:
+  - Tombol aksi mandiri *"Ekspor SIMPEG Lengkap + SIMGAJI"* pada header halaman dan tab laporan.
+  - Menghasilkan berkas spreadsheet `.xlsx` dengan pewarnaan tematik grup kolom, proteksi format teks numerik (NIP, NIK, NPWP, No Rekening, Kd SKPD, Kd Satker), auto-size kolom, dan header styling standar pelaporan resmi.
+  - Mendukung filter dinamis: SKPD SIMPEG, Status Pegawai (PNS, PPPK, dll), Status di SIMGAJI (Terdaftar vs Belum Terdaftar), dan pencarian instan kata kunci.
+  - Menggunakan streaming response (`streamDownload`) untuk efisiensi memori tinggi pada data puluhan ribu pegawai.
+- **Pengujian Otomatis (*Feature Tests*)**:
+  - Pengujian feature tests diperluas (**12 tests passed, 37 assertions**) mencakup pemuatan Tab 4 dan ekspor Excel streaming response.
+
+---
+
 ## 📌 [v2.15.2] - 2026-10-15
 ### 🏢 Pemisahan Kolom UPTD dan Satker / Sub Unit SIMPEG pada Ekspor Dokumen & Antarmuka BNBA
 - **Pemisahan Kolom Mandiri UPTD vs Satker pada Ekspor Excel (`.xlsx`)**:

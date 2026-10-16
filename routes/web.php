@@ -165,6 +165,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/laporan/perbaikan-simgaji-skpd', [LaporanBnbaPerbaikanSimgajiController::class, 'index'])->name('laporan.perbaikan_simgaji_skpd.index');
     Route::get('/laporan/perbaikan-simgaji-skpd/refresh', [LaporanBnbaPerbaikanSimgajiController::class, 'refreshCache'])->name('laporan.perbaikan_simgaji_skpd.refresh');
     Route::get('/laporan/perbaikan-simgaji-skpd/export/excel', [LaporanBnbaPerbaikanSimgajiController::class, 'exportExcel'])->name('laporan.perbaikan_simgaji_skpd.export_excel');
+    Route::get('/laporan/perbaikan-simgaji-skpd/export/simpeg-lengkap', [LaporanBnbaPerbaikanSimgajiController::class, 'exportSimpegLengkap'])->name('laporan.perbaikan_simgaji_skpd.export_simpeg_lengkap');
     Route::get('/laporan/perbaikan-simgaji-skpd/export/pdf', [LaporanBnbaPerbaikanSimgajiController::class, 'exportPdf'])->name('laporan.perbaikan_simgaji_skpd.export_pdf');
 
     // Laporan Rekonsiliasi IWP & BPJS Kesehatan (Jamkes)

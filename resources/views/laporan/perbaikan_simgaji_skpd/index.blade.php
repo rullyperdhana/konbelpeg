@@ -160,6 +160,11 @@
             <i class="ph-bold ph-file-arrow-down" style="font-size: 16px; color: #1e40af;"></i> Ekspor Full Pemetaan
         </a>
 
+        <!-- Ekspor BNBA SIMPEG Lengkap + Data SIMGAJI -->
+        <a href="{{ route('laporan.perbaikan_simgaji_skpd.export_simpeg_lengkap', request()->query()) }}" class="btn btn-export" style="color: #0d9488; border-color: rgba(13, 148, 136, 0.4); font-weight: 600;" title="Unduh Laporan BNBA Data SIMPEG Lengkap (Biodata, Status, Pangkat, Jabatan, Unit Kerja, Finansial) disandingkan dengan Kd SKPD, Nama SKPD SIMGAJI, Kode Satker & Nama Satker Resmi SIMGAJI">
+            <i class="ph-bold ph-identification-card" style="font-size: 16px; color: #0d9488;"></i> Ekspor SIMPEG Lengkap + SIMGAJI
+        </a>
+
         <!-- Ekspor PDF Resmi -->
         <a href="{{ route('laporan.perbaikan_simgaji_skpd.export_pdf', ['tab' => $tab, 'status' => $statusFilter, 'kategori' => $kategori, 'skpd' => $skpdFilter, 'skpd_simgaji' => $simgajiFilter, 'search' => $search]) }}" target="_blank" class="btn btn-export" style="color: #dc2626; border-color: rgba(239, 68, 68, 0.4); font-weight: 600;" title="Buka / Cetak dokumen PDF resmi A4 Landscape">
             <i class="ph-bold ph-file-pdf" style="font-size: 16px; color: #ef4444;"></i> Cetak PDF
@@ -202,6 +207,13 @@
         <span>3. Matriks Master Satker ({{ $summary['total_satker_simgaji'] ?? 551 }} Satker SIMGAJI)</span>
         <span class="badge" style="background: #047857; color: #ffffff; font-size: 11px; padding: 2px 7px; border-radius: 999px;">
             {{ $summary['total_satker_simgaji'] ?? 551 }} Satker
+        </span>
+    </a>
+    <a href="{{ route('laporan.perbaikan_simgaji_skpd.index', array_merge(request()->query(), ['tab' => 'simpeg_lengkap', 'page' => 1])) }}" class="custom-tab-item {{ $tab === 'simpeg_lengkap' ? 'active' : '' }}">
+        <i class="ph-bold ph-identification-card"></i>
+        <span>4. BNBA SIMPEG Lengkap + SIMGAJI</span>
+        <span class="badge" style="background: #0d9488; color: #ffffff; font-size: 11px; padding: 2px 7px; border-radius: 999px;">
+            {{ number_format($totalSimpegCount ?? 0, 0, ',', '.') }} Pegawai
         </span>
     </a>
 </div>
@@ -536,6 +548,466 @@
                                     Next <i class="ph-bold ph-caret-right"></i>
                                 </a>
                                 <a href="{{ $satkerMappings->appends(request()->query())->url($lPage) }}" class="page-btn" title="Halaman Terakhir">
+                                    <i class="ph-bold ph-caret-double-right"></i>
+                                </a>
+                            @else
+                                <span class="page-btn disabled">Next <i class="ph-bold ph-caret-right"></i></span>
+                                <span class="page-btn disabled"><i class="ph-bold ph-caret-double-right"></i></span>
+                            @endif
+                        </div>
+                    @endif
+                </div>
+            </div>
+        @endif
+    </div>
+
+@elseif($tab === 'simpeg_lengkap')
+    <!-- ======================================================== -->
+    <!-- TAB 4: BNBA DATA SIMPEG LENGKAP & INTEGRASI DATA SIMGAJI -->
+    <!-- ======================================================== -->
+
+    <!-- Petunjuk Operasional Tab 4 -->
+    <div style="background: linear-gradient(135deg, rgba(13, 148, 136, 0.06), rgba(30, 64, 175, 0.05)); border: 1px solid rgba(13, 148, 136, 0.25); border-radius: 12px; padding: 16px 20px; margin-bottom: 22px; display: flex; align-items: flex-start; gap: 14px;">
+        <div style="width: 40px; height: 40px; border-radius: 10px; background: #0d9488; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; margin-top: 2px;">
+            <i class="ph-bold ph-identification-card"></i>
+        </div>
+        <div style="font-size: 13px; line-height: 1.6; color: var(--text-main);">
+            <strong style="color: #0f766e; font-size: 14px;">Laporan BNBA Pegawai SIMPEG Lengkap Disandingkan Data SIMGAJI:</strong><br>
+            Tabel di bawah ini menyajikan seluruh basis data profil pegawai dari <strong>SIMPEG BKD</strong> (Identitas lengkap, NIK, Status Pegawai, Pangkat/Golru, Riwayat TMT, Jabatan, Acuan Unit Kerja, Pendidikan, Rekening Bank, dan NPWP) yang disandingkan langsung dengan 4 atribut acuan dari sistem penggajian <strong>SIMGAJI Taspen</strong>: <strong>Kd SKPD</strong>, <strong>Nama SKPD SIMGAJI</strong>, <strong>Kode Satker</strong>, dan <strong>Nama Satker Resmi SIMGAJI</strong>.
+        </div>
+    </div>
+
+    <!-- KPI Summary Grid -->
+    <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 24px;">
+        <!-- Total Pegawai SIMPEG -->
+        <div class="luno-widget">
+            <div class="luno-widget-top">
+                <div>
+                    <p class="luno-widget-title">Total Pegawai SIMPEG</p>
+                    <h3 class="luno-widget-value" style="color: #1e40af;">{{ number_format($totalSimpegCount, 0, ',', '.') }}</h3>
+                </div>
+                <div class="luno-widget-icon" style="background: rgba(30, 64, 175, 0.1); color: #1e40af;">
+                    <i class="ph-bold ph-users-four"></i>
+                </div>
+            </div>
+            <div class="luno-widget-bottom">
+                <span class="luno-trend-neutral"><i class="ph-bold ph-database"></i> Seluruh Master Pegawai SIMPEG</span>
+            </div>
+        </div>
+
+        <!-- Terdaftar di SIMGAJI -->
+        <div class="luno-widget">
+            <div class="luno-widget-top">
+                <div>
+                    <p class="luno-widget-title">Terdaftar di SIMGAJI</p>
+                    <h3 class="luno-widget-value" style="color: #059669;">{{ number_format($totalSimpegTerdaftarSimgaji, 0, ',', '.') }}</h3>
+                </div>
+                <div class="luno-widget-icon" style="background: rgba(5, 150, 105, 0.1); color: #059669;">
+                    <i class="ph-bold ph-check-circle"></i>
+                </div>
+            </div>
+            <div class="luno-widget-bottom">
+                <span class="luno-trend-up"><i class="ph-bold ph-check"></i> Memiliki NIP di Database DBF</span>
+            </div>
+        </div>
+
+        <!-- Belum Terdaftar di SIMGAJI -->
+        <div class="luno-widget">
+            <div class="luno-widget-top">
+                <div>
+                    <p class="luno-widget-title">Belum di SIMGAJI</p>
+                    <h3 class="luno-widget-value" style="color: #d97706;">{{ number_format(max(0, $totalSimpegCount - $totalSimpegTerdaftarSimgaji), 0, ',', '.') }}</h3>
+                </div>
+                <div class="luno-widget-icon" style="background: rgba(217, 119, 6, 0.1); color: #d97706;">
+                    <i class="ph-bold ph-warning-circle"></i>
+                </div>
+            </div>
+            <div class="luno-widget-bottom">
+                <span class="luno-trend-danger"><i class="ph-bold ph-info"></i> PPPK Paruh Waktu / Pegawai Baru</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Card -->
+    <div class="card" style="padding: 18px 20px; margin-bottom: 24px; border: 1px solid var(--border-color);">
+        <form method="GET" action="{{ route('laporan.perbaikan_simgaji_skpd.index') }}" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
+            <input type="hidden" name="tab" value="simpeg_lengkap">
+
+            <!-- Filter SKPD SIMPEG -->
+            <div style="flex: 1.5; min-width: 220px;">
+                <label style="display: block; font-size: 12px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                    <i class="ph-bold ph-buildings"></i> SKPD Resmi (SIMPEG)
+                </label>
+                <select name="simpeg_skpd" class="form-control" style="width: 100%; height: 38px; font-size: 12.5px;" onchange="this.form.submit()">
+                    <option value="semua">Semua SKPD ({{ count($simpegSkpdOptions) }})</option>
+                    @foreach($simpegSkpdOptions as $skpd)
+                        <option value="{{ $skpd }}" {{ $simpegSkpdFilter === $skpd ? 'selected' : '' }}>{{ $skpd }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- Filter Status Pegawai -->
+            <div style="flex: 1; min-width: 160px;">
+                <label style="display: block; font-size: 12px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                    <i class="ph-bold ph-user-circle"></i> Status Pegawai
+                </label>
+                <select name="status_pegawai" class="form-control" style="width: 100%; height: 38px; font-size: 12.5px;" onchange="this.form.submit()">
+                    <option value="semua">Semua Status</option>
+                    @foreach($statusPegawaiOptions as $st)
+                        <option value="{{ $st }}" {{ $statusPegawaiFilter === $st ? 'selected' : '' }}>{{ $st }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- Filter Status di SIMGAJI -->
+            <div style="flex: 1; min-width: 160px;">
+                <label style="display: block; font-size: 12px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                    <i class="ph-bold ph-toggle-left"></i> Status di SIMGAJI
+                </label>
+                <select name="status_simgaji" class="form-control" style="width: 100%; height: 38px; font-size: 12.5px;" onchange="this.form.submit()">
+                    <option value="semua" {{ $statusSimgajiFilter === 'semua' ? 'selected' : '' }}>Semua Pegawai</option>
+                    <option value="terdaftar" {{ $statusSimgajiFilter === 'terdaftar' ? 'selected' : '' }}>🟢 Terdaftar di SIMGAJI</option>
+                    <option value="belum_terdaftar" {{ $statusSimgajiFilter === 'belum_terdaftar' ? 'selected' : '' }}>🟡 Belum di SIMGAJI</option>
+                </select>
+            </div>
+
+            <!-- Search Box -->
+            <div style="flex: 1.5; min-width: 220px;">
+                <label style="display: block; font-size: 12px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">
+                    <i class="ph-bold ph-magnifying-glass"></i> Pencarian
+                </label>
+                <input type="text" name="simpeg_search" class="form-control" placeholder="Cari NIP, Nama, NIK, Satker, Jabatan..." value="{{ $simpegSearch }}" style="width: 100%; height: 38px; font-size: 12.5px;">
+            </div>
+
+            <!-- Tombol Aksi Filter -->
+            <div style="display: flex; gap: 8px;">
+                <button type="submit" class="btn btn-primary" style="height: 38px; padding: 0 16px;">
+                    <i class="ph-bold ph-magnifying-glass"></i> Cari
+                </button>
+                @if($simpegSkpdFilter !== 'semua' || $statusPegawaiFilter !== 'semua' || $statusSimgajiFilter !== 'semua' || $simpegSearch !== '' || $perPage !== 25)
+                    <a href="{{ route('laporan.perbaikan_simgaji_skpd.index', ['tab' => 'simpeg_lengkap']) }}" class="btn btn-export" style="height: 38px; color: var(--danger-text); padding: 0 14px;" title="Reset filter">
+                        <i class="ph-bold ph-arrow-counter-clockwise"></i> Reset
+                    </a>
+                @endif
+                <a href="{{ route('laporan.perbaikan_simgaji_skpd.export_simpeg_lengkap', request()->query()) }}" class="btn btn-export" style="height: 38px; color: #0d9488; border-color: rgba(13, 148, 136, 0.4); font-weight: 700;" title="Unduh hasil filter ke Excel">
+                    <i class="ph-bold ph-file-xls"></i> Unduh Excel
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tabel BNBA SIMPEG Lengkap + SIMGAJI -->
+    <div class="card" style="padding: 0; overflow: hidden; margin-bottom: 30px;">
+        <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; background: var(--bg-surface);">
+            <div>
+                <h3 style="margin: 0 0 4px 0; font-size: 15px; font-weight: 700; color: var(--text-main);">
+                    Data BNBA Pegawai SIMPEG Lengkap & Data SIMGAJI
+                </h3>
+                <p style="margin: 0; font-size: 12.5px; color: var(--text-muted);">
+                    Menampilkan <strong>{{ $simpegItems ? number_format($simpegItems->total(), 0, ',', '.') : 0 }}</strong> data pegawai sesuai filter yang dipilih.
+                </p>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <span class="badge" style="background: rgba(13, 148, 136, 0.1); color: #0d9488; padding: 6px 12px; font-size: 11px; font-weight: 700; border-radius: 6px;">
+                    <i class="ph-bold ph-database"></i> 4 Kolom SIMGAJI: Kd SKPD, Nama SKPD, Kode Satker, Nama Satker Resmi
+                </span>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table" style="font-size: 11.5px;">
+                <thead>
+                    <!-- Top Group Headers -->
+                    <tr>
+                        <th colspan="4" style="text-align: center; background: #1e3a8a; color: #ffffff; border-right: 1px solid rgba(255,255,255,0.2); padding: 8px 10px; font-size: 11px; text-transform: uppercase;">
+                            <i class="ph-bold ph-user"></i> Identitas Pegawai (SIMPEG)
+                        </th>
+                        <th colspan="4" style="text-align: center; background: #047857; color: #ffffff; border-right: 1px solid rgba(255,255,255,0.2); padding: 8px 10px; font-size: 11px; text-transform: uppercase;">
+                            <i class="ph-bold ph-medal"></i> Status & Pangkat (SIMPEG)
+                        </th>
+                        <th colspan="3" style="text-align: center; background: #0f766e; color: #ffffff; border-right: 1px solid rgba(255,255,255,0.2); padding: 8px 10px; font-size: 11px; text-transform: uppercase;">
+                            <i class="ph-bold ph-buildings"></i> Acuan Unit Kerja (SIMPEG)
+                        </th>
+                        <th colspan="4" style="text-align: center; background: #0f172a; color: #ffffff; border-right: 1px solid rgba(255,255,255,0.2); padding: 8px 10px; font-size: 11px; text-transform: uppercase;">
+                            <i class="ph-bold ph-database"></i> Data dari SIMGAJI Taspen
+                        </th>
+                        <th rowspan="2" style="text-align: center; background: #374151; color: #ffffff; vertical-align: middle; padding: 8px 12px; font-size: 11px; text-transform: uppercase; width: 130px;">
+                            Status SIMGAJI
+                        </th>
+                    </tr>
+                    <!-- Sub Headers -->
+                    <tr style="background: var(--bg-surface-subtle); color: var(--text-main);">
+                        <th style="width: 35px; text-align: center;">No</th>
+                        <th style="width: 165px;">NIP</th>
+                        <th style="min-width: 200px;">Nama Pegawai / Biodata</th>
+                        <th style="width: 150px; border-right: 1px solid var(--border-color);">NIK</th>
+
+                        <th style="width: 110px;">Status / Jenis</th>
+                        <th style="width: 100px; text-align: center;">Gol / TMT</th>
+                        <th style="min-width: 180px;">Jabatan SIMPEG</th>
+                        <th style="min-width: 160px; border-right: 1px solid var(--border-color);">Pendidikan</th>
+
+                        <th style="min-width: 180px;">SKPD Resmi</th>
+                        <th style="min-width: 160px;">UPTD Resmi</th>
+                        <th style="min-width: 160px; border-right: 1px solid var(--border-color);">Satker / Sub Unit</th>
+
+                        <th style="width: 80px; text-align: center;">Kd SKPD</th>
+                        <th style="min-width: 190px;">Nama SKPD SIMGAJI</th>
+                        <th style="width: 90px; text-align: center;">Kode Satker</th>
+                        <th style="min-width: 190px; border-right: 1px solid var(--border-color);">Nama Satker Resmi SIMGAJI</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @php $noSimpeg = $simpegItems ? ($simpegItems->firstItem() ?? 1) : 1; @endphp
+                    @forelse($simpegItems ?? [] as $pgw)
+                        @php
+                            $isRegisteredSimgaji = ($pgw->kdskpd_simgaji !== '-');
+                            $rowBg = $isRegisteredSimgaji ? '' : 'rgba(245, 158, 11, 0.04)';
+                        @endphp
+                        <tr style="border-bottom: 1px solid var(--border-color); background: {{ $rowBg }};">
+                            <!-- No -->
+                            <td style="text-align: center; color: var(--text-muted); font-size: 11px;">
+                                {{ $noSimpeg++ }}
+                            </td>
+
+                            <!-- NIP -->
+                            <td style="font-family: monospace; font-size: 11.5px; font-weight: 600;">
+                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+                                    <span>{{ $pgw->nip }}</span>
+                                    <button type="button" class="btn btn-export" style="padding: 1px 4px; height: 20px; font-size: 10px; border-radius: 4px;" onclick="copyNip('{{ $pgw->nip }}', this)" title="Salin NIP">
+                                        <i class="ph-bold ph-copy"></i>
+                                    </button>
+                                </div>
+                            </td>
+
+                            <!-- Nama Pegawai / Biodata -->
+                            <td>
+                                <div style="font-weight: 700; color: var(--text-main); font-size: 12px;">
+                                    {{ $pgw->nama }}
+                                </div>
+                                <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">
+                                    {{ $pgw->tempat_lahir ?: '-' }}, {{ $pgw->tgl_lahir ? date('d-m-Y', strtotime($pgw->tgl_lahir)) : '-' }} &bull; {{ $pgw->jk ?: '-' }} &bull; {{ $pgw->agama ?: '-' }}
+                                </div>
+                            </td>
+
+                            <!-- NIK -->
+                            <td style="font-family: monospace; font-size: 11px; color: var(--text-muted); border-right: 1px solid var(--border-color);">
+                                {{ $pgw->nik ?: '-' }}
+                            </td>
+
+                            <!-- Status / Jenis Pegawai -->
+                            <td>
+                                <span class="badge" style="background: rgba(30, 64, 175, 0.1); color: #1e40af; font-size: 10px; padding: 2px 6px;">
+                                    {{ $pgw->status_pegawai ?: '-' }}
+                                </span>
+                                @if($pgw->jenis_pegawai)
+                                    <span class="badge" style="background: rgba(5, 150, 105, 0.1); color: #059669; font-size: 10px; padding: 2px 6px; margin-top: 2px; display: inline-block;">
+                                        {{ $pgw->jenis_pegawai }}
+                                    </span>
+                                @endif
+                            </td>
+
+                            <!-- Gol / TMT & Masa Kerja -->
+                            <td style="text-align: center;">
+                                <div style="font-weight: 700; color: var(--text-main);">{{ $pgw->golru ?: '-' }}</div>
+                                <div style="font-size: 10px; color: var(--text-muted);">
+                                    TMT: {{ $pgw->tmt_golru ?: '-' }}
+                                </div>
+                                @if($pgw->masa_kerja_tahun !== null)
+                                    <div style="font-size: 10px; color: var(--text-muted);">
+                                        MK: {{ $pgw->masa_kerja_tahun }} th {{ $pgw->masa_kerja_bulan ?? 0 }} bl
+                                    </div>
+                                @endif
+                            </td>
+
+                            <!-- Jabatan SIMPEG -->
+                            <td>
+                                <div style="font-weight: 600; color: var(--text-main); font-size: 11.5px;">
+                                    {{ $pgw->jabatan?->nama ?? '-' }}
+                                </div>
+                                @if($pgw->jabatan?->eselon && $pgw->jabatan->eselon !== '-')
+                                    <span class="badge" style="background: rgba(0,0,0,0.06); font-size: 9.5px; padding: 1px 5px;">
+                                        Eselon: {{ $pgw->jabatan->eselon }}
+                                    </span>
+                                @endif
+                                @if($pgw->tmt_jabatan)
+                                    <span style="font-size: 10px; color: var(--text-muted); margin-left: 4px;">
+                                        TMT: {{ $pgw->tmt_jabatan }}
+                                    </span>
+                                @endif
+                            </td>
+
+                            <!-- Pendidikan -->
+                            <td style="border-right: 1px solid var(--border-color); font-size: 11px;">
+                                <div style="font-weight: 600; color: var(--text-main);">
+                                    {{ $pgw->tk_ijazah ?: '-' }}
+                                </div>
+                                <div style="color: var(--text-muted); font-size: 10.5px;">
+                                    {{ $pgw->nm_pendidikan ?: '-' }} {{ $pgw->th_lulus ? '('.$pgw->th_lulus.')' : '' }}
+                                </div>
+                            </td>
+
+                            <!-- Acuan Unit Kerja SIMPEG -->
+                            <td style="font-size: 11px;">
+                                <div style="font-weight: 600; color: var(--text-main);">
+                                    {{ $pgw->unitKerja?->skpd ?? '-' }}
+                                </div>
+                            </td>
+                            <td style="font-size: 11px;">
+                                @if($pgw->unitKerja?->upt && $pgw->unitKerja->upt !== '-')
+                                    <span style="color: #0d9488; font-weight: 600;">
+                                        <i class="ph-bold ph-buildings"></i> {{ $pgw->unitKerja->upt }}
+                                    </span>
+                                @else
+                                    <span style="color: var(--text-muted);">-</span>
+                                @endif
+                            </td>
+                            <td style="font-size: 11px; border-right: 1px solid var(--border-color);">
+                                @if($pgw->unitKerja?->satker && $pgw->unitKerja->satker !== '-')
+                                    <span>{{ $pgw->unitKerja->satker }}</span>
+                                @else
+                                    <span style="color: var(--text-muted);">-</span>
+                                @endif
+                            </td>
+
+                            <!-- DATA SIMGAJI: Kd SKPD -->
+                            <td style="text-align: center; font-family: monospace; font-weight: 700;">
+                                @if($pgw->kdskpd_simgaji !== '-')
+                                    <span class="badge" style="background: #0f172a; color: #ffffff; padding: 2px 7px; font-size: 11px;">
+                                        {{ $pgw->kdskpd_simgaji }}
+                                    </span>
+                                @else
+                                    <span style="color: var(--text-muted);">-</span>
+                                @endif
+                            </td>
+
+                            <!-- DATA SIMGAJI: Nama SKPD SIMGAJI -->
+                            <td style="font-size: 11.5px; font-weight: 600; color: var(--text-main);">
+                                @if($pgw->kdskpd_simgaji !== '-')
+                                    <span>{{ $pgw->nmskpd_simgaji }}</span>
+                                @else
+                                    <span style="color: var(--danger-text); font-style: italic; font-weight: 400;">
+                                        Belum Terdaftar di SIMGAJI
+                                    </span>
+                                @endif
+                            </td>
+
+                            <!-- DATA SIMGAJI: Kode Satker -->
+                            <td style="text-align: center; font-family: monospace;">
+                                @if($pgw->kdsatker_simgaji !== '-')
+                                    <span class="badge" style="background: #047857; color: #ffffff; padding: 2px 7px; font-size: 10.5px;">
+                                        {{ $pgw->kdsatker_simgaji }}
+                                    </span>
+                                @else
+                                    <span style="color: var(--text-muted);">-</span>
+                                @endif
+                            </td>
+
+                            <!-- DATA SIMGAJI: Nama Satker Resmi SIMGAJI -->
+                            <td style="font-size: 11px; color: var(--text-main); border-right: 1px solid var(--border-color);">
+                                @if($pgw->nmsatker_simgaji !== '-')
+                                    <strong style="color: #047857;">{{ $pgw->nmsatker_simgaji }}</strong>
+                                @else
+                                    <span style="color: var(--text-muted);">-</span>
+                                @endif
+                            </td>
+
+                            <!-- Status di SIMGAJI -->
+                            <td style="text-align: center;">
+                                @if($pgw->status_simgaji === 'Aktif')
+                                    <span class="badge" style="background: rgba(5, 150, 105, 0.1); color: #059669; font-size: 10.5px; padding: 3px 8px; border: 1px solid rgba(5, 150, 105, 0.25);">
+                                        <i class="ph-bold ph-check"></i> Aktif
+                                    </span>
+                                @elseif(str_contains($pgw->status_simgaji, 'Pensiun'))
+                                    <span class="badge" style="background: rgba(245, 158, 11, 0.1); color: #d97706; font-size: 10px; padding: 3px 8px; border: 1px solid rgba(245, 158, 11, 0.25);">
+                                        <i class="ph-bold ph-user-minus"></i> Pensiun/Stop
+                                    </span>
+                                @else
+                                    <span class="badge" style="background: rgba(239, 68, 68, 0.08); color: #dc2626; font-size: 10px; padding: 3px 8px; border: 1px solid rgba(239, 68, 68, 0.2);">
+                                        <i class="ph-bold ph-x"></i> Belum di SIMGAJI
+                                    </span>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="16" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+                                <i class="ph-bold ph-user-minus" style="font-size: 32px; display: block; margin-bottom: 8px;"></i>
+                                Tidak ada data pegawai SIMPEG yang cocok dengan filter pencarian.
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        @if($simpegItems && $simpegItems->total() > 0)
+            <div class="pagination-container">
+                <div class="pagination-info">
+                    <i class="ph-bold ph-list-numbers" style="color: #0d9488; font-size: 16px;"></i>
+                    <span>
+                        Menampilkan <strong>{{ $simpegItems->firstItem() ?? 0 }}</strong> s/d <strong>{{ $simpegItems->lastItem() ?? 0 }}</strong> dari total <strong>{{ number_format($simpegItems->total(), 0, ',', '.') }}</strong> Pegawai (Halaman {{ $simpegItems->currentPage() }} dari {{ $simpegItems->lastPage() }})
+                    </span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted);">
+                        <span>Per hal:</span>
+                        <select onchange="window.location.href = this.value;" class="form-control" style="height: 32px; padding: 2px 8px; font-size: 12px; width: 75px;">
+                            @foreach([25, 50, 100, 250, 500] as $size)
+                                <option value="{{ $simpegItems->appends(array_merge(request()->query(), ['per_page' => $size, 'page' => 1]))->url(1) }}" {{ $perPage == $size ? 'selected' : '' }}>{{ $size }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    @if($simpegItems->hasPages())
+                        <div class="pagination-nav">
+                            @if(!$simpegItems->onFirstPage())
+                                <a href="{{ $simpegItems->appends(request()->query())->url(1) }}" class="page-btn" title="Halaman Pertama">
+                                    <i class="ph-bold ph-caret-double-left"></i>
+                                </a>
+                                <a href="{{ $simpegItems->appends(request()->query())->previousPageUrl() }}" class="page-btn" title="Halaman Sebelumnya">
+                                    <i class="ph-bold ph-caret-left"></i> Prev
+                                </a>
+                            @else
+                                <span class="page-btn disabled"><i class="ph-bold ph-caret-double-left"></i></span>
+                                <span class="page-btn disabled"><i class="ph-bold ph-caret-left"></i> Prev</span>
+                            @endif
+
+                            @php
+                                $cPage = $simpegItems->currentPage();
+                                $lPage = $simpegItems->lastPage();
+                                $sPage = max(1, $cPage - 2);
+                                $ePage = min($lPage, $cPage + 2);
+                            @endphp
+
+                            @if($sPage > 1)
+                                <a href="{{ $simpegItems->appends(request()->query())->url(1) }}" class="page-btn">1</a>
+                                @if($sPage > 2)
+                                    <span class="page-dots">&hellip;</span>
+                                @endif
+                            @endif
+
+                            @for($p = $sPage; $p <= $ePage; $p++)
+                                @if($p == $cPage)
+                                    <span class="page-btn active" style="background: #0d9488 !important; border-color: #0d9488 !important;">{{ $p }}</span>
+                                @else
+                                    <a href="{{ $simpegItems->appends(request()->query())->url($p) }}" class="page-btn">{{ $p }}</a>
+                                @endif
+                            @endfor
+
+                            @if($ePage < $lPage)
+                                @if($ePage < $lPage - 1)
+                                    <span class="page-dots">&hellip;</span>
+                                @endif
+                                <a href="{{ $simpegItems->appends(request()->query())->url($lPage) }}" class="page-btn">{{ $lPage }}</a>
+                            @endif
+
+                            @if($simpegItems->hasMorePages())
+                                <a href="{{ $simpegItems->appends(request()->query())->nextPageUrl() }}" class="page-btn" title="Halaman Selanjutnya">
+                                    Next <i class="ph-bold ph-caret-right"></i>
+                                </a>
+                                <a href="{{ $simpegItems->appends(request()->query())->url($lPage) }}" class="page-btn" title="Halaman Terakhir">
                                     <i class="ph-bold ph-caret-double-right"></i>
                                 </a>
                             @else

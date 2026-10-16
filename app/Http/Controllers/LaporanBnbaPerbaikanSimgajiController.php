@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Pegawai;
+use App\Models\UnitKerja;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -12,6 +13,7 @@ use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use XBase\TableReader;
 
@@ -204,6 +206,72 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
         Cache::put($cacheKey, $result, 86400 * 30);
 
         return $result;
+    }
+
+    /**
+     * Dapatkan Peta Lookup NIP => Info SIMGAJI (kdskpd, nmskpd, kdsatker, nmsatker, inputer, is_pensiun, status_simgaji)
+     *
+     * @return array<string, array{kdskpd: string, nmskpd: string, kdsatker: string, nmsatker: string, inputer: string, is_pensiun: bool, status_simgaji: string}>
+     */
+    public function getSimgajiPgwLookup(): array
+    {
+        $activeFile = $this->getActiveDbfFile();
+        if (! $activeFile || ! file_exists($activeFile['path'])) {
+            return [];
+        }
+
+        $mtime = filemtime($activeFile['path']);
+        $cacheKey = 'simgaji_pgw_lookup_'.$mtime;
+        if (Cache::has($cacheKey)) {
+            return Cache::get($cacheKey);
+        }
+
+        $masterData = $this->getSimgajiMasterData();
+        $simgajiSkpds = $masterData['skpds'];
+        $simgajiSatkers = $masterData['satkers'];
+
+        $table = new TableReader($activeFile['path']);
+        $lookup = [];
+
+        while ($record = $table->nextRecord()) {
+            if ($record->isDeleted()) {
+                continue;
+            }
+
+            $nip = trim((string) $record->get('nip'));
+            if ($nip === '') {
+                continue;
+            }
+
+            $kdskpd = trim((string) $record->get('kdskpd'));
+            $kdsatker = trim((string) $record->get('kdsatker'));
+            $inputer = trim((string) $record->get('inputer'));
+            $tmtstop = trim((string) $record->get('tmtstop'));
+            $kdstapeg = trim((string) $record->get('kdstapeg'));
+
+            $isPensiun = in_array($kdstapeg, ['22', '23', '24', '27', '28'])
+                || (! empty($tmtstop) && strtotime($tmtstop) < strtotime('2026-09-01'));
+
+            $nmskpd = $simgajiSkpds[$kdskpd] ?? ($kdskpd ? 'KODE '.$kdskpd : '-');
+            $satkerInfo = $simgajiSatkers[$kdsatker] ?? null;
+            $nmsatker = $satkerInfo ? $satkerInfo['nmsatker'] : ($kdsatker ?: '-');
+
+            $statusSimgaji = $isPensiun ? 'Pensiun / Non-Aktif' : 'Aktif';
+
+            $lookup[$nip] = [
+                'kdskpd' => $kdskpd ?: '-',
+                'nmskpd' => $nmskpd,
+                'kdsatker' => $kdsatker ?: '-',
+                'nmsatker' => $nmsatker,
+                'inputer' => $inputer ?: '-',
+                'is_pensiun' => $isPensiun,
+                'status_simgaji' => $statusSimgaji,
+            ];
+        }
+
+        Cache::put($cacheKey, $lookup, 86400 * 30);
+
+        return $lookup;
     }
 
     /**
@@ -857,11 +925,95 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
                 'statusSatker' => 'semua',
                 'satkerSearch' => '',
                 'satkerSkpd' => 'semua',
+                'simpegItems' => new LengthAwarePaginator([], 0, 25),
+                'totalSimpegCount' => 0,
+                'totalSimpegTerdaftarSimgaji' => 0,
+                'simpegSkpdOptions' => [],
+                'statusPegawaiOptions' => [],
+                'jenisPegawaiOptions' => [],
+                'simpegSkpdFilter' => 'semua',
+                'statusPegawaiFilter' => 'semua',
+                'jenisPegawaiFilter' => 'semua',
+                'statusSimgajiFilter' => 'semua',
+                'simpegSearch' => '',
             ]);
         }
 
         // Tentukan dataset berdasarkan Tab
         $page = (int) $request->get('page', 1);
+
+        // TAB 4: BNBA SIMPEG Lengkap + SIMGAJI
+        $paginatedSimpeg = null;
+        $simpegSkpdFilter = $request->get('simpeg_skpd', 'semua');
+        $statusPegawaiFilter = $request->get('status_pegawai', 'semua');
+        $jenisPegawaiFilter = $request->get('jenis_pegawai', 'semua');
+        $statusSimgajiFilter = $request->get('status_simgaji', 'semua');
+        $simpegSearch = trim((string) $request->get('simpeg_search', ($tab === 'simpeg_lengkap' ? $search : '')));
+
+        $totalSimpegCount = Pegawai::count();
+        $simpegSkpdOptions = [];
+        $statusPegawaiOptions = [];
+        $jenisPegawaiOptions = [];
+        $totalSimpegTerdaftarSimgaji = 0;
+
+        if ($tab === 'simpeg_lengkap') {
+            $simgajiLookup = $this->getSimgajiPgwLookup();
+            $simgajiNips = array_keys($simgajiLookup);
+            $totalSimpegTerdaftarSimgaji = count($simgajiLookup);
+
+            $simpegSkpdOptions = UnitKerja::whereNotNull('skpd')->distinct()->orderBy('skpd')->pluck('skpd')->toArray();
+            $statusPegawaiOptions = Pegawai::whereNotNull('status_pegawai')->distinct()->orderBy('status_pegawai')->pluck('status_pegawai')->toArray();
+            $jenisPegawaiOptions = Pegawai::whereNotNull('jenis_pegawai')->distinct()->orderBy('jenis_pegawai')->pluck('jenis_pegawai')->toArray();
+
+            $simpegQuery = Pegawai::with(['unitKerja', 'jabatan']);
+
+            if ($simpegSkpdFilter !== 'semua' && ! empty($simpegSkpdFilter)) {
+                $simpegQuery->whereHas('unitKerja', fn ($q) => $q->where('skpd', $simpegSkpdFilter));
+            }
+
+            if ($statusPegawaiFilter !== 'semua' && ! empty($statusPegawaiFilter)) {
+                $simpegQuery->where('status_pegawai', $statusPegawaiFilter);
+            }
+
+            if ($jenisPegawaiFilter !== 'semua' && ! empty($jenisPegawaiFilter)) {
+                $simpegQuery->where('jenis_pegawai', $jenisPegawaiFilter);
+            }
+
+            if ($statusSimgajiFilter === 'terdaftar') {
+                $simpegQuery->whereIn('nip', $simgajiNips);
+            } elseif ($statusSimgajiFilter === 'belum_terdaftar') {
+                $simpegQuery->whereNotIn('nip', $simgajiNips);
+            }
+
+            if ($simpegSearch !== '') {
+                $s = $simpegSearch;
+                $simpegQuery->where(function ($q) use ($s) {
+                    $q->where('nip', 'like', "%{$s}%")
+                        ->orWhere('nama', 'like', "%{$s}%")
+                        ->orWhere('nik', 'like', "%{$s}%")
+                        ->orWhereHas('unitKerja', function ($uq) use ($s) {
+                            $uq->where('skpd', 'like', "%{$s}%")
+                                ->orWhere('upt', 'like', "%{$s}%")
+                                ->orWhere('satker', 'like', "%{$s}%");
+                        })
+                        ->orWhereHas('jabatan', function ($jq) use ($s) {
+                            $jq->where('nama', 'like', "%{$s}%");
+                        });
+                });
+            }
+
+            $paginatedSimpeg = $simpegQuery->orderBy('unit_kerja_id')->orderBy('nama')->paginate($perPage, ['*'], 'page', $page)->appends($request->query());
+
+            foreach ($paginatedSimpeg as $p) {
+                $nip = (string) ($p->nip ?? '');
+                $sg = $simgajiLookup[$nip] ?? null;
+                $p->kdskpd_simgaji = $sg ? $sg['kdskpd'] : '-';
+                $p->nmskpd_simgaji = $sg ? $sg['nmskpd'] : 'Belum Terdaftar di SIMGAJI';
+                $p->kdsatker_simgaji = $sg ? $sg['kdsatker'] : '-';
+                $p->nmsatker_simgaji = $sg ? $sg['nmsatker'] : '-';
+                $p->status_simgaji = $sg ? $sg['status_simgaji'] : 'Belum Terdaftar di SIMGAJI';
+            }
+        }
 
         // TAB 3: Master Satker
         $statusSatker = $request->get('status_satker', 'semua'); // 'semua', 'aktif', '0_pegawai'
@@ -930,7 +1082,7 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
         }
 
         // Filter Search di BNBA
-        if ($search !== '' && $tab !== 'master_satker') {
+        if ($search !== '' && $tab !== 'master_satker' && $tab !== 'simpeg_lengkap') {
             $sLower = strtolower($search);
             $items = $items->filter(function ($item) use ($sLower) {
                 return str_contains(strtolower($item['nip'] ?? ''), $sLower)
@@ -975,6 +1127,18 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
             'statusSatker' => $statusSatker,
             'satkerSearch' => $satkerSearch,
             'satkerSkpd' => $satkerSkpd,
+            // TAB 4: SIMPEG Lengkap
+            'simpegItems' => $paginatedSimpeg,
+            'totalSimpegCount' => $totalSimpegCount,
+            'totalSimpegTerdaftarSimgaji' => $totalSimpegTerdaftarSimgaji,
+            'simpegSkpdOptions' => $simpegSkpdOptions,
+            'statusPegawaiOptions' => $statusPegawaiOptions,
+            'jenisPegawaiOptions' => $jenisPegawaiOptions,
+            'simpegSkpdFilter' => $simpegSkpdFilter,
+            'statusPegawaiFilter' => $statusPegawaiFilter,
+            'jenisPegawaiFilter' => $jenisPegawaiFilter,
+            'statusSimgajiFilter' => $statusSimgajiFilter,
+            'simpegSearch' => $simpegSearch,
         ]);
     }
 
@@ -991,6 +1155,12 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
         $mtime = file_exists($filePath) ? filemtime($filePath) : 0;
         Cache::forget('master_simgaji_excel_data_'.$mtime);
 
+        $active = $this->getActiveDbfFile();
+        if ($active && file_exists($active['path'])) {
+            $mtimeDbf = filemtime($active['path']);
+            Cache::forget('simgaji_pgw_lookup_'.$mtimeDbf);
+        }
+
         $this->getBnbaData(true);
 
         return redirect()->back()->with('success', 'Data Master SIMGAJI, BNBA & Matriks SKPD/Satker berhasil dihitung ulang dan diselaraskan.');
@@ -1001,7 +1171,10 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
      */
     public function exportExcel(Request $request)
     {
-        $scope = $request->get('scope', 'perbaikan'); // 'perbaikan' atau 'full'/'semua'
+        $scope = $request->get('scope', 'perbaikan'); // 'perbaikan' atau 'full'/'semua' atau 'simpeg_lengkap'
+        if ($scope === 'simpeg_lengkap') {
+            return $this->exportSimpegLengkap($request);
+        }
         $statusFilter = $request->get('status', ($scope === 'full' || $scope === 'semua') ? 'semua' : 'perlu_perbaikan');
         $kategori = $request->get('kategori', 'semua');
         $skpdFilter = $request->get('skpd', 'semua');
@@ -1341,14 +1514,13 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
 
         $suffix = ($scope === 'full' || $scope === 'semua' || $statusFilter === 'semua') ? 'FULL_PEMETAAN' : 'PERBAIKAN';
         $filename = "Pemetaan_SKPD_Satker_SIMGAJI_vs_SIMPEG_{$suffix}_".date('Ymd_His').'.xlsx';
-
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment;filename="'.$filename.'"');
-        header('Cache-Control: max-age=0');
-
         $writer = new Xlsx($spreadsheet);
-        $writer->save('php://output');
-        exit;
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 
     /**
@@ -1456,5 +1628,265 @@ class LaporanBnbaPerbaikanSimgajiController extends Controller
         ])->setPaper('a4', 'landscape');
 
         return $pdf->stream('Laporan_Perbaikan_SIMGAJI_'.strtoupper($tab).'_'.date('Ymd_His').'.pdf');
+    }
+
+    /**
+     * Ekspor Data BNBA Pegawai SIMPEG Lengkap Disandingkan Data SIMGAJI ke Excel (.xlsx)
+     */
+    public function exportSimpegLengkap(Request $request)
+    {
+        @ini_set('max_execution_time', 0);
+        @set_time_limit(0);
+        @ini_set('memory_limit', '1024M');
+
+        $skpdFilter = $request->get('simpeg_skpd', $request->get('skpd', 'semua'));
+        $statusPegawai = $request->get('status_pegawai', 'semua');
+        $jenisPegawai = $request->get('jenis_pegawai', 'semua');
+        $statusSimgaji = $request->get('status_simgaji', 'semua');
+        $search = trim((string) $request->get('simpeg_search', $request->get('search', '')));
+
+        $simgajiLookup = $this->getSimgajiPgwLookup();
+        $simgajiNips = array_keys($simgajiLookup);
+
+        $query = Pegawai::with(['unitKerja', 'jabatan']);
+
+        if ($skpdFilter !== 'semua' && ! empty($skpdFilter)) {
+            $query->whereHas('unitKerja', fn ($q) => $q->where('skpd', $skpdFilter));
+        }
+
+        if ($statusPegawai !== 'semua' && ! empty($statusPegawai)) {
+            $query->where('status_pegawai', $statusPegawai);
+        }
+
+        if ($jenisPegawai !== 'semua' && ! empty($jenisPegawai)) {
+            $query->where('jenis_pegawai', $jenisPegawai);
+        }
+
+        if ($statusSimgaji === 'terdaftar') {
+            $query->whereIn('nip', $simgajiNips);
+        } elseif ($statusSimgaji === 'belum_terdaftar') {
+            $query->whereNotIn('nip', $simgajiNips);
+        }
+
+        if ($search !== '') {
+            $s = $search;
+            $query->where(function ($q) use ($s) {
+                $q->where('nip', 'like', "%{$s}%")
+                    ->orWhere('nama', 'like', "%{$s}%")
+                    ->orWhere('nik', 'like', "%{$s}%")
+                    ->orWhereHas('unitKerja', function ($uq) use ($s) {
+                        $uq->where('skpd', 'like', "%{$s}%")
+                            ->orWhere('upt', 'like', "%{$s}%")
+                            ->orWhere('satker', 'like', "%{$s}%");
+                    })
+                    ->orWhereHas('jabatan', function ($jq) use ($s) {
+                        $jq->where('nama', 'like', "%{$s}%");
+                    });
+            });
+        }
+
+        $pegawais = $query->orderBy('unit_kerja_id')->orderBy('nama')->get();
+
+        $spreadsheet = new Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('SIMPEG Lengkap + SIMGAJI');
+
+        // Title Block
+        $sheet->setCellValue('A1', 'PEMERINTAH PROVINSI KALIMANTAN SELATAN');
+        $sheet->setCellValue('A2', 'LAPORAN DATA BNBA PEGAWAI SIMPEG LENGKAP & INTEGRASI DATA SIMGAJI TASPEN');
+        $filterDesc = 'Total Data: '.number_format($pegawais->count(), 0, ',', '.').' Pegawai | Sumber: SIMPEG & SIMGAJI | Waktu Unduh: '.date('d/m/Y H:i').' WITA';
+        if ($skpdFilter !== 'semua') {
+            $filterDesc .= ' | SKPD: '.$skpdFilter;
+        }
+        if ($statusPegawai !== 'semua') {
+            $filterDesc .= ' | Status: '.$statusPegawai;
+        }
+        if ($statusSimgaji !== 'semua') {
+            $filterDesc .= ' | Status SIMGAJI: '.($statusSimgaji === 'terdaftar' ? 'Terdaftar di SIMGAJI' : 'Belum di SIMGAJI');
+        }
+        $sheet->setCellValue('A3', $filterDesc);
+
+        $sheet->getStyle('A1:A2')->getFont()->setBold(true);
+        $sheet->getStyle('A1')->getFont()->setSize(13);
+        $sheet->getStyle('A2')->getFont()->setSize(11);
+        $sheet->getStyle('A3')->getFont()->setSize(9.5)->setItalic(true);
+
+        // Group Headers (Row 5)
+        $sheet->mergeCells('A5:A6');
+        $sheet->setCellValue('A5', 'No');
+
+        $sheet->mergeCells('B5:H5');
+        $sheet->setCellValue('B5', 'IDENTITAS PEGAWAI (SIMPEG)');
+
+        $sheet->mergeCells('I5:N5');
+        $sheet->setCellValue('I5', 'STATUS KEPEGAWAIAN & PANGKAT (SIMPEG)');
+
+        $sheet->mergeCells('O5:U5');
+        $sheet->setCellValue('O5', 'JABATAN & PENDIDIKAN (SIMPEG)');
+
+        $sheet->mergeCells('V5:X5');
+        $sheet->setCellValue('V5', 'ACUAN RESMI UNIT KERJA (SIMPEG)');
+
+        $sheet->mergeCells('Y5:AB5');
+        $sheet->setCellValue('Y5', 'DATA FINANSIAL & ADMINISTRASI (SIMPEG)');
+
+        $sheet->mergeCells('AC5:AF5');
+        $sheet->setCellValue('AC5', 'DATA SIMGAJI TASPEN (EKSISTING)');
+
+        $sheet->mergeCells('AG5:AG6');
+        $sheet->setCellValue('AG5', 'Status di SIMGAJI');
+
+        // Sub Headers (Row 6)
+        $subHeaders = [
+            'B' => 'NIP',
+            'C' => 'Nama Pegawai',
+            'D' => 'NIK',
+            'E' => 'Tempat Lahir',
+            'F' => 'Tanggal Lahir',
+            'G' => 'Jenis Kelamin',
+            'H' => 'Agama',
+            'I' => 'Status Pegawai',
+            'J' => 'Jenis Pegawai',
+            'K' => 'Gol/Ruang',
+            'L' => 'TMT Golru',
+            'M' => 'Masa Kerja (Thn)',
+            'N' => 'Masa Kerja (Bln)',
+            'O' => 'Jabatan Resmi (SIMPEG)',
+            'P' => 'Eselon',
+            'Q' => 'Jenis Jabatan',
+            'R' => 'TMT Jabatan',
+            'S' => 'Tingkat Ijazah',
+            'T' => 'Nama Pendidikan / Jurusan',
+            'U' => 'Tahun Lulus',
+            'V' => 'SKPD Resmi (SIMPEG)',
+            'W' => 'UPTD Resmi (SIMPEG)',
+            'X' => 'Satker / Sub Unit Resmi (SIMPEG)',
+            'Y' => 'Nomor Rekening',
+            'Z' => 'Nama Bank',
+            'AA' => 'NPWP',
+            'AB' => 'Nomor Karpeg',
+            // 4 Kolom Khusus Permintaan User
+            'AC' => 'Kd SKPD',
+            'AD' => 'Nama SKPD SIMGAJI',
+            'AE' => 'Kode Satker',
+            'AF' => 'Nama Satker Resmi SIMGAJI',
+        ];
+
+        foreach ($subHeaders as $col => $label) {
+            $sheet->setCellValue($col.'6', $label);
+        }
+
+        // Apply Styles to Row 5 & 6
+        $sheet->getStyle('A5:AG6')->getFont()->setBold(true)->setSize(10)->getColor()->setRGB('FFFFFF');
+        $sheet->getStyle('A5:AG6')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
+        $sheet->getStyle('A5:AG6')->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN)->getColor()->setRGB('CBD5E1');
+
+        $sheet->getStyle('A5:A6')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1E293B');
+        $sheet->getStyle('B5:H6')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('1E3A8A'); // Blue
+        $sheet->getStyle('I5:N6')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('047857'); // Emerald
+        $sheet->getStyle('O5:U6')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('4338CA'); // Indigo
+        $sheet->getStyle('V5:X6')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('0F766E'); // Teal
+        $sheet->getStyle('Y5:AB6')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('B45309'); // Amber
+        $sheet->getStyle('AC5:AF6')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('0F172A'); // Slate Dark (SIMGAJI)
+        $sheet->getStyle('AG5:AG6')->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('374151'); // Charcoal
+
+        $sheet->getRowDimension(5)->setRowHeight(24);
+        $sheet->getRowDimension(6)->setRowHeight(26);
+
+        // Populate Data
+        $dataRows = [];
+        $no = 1;
+        foreach ($pegawais as $p) {
+            $nip = (string) ($p->nip ?? '');
+            $sg = $simgajiLookup[$nip] ?? null;
+
+            $kdSkpdSimgaji = $sg ? (string) $sg['kdskpd'] : '-';
+            $nmSkpdSimgaji = $sg ? (string) $sg['nmskpd'] : 'Belum Terdaftar di SIMGAJI';
+            $kdSatkerSimgaji = $sg ? (string) $sg['kdsatker'] : '-';
+            $nmSatkerSimgaji = $sg ? (string) $sg['nmsatker'] : '-';
+            $statusSimgaji = $sg ? (string) $sg['status_simgaji'] : 'Belum di SIMGAJI';
+
+            $dataRows[] = [
+                $no++,
+                $nip,
+                $p->nama ?? '-',
+                $p->nik ? (string) $p->nik : '-',
+                $p->tempat_lahir ?? '-',
+                $p->tgl_lahir ? (string) $p->tgl_lahir : '-',
+                $p->jk ?? '-',
+                $p->agama ?? '-',
+                $p->status_pegawai ?? '-',
+                $p->jenis_pegawai ?? '-',
+                $p->golru ?? '-',
+                $p->tmt_golru ?? '-',
+                $p->masa_kerja_tahun !== null ? (int) $p->masa_kerja_tahun : '-',
+                $p->masa_kerja_bulan !== null ? (int) $p->masa_kerja_bulan : '-',
+                $p->jabatan?->nama ?? '-',
+                $p->jabatan?->eselon ?? '-',
+                $p->jabatan?->jenis ?? '-',
+                $p->tmt_jabatan ?? '-',
+                $p->tk_ijazah ?? '-',
+                $p->nm_pendidikan ?? '-',
+                $p->th_lulus !== null ? (int) $p->th_lulus : '-',
+                $p->unitKerja?->skpd ?? '-',
+                $p->unitKerja?->upt ?? '-',
+                $p->unitKerja?->satker ?? '-',
+                $p->no_rekening ? (string) $p->no_rekening : '-',
+                $p->nama_bank ?? '-',
+                $p->npwp ? (string) $p->npwp : '-',
+                $p->no_karpeg ? (string) $p->no_karpeg : '-',
+                $kdSkpdSimgaji,
+                $nmSkpdSimgaji,
+                $kdSatkerSimgaji,
+                $nmSatkerSimgaji,
+                $statusSimgaji,
+            ];
+        }
+
+        $startRow = 7;
+        $sheet->fromArray($dataRows, null, "A{$startRow}");
+        $endRow = $startRow + count($dataRows) - 1;
+
+        if ($endRow >= $startRow) {
+            $sheet->getStyle("A{$startRow}:AG{$endRow}")->applyFromArray([
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E2E8F0']]],
+                'alignment' => ['vertical' => Alignment::VERTICAL_CENTER],
+            ]);
+
+            // Format text
+            $sheet->getStyle("B{$startRow}:B{$endRow}")->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
+            $sheet->getStyle("D{$startRow}:D{$endRow}")->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
+            $sheet->getStyle("Y{$startRow}:Y{$endRow}")->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
+            $sheet->getStyle("AA{$startRow}:AB{$endRow}")->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
+            $sheet->getStyle("AC{$startRow}:AC{$endRow}")->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
+            $sheet->getStyle("AE{$startRow}:AE{$endRow}")->getNumberFormat()->setFormatCode(NumberFormat::FORMAT_TEXT);
+
+            // Alignments
+            $sheet->getStyle("A{$startRow}:A{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("B{$startRow}:B{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("D{$startRow}:D{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("F{$startRow}:H{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("I{$startRow}:N{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("P{$startRow}:R{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("S{$startRow}:S{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("U{$startRow}:U{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("AC{$startRow}:AC{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("AE{$startRow}:AE{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("AG{$startRow}:AG{$endRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        }
+
+        $cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG'];
+        foreach ($cols as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        $filename = 'Laporan_BNBA_SIMPEG_Lengkap_vs_SIMGAJI_'.date('Ymd_His').'.xlsx';
+        $writer = new Xlsx($spreadsheet);
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 }
