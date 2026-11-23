@@ -455,6 +455,8 @@
                 } else if (nameUpper.includes('MST') || nameUpper.includes('PGW')) {
                     previewBadge.innerHTML = '<span class="badge" style="background: rgba(37, 99, 235, 0.15); color: #2563eb; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;">👤 Terdeteksi: Master Pegawai (MST_PGW_*.DBF)</span>';
                     if (select) select.value = 'mst_pgw';
+                } else if (nameUpper.startsWith('GAJI')) {
+                    previewBadge.innerHTML = '<span class="badge" style="background: rgba(245, 158, 11, 0.18); color: #b45309; padding: 4px 8px; border-radius: 6px; font-weight: 700; font-size: 11px;">⚠️ Berkas Realisasi Gaji (GAJI_*.DBF) — Unggah melalui menu Laporan &amp; Realisasi &gt; 1. Realisasi Gaji</span>';
                 } else {
                     previewBadge.innerHTML = '<span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #475569; padding: 3px 8px; border-radius: 6px; font-weight: 600; font-size: 11px;">🤖 Berkas DBF Terbaca</span>';
                 }

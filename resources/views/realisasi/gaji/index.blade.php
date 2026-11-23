@@ -326,8 +326,8 @@ function exportData(type) {
                 </div>
                 <div class="upload-box" style="margin-bottom: 20px;">
                     <i class="ph ph-file-xls" style="font-size: 32px; color: #3b82f6; margin-bottom: 12px; display: block;"></i>
-                    <p style="margin-bottom: 12px;">Pilih file Excel (<strong>.xlsx</strong>) atau <strong>.dbf</strong> dari komputer Anda.</p>
-                    <input type="file" name="file" accept=".xlsx, .xls, .csv, .dbf" required style="display: block; margin: 0 auto;">
+                    <p style="margin-bottom: 12px;">Pilih file Excel (<strong>.xlsx</strong>) atau <strong>.dbf / .DBF</strong> (seperti <code>GAJI_*.DBF</code>) dari komputer Anda.</p>
+                    <input type="file" name="file" accept=".xlsx,.xls,.csv,.dbf,.DBF" required style="display: block; margin: 0 auto;">
                 </div>
                 <div style="text-align: right;">
                     <button type="button" class="btn-close" onclick="closeModal('uploadModal')" style="font-size: 14px; background: #f1f5f9; padding: 10px 16px; border-radius: 8px; margin-right: 8px;">Batal</button>

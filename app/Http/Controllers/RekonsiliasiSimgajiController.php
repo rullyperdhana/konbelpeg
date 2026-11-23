@@ -548,6 +548,10 @@ class RekonsiliasiSimgajiController extends Controller
             'keterangan' => 'nullable|string|max:255',
         ]);
 
+        @ini_set('max_execution_time', '0');
+        @set_time_limit(0);
+        @ini_set('memory_limit', '1024M');
+
         $file = $request->file('file_dbf');
         $extension = strtolower($file->getClientOriginalExtension());
 
@@ -562,8 +566,22 @@ class RekonsiliasiSimgajiController extends Controller
 
         $originalName = $file->getClientOriginalName();
         $targetDir = storage_path('app/simgaji');
-        if (! is_dir($targetDir)) {
-            mkdir($targetDir, 0755, true);
+        if (! is_dir($targetDir) && ! @mkdir($targetDir, 0775, true) && ! is_dir($targetDir)) {
+            $errMsg = 'Direktori penyimpanan server (storage/app/simgaji) tidak dapat dibuat. Periksa izin direktori storage pada server.';
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $errMsg], 500);
+            }
+
+            return redirect()->back()->with('error', $errMsg);
+        }
+
+        if (! is_writable($targetDir)) {
+            $errMsg = 'Direktori penyimpanan server (storage/app/simgaji) tidak memiliki izin tulis (permission denied). Periksa kepemilikan folder storage di server.';
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json(['success' => false, 'message' => $errMsg], 500);
+            }
+
+            return redirect()->back()->with('error', $errMsg);
         }
 
         $cleanFilename = preg_replace('/[^a-zA-Z0-9_\.-]/', '_', $originalName);
@@ -574,13 +592,24 @@ class RekonsiliasiSimgajiController extends Controller
         // Deteksi jenis file dan hitung total record
         $recordsCount = 0;
         $detectedType = 'mst_pgw';
+        $colNames = [];
         try {
             $table = new TableReader($fullPath, ['encoding' => 'cp850']);
             $recordsCount = $table->getRecordCount();
 
-            $colNames = [];
             foreach ($table->getColumns() as $col) {
                 $colNames[] = strtolower($col->getName());
+            }
+            $table->close();
+
+            if ($this->isGajiRealisasiDbf($originalName, $colNames)) {
+                @unlink($fullPath);
+                $errMsg = "Berkas '{$originalName}' terdeteksi sebagai file Realisasi Gaji bulanan (GAJI_*.DBF), bukan Master Database SIMGAJI. Silakan unggah berkas ini melalui menu Laporan & Realisasi > 1. Realisasi Gaji (/realisasi/gaji).";
+                if ($request->expectsJson() || $request->ajax()) {
+                    return response()->json(['success' => false, 'message' => $errMsg], 422);
+                }
+
+                return redirect()->back()->with('error', $errMsg);
             }
 
             if (str_contains(strtoupper($originalName), 'KEL') || in_array('nmkel', $colNames) || in_array('kdhubkel', $colNames)) {
@@ -589,6 +618,16 @@ class RekonsiliasiSimgajiController extends Controller
                 $detectedType = 'his_gpok';
             }
         } catch (\Exception $e) {
+            if ($this->isGajiRealisasiDbf($originalName)) {
+                @unlink($fullPath);
+                $errMsg = "Berkas '{$originalName}' terdeteksi sebagai file Realisasi Gaji bulanan (GAJI_*.DBF), bukan Master Database SIMGAJI. Silakan unggah berkas ini melalui menu Laporan & Realisasi > 1. Realisasi Gaji (/realisasi/gaji).";
+                if ($request->expectsJson() || $request->ajax()) {
+                    return response()->json(['success' => false, 'message' => $errMsg], 422);
+                }
+
+                return redirect()->back()->with('error', $errMsg);
+            }
+
             if (str_contains(strtoupper($originalName), 'KEL')) {
                 $detectedType = 'kel';
             } elseif (str_contains(strtoupper($originalName), 'HIS_GPOK')) {
@@ -740,6 +779,10 @@ class RekonsiliasiSimgajiController extends Controller
      */
     public function syncSimgaji(Request $request)
     {
+        @ini_set('max_execution_time', '0');
+        @set_time_limit(0);
+        @ini_set('memory_limit', '1024M');
+
         $type = $request->input('type', 'all');
 
         $this->updateSyncProgress([
@@ -902,6 +945,47 @@ class RekonsiliasiSimgajiController extends Controller
         return $results;
     }
 
+    /**
+     * Deteksi apakah berkas DBF merupakan berkas Realisasi Gaji bulanan (GAJI_*.DBF)
+     * yang seharusnya diunggah pada modul Realisasi Gaji, bukan Master Database SIMGAJI.
+     *
+     * @param  array<int, string>  $colNames
+     */
+    public function isGajiRealisasiDbf(string $filename, array $colNames = [], string $filePath = ''): bool
+    {
+        $upper = strtoupper(basename($filename));
+        $isMasterOrHisOrKelName = str_contains($upper, 'MST_PGW')
+            || str_contains($upper, 'HIS_GPOK')
+            || str_contains($upper, 'KEL');
+
+        if (! empty($colNames)) {
+            $hasGajiCols = in_array('tglgaji', $colNames) && in_array('bersih', $colNames);
+            $hasMasterCols = in_array('induk_bank', $colNames) || in_array('nokarpeg', $colNames);
+            if ($hasGajiCols && ! $hasMasterCols) {
+                return true;
+            }
+        }
+
+        if (! $isMasterOrHisOrKelName && preg_match('/^(\d+_)?GAJI/i', $upper)) {
+            return true;
+        }
+
+        if (empty($colNames) && ! empty($filePath) && file_exists($filePath) && ! $isMasterOrHisOrKelName) {
+            try {
+                $table = new TableReader($filePath, ['encoding' => 'cp850']);
+                $cols = array_map(fn ($c) => strtolower($c->getName()), $table->getColumns());
+                $table->close();
+                if (in_array('tglgaji', $cols) && in_array('bersih', $cols) && ! in_array('induk_bank', $cols)) {
+                    return true;
+                }
+            } catch (\Exception $e) {
+                // Abaikan kesalahan inspeksi
+            }
+        }
+
+        return false;
+    }
+
     public function detectDbfType(string $filename, string $filePath = ''): string
     {
         $upper = strtoupper($filename.' '.basename($filePath));
@@ -1032,6 +1116,10 @@ class RekonsiliasiSimgajiController extends Controller
             $candidateBasename = basename($candidatePath);
             $cleanName = preg_replace('/^\d+_/', '', $candidateBasename);
 
+            if ($this->isGajiRealisasiDbf($cleanName, [], $candidatePath)) {
+                continue;
+            }
+
             if (in_array($candidatePath, $registeredPaths)
                 || in_array($candidateBasename, $registeredStored)
                 || in_array($candidateBasename, $registeredFiles)
@@ -1159,6 +1247,9 @@ class RekonsiliasiSimgajiController extends Controller
         );
 
         foreach ($diskCandidates as $df) {
+            if ($this->isGajiRealisasiDbf(basename($df), [], $df)) {
+                continue;
+            }
             $detected = $this->detectDbfType(basename($df), $df);
             if ($detected === $type && file_exists($df)) {
                 $bName = basename($df);

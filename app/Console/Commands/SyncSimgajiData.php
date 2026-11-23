@@ -32,6 +32,10 @@ class SyncSimgajiData extends Command
      */
     public function handle(): int
     {
+        @ini_set('max_execution_time', '0');
+        @set_time_limit(0);
+        @ini_set('memory_limit', '1024M');
+
         $type = $this->option('type') ?: 'all';
 
         if (in_array($type, ['all', 'master'])) {
@@ -52,6 +56,10 @@ class SyncSimgajiData extends Command
      */
     public function syncMasterPegawai(): void
     {
+        @ini_set('max_execution_time', '0');
+        @set_time_limit(0);
+        @ini_set('memory_limit', '1024M');
+
         $filePath = $this->resolveDbfPath('mst_pgw', $this->option('mst'), 'MST_PGW');
 
         if (! $filePath || ! file_exists($filePath)) {
@@ -65,6 +73,20 @@ class SyncSimgajiData extends Command
         try {
             $table = new TableReader($filePath, ['encoding' => 'cp850']);
             $totalRecords = $table->getRecordCount();
+            $availableCols = [];
+            foreach ($table->getColumns() as $col) {
+                $availableCols[strtolower($col->getName())] = true;
+            }
+
+            if (! isset($availableCols['nip'])) {
+                $table->close();
+                throw new \RuntimeException('Berkas DBF tidak memiliki kolom NIP yang valid.');
+            }
+
+            $getCol = static function ($record, string $col) use ($availableCols): string {
+                return isset($availableCols[$col]) ? trim((string) $record->get($col)) : '';
+            };
+
             $this->info("Total record MST_PGW: {$totalRecords}");
 
             $this->updateProgress([
@@ -83,16 +105,16 @@ class SyncSimgajiData extends Command
 
             while ($record = $table->nextRecord()) {
                 $processed++;
-                $nip = trim((string) $record->get('nip'));
+                $nip = $getCol($record, 'nip');
                 if (empty($nip)) {
                     continue;
                 }
 
-                $noktp = trim((string) $record->get('noktp'));
-                $norek = trim((string) $record->get('norek'));
-                $indukBank = trim((string) $record->get('induk_bank'));
-                $npwp = trim((string) $record->get('npwp'));
-                $nokarpeg = trim((string) $record->get('nokarpeg'));
+                $noktp = $getCol($record, 'noktp');
+                $norek = $getCol($record, 'norek');
+                $indukBank = $getCol($record, 'induk_bank');
+                $npwp = $getCol($record, 'npwp');
+                $nokarpeg = $getCol($record, 'nokarpeg');
 
                 // Hanya simpan jika ada data relevan
                 if (! empty($noktp) || ! empty($norek) || ! empty($npwp) || ! empty($indukBank) || ! empty($nokarpeg)) {
@@ -126,6 +148,8 @@ class SyncSimgajiData extends Command
             if (! empty($updates)) {
                 $updatedCount += $this->batchUpdatePegawai($updates);
             }
+
+            $table->close();
 
             $this->updateProgress([
                 'status' => 'done',
@@ -281,23 +305,89 @@ class SyncSimgajiData extends Command
     }
 
     /**
-     * Update data pegawai secara efisien.
+     * Update data pegawai secara efisien dalam satu transaksi & bulk CASE WHEN SQL.
      */
     private function batchUpdatePegawai(array $updates): int
     {
         $nips = array_keys($updates);
-        $existing = Pegawai::whereIn('nip', $nips)->get()->keyBy('nip');
-        $count = 0;
+        $existing = DB::table('pegawais')
+            ->select(['id', 'nip', 'nik', 'no_rekening', 'nama_bank', 'npwp', 'no_karpeg'])
+            ->whereIn('nip', $nips)
+            ->get()
+            ->keyBy('nip');
+
+        $columns = ['nik', 'no_rekening', 'nama_bank', 'npwp', 'no_karpeg'];
+        $rowsToUpdate = [];
+        $matchedCount = 0;
 
         foreach ($updates as $nip => $data) {
-            if (isset($existing[$nip])) {
-                $pegawai = $existing[$nip];
-                $pegawai->update(array_filter($data, fn ($val) => ! is_null($val)));
-                $count++;
+            if (! isset($existing[$nip])) {
+                continue;
+            }
+
+            $matchedCount++;
+            $current = $existing[$nip];
+            $changes = [];
+
+            foreach ($columns as $col) {
+                $incoming = $data[$col] ?? null;
+                if ($incoming !== null && $incoming !== $current->{$col}) {
+                    $changes[$col] = $incoming;
+                }
+            }
+
+            if (! empty($changes)) {
+                $rowsToUpdate[(int) $current->id] = $changes;
             }
         }
 
-        return $count;
+        if (empty($rowsToUpdate)) {
+            return $matchedCount;
+        }
+
+        $now = Carbon::now()->toDateTimeString();
+
+        DB::transaction(function () use ($rowsToUpdate, $columns, $now): void {
+            foreach (array_chunk($rowsToUpdate, 100, true) as $chunk) {
+                $ids = array_keys($chunk);
+                $setClauses = [];
+                $bindings = [];
+
+                foreach ($columns as $col) {
+                    $caseParts = [];
+                    foreach ($chunk as $id => $changes) {
+                        if (array_key_exists($col, $changes)) {
+                            $caseParts[] = 'WHEN ? THEN ?';
+                            $bindings[] = $id;
+                            $bindings[] = $changes[$col];
+                        }
+                    }
+
+                    if (! empty($caseParts)) {
+                        $setClauses[] = "{$col} = CASE id ".implode(' ', $caseParts)." ELSE {$col} END";
+                    }
+                }
+
+                if (empty($setClauses)) {
+                    continue;
+                }
+
+                $setClauses[] = 'updated_at = ?';
+                $bindings[] = $now;
+
+                $placeholders = implode(', ', array_fill(0, count($ids), '?'));
+                foreach ($ids as $id) {
+                    $bindings[] = $id;
+                }
+
+                DB::update(
+                    'UPDATE pegawais SET '.implode(', ', $setClauses)." WHERE id IN ({$placeholders})",
+                    $bindings
+                );
+            }
+        });
+
+        return $matchedCount;
     }
 
     /**

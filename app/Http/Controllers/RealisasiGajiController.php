@@ -406,11 +406,15 @@ class RealisasiGajiController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|max:20480',
+            'file' => 'required|file|max:65536',
             'periode_import' => 'required|string|max:50',
             'jenis_gaji' => 'nullable|string|max:50',
             'kelompok_pegawai' => 'nullable|string|max:50',
         ]);
+
+        @ini_set('max_execution_time', '0');
+        @set_time_limit(0);
+        @ini_set('memory_limit', '1024M');
 
         $file = $request->file('file');
         $path = $file->getRealPath();
@@ -419,7 +423,7 @@ class RealisasiGajiController extends Controller
 
         if (! in_array($extension, ['xlsx', 'csv', 'xls', 'dbf'])) {
             if ($request->ajax() || $request->wantsJson()) {
-                return response()->json(['success' => false, 'message' => 'Format file tidak didukung. Harap unggah file .xlsx, .csv, atau .dbf']);
+                return response()->json(['success' => false, 'message' => 'Format file tidak didukung. Harap unggah file .xlsx, .csv, atau .dbf'], 422);
             }
 
             return redirect()->back()->with('error', 'Format file tidak didukung. Harap unggah file .xlsx, .csv, atau .dbf');
@@ -430,6 +434,10 @@ class RealisasiGajiController extends Controller
         $kelompokPegawai = $request->input('kelompok_pegawai');
 
         $processImport = function ($sendProgress = null) use ($path, $extension, $periode, $jenisGaji, $kelompokPegawai, $uploadId) {
+            @ini_set('max_execution_time', '0');
+            @set_time_limit(0);
+            @ini_set('memory_limit', '1024M');
+
             // Delete old unmatched NIP logs for this period & criteria
             UnmatchedNip::where('periode', $periode)
                 ->where('jenis_file', 'Gaji')
@@ -439,14 +447,106 @@ class RealisasiGajiController extends Controller
                 })
                 ->delete();
 
+            // Preload NIP -> pegawai_id & existing realisasi_gajis in memory to eliminate N+1 queries
+            $pegawaiMap = Pegawai::query()->pluck('id', 'nip')->all();
+            $existingGajiMap = RealisasiGaji::query()
+                ->where('periode', $periode)
+                ->where('jenis_gaji', $jenisGaji)
+                ->pluck('id', 'pegawai_id')
+                ->all();
+
             $importedCount = 0;
             $failedCount = 0;
+            $now = now()->toDateTimeString();
+            $insertBuffer = [];
+            $unmatchedBuffer = [];
+            $batchSize = 250;
+
+            $flushBuffers = function () use (&$insertBuffer, &$unmatchedBuffer, &$existingGajiMap, $periode, $jenisGaji): void {
+                if (! empty($insertBuffer)) {
+                    $newPegawaiIds = array_keys($insertBuffer);
+                    DB::table('realisasi_gajis')->insert(array_values($insertBuffer));
+
+                    $insertedMap = DB::table('realisasi_gajis')
+                        ->where('periode', $periode)
+                        ->where('jenis_gaji', $jenisGaji)
+                        ->whereIn('pegawai_id', $newPegawaiIds)
+                        ->pluck('id', 'pegawai_id')
+                        ->all();
+
+                    foreach ($insertedMap as $pid => $gid) {
+                        $existingGajiMap[$pid] = $gid;
+                    }
+
+                    $insertBuffer = [];
+                }
+
+                if (! empty($unmatchedBuffer)) {
+                    DB::table('unmatched_nips')->insert($unmatchedBuffer);
+                    $unmatchedBuffer = [];
+                }
+            };
+
+            $upsertGajiRow = function (int $pegawaiId, array $payload) use (&$insertBuffer, &$existingGajiMap, $periode, $jenisGaji, $now, $batchSize, $flushBuffers): void {
+                $encodedRaw = json_encode($payload['raw_data'], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
+
+                if (isset($existingGajiMap[$pegawaiId])) {
+                    DB::table('realisasi_gajis')
+                        ->where('id', $existingGajiMap[$pegawaiId])
+                        ->update([
+                            'gaji_pokok' => $payload['gaji_pokok'],
+                            'pajak' => $payload['pajak'],
+                            'iwp' => $payload['iwp'],
+                            'potongan_lain' => $payload['potongan_lain'],
+                            'gaji_bersih' => $payload['gaji_bersih'],
+                            'sub_kegiatan' => $payload['sub_kegiatan'],
+                            'raw_data' => $encodedRaw,
+                            'updated_at' => $now,
+                        ]);
+                } else {
+                    $insertBuffer[$pegawaiId] = [
+                        'pegawai_id' => $pegawaiId,
+                        'periode' => $periode,
+                        'jenis_gaji' => $jenisGaji,
+                        'gaji_pokok' => $payload['gaji_pokok'],
+                        'pajak' => $payload['pajak'],
+                        'iwp' => $payload['iwp'],
+                        'potongan_lain' => $payload['potongan_lain'],
+                        'gaji_bersih' => $payload['gaji_bersih'],
+                        'sub_kegiatan' => $payload['sub_kegiatan'],
+                        'raw_data' => $encodedRaw,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+
+                    if (count($insertBuffer) >= $batchSize) {
+                        $flushBuffers();
+                    }
+                }
+            };
 
             DB::beginTransaction();
             try {
                 if ($extension === 'dbf') {
-                    $table = new TableReader($path);
+                    $table = new TableReader($path, ['encoding' => 'cp850']);
                     $totalRows = $table->getRecordCount();
+                    $columns = $table->getColumns();
+                    $columnNames = [];
+                    $availableCols = [];
+                    foreach ($columns as $column) {
+                        $colName = $column->getName();
+                        $columnNames[] = $colName;
+                        $availableCols[strtolower($colName)] = true;
+                    }
+
+                    $getDbfCol = static function ($record, string $col) use ($availableCols) {
+                        return isset($availableCols[strtolower($col)]) ? $record->get($col) : null;
+                    };
+
+                    if (! isset($availableCols['nip']) || ! isset($availableCols['gapok']) || ! isset($availableCols['bersih'])) {
+                        $table->close();
+                        throw new \RuntimeException('Struktur kolom berkas DBF tidak sesuai format Realisasi Gaji (kolom NIP, GAPOK, atau BERSIH tidak ditemukan).');
+                    }
 
                     if ($sendProgress) {
                         $sendProgress('start', ['total' => $totalRows, 'message' => "Membaca file DBF: {$totalRows} baris ditemukan..."]);
@@ -457,23 +557,23 @@ class RealisasiGajiController extends Controller
                         'percent' => 0,
                         'success' => 0,
                         'failed' => 0,
-                    ], 120);
+                    ], 180);
 
-                    $updateInterval = $totalRows > 1000 ? 25 : ($totalRows > 100 ? 10 : 2);
+                    $updateInterval = $totalRows > 1000 ? 200 : ($totalRows > 100 ? 25 : 2);
 
                     while ($record = $table->nextRecord()) {
-                        $nip = trim($record->get('NIP'));
+                        $nip = trim((string) ($getDbfCol($record, 'nip') ?? ''));
                         if (! $nip) {
                             continue;
                         }
 
-                        $pegawai = Pegawai::where('nip', $nip)->first();
-                        if (! $pegawai) {
+                        $pegawaiId = $pegawaiMap[$nip] ?? null;
+                        if (! $pegawaiId) {
                             $failedCount++;
                             $importedCount++;
 
-                            $namaPgw = trim((string) ($record->get('NAMA') ?? ''));
-                            $kdstapeg = trim((string) ($record->get('KDSTAPEG') ?? $record->get('kdstapeg') ?? ''));
+                            $namaPgw = trim((string) ($getDbfCol($record, 'nama') ?? ''));
+                            $kdstapeg = trim((string) ($getDbfCol($record, 'kdstapeg') ?? ''));
                             $statusPgw = null;
                             if ($kdstapeg === '12') {
                                 $statusPgw = 'PPPK';
@@ -497,14 +597,20 @@ class RealisasiGajiController extends Controller
                                 }
                             }
 
-                            UnmatchedNip::create([
+                            $unmatchedBuffer[] = [
                                 'nip' => $nip,
                                 'nama' => $namaPgw ?: null,
                                 'status_pegawai' => $statusPgw,
                                 'jenis_file' => 'Gaji',
                                 'periode' => $periode,
                                 'keterangan' => "NIP dari file {$jenisGaji} DBF tidak ditemukan di Master Data Pegawai",
-                            ]);
+                                'created_at' => $now,
+                                'updated_at' => $now,
+                            ];
+
+                            if (count($unmatchedBuffer) >= $batchSize) {
+                                $flushBuffers();
+                            }
 
                             if ($importedCount % $updateInterval === 0 || $importedCount === $totalRows) {
                                 $percent = $totalRows > 0 ? min(100, round(($importedCount / $totalRows) * 100)) : 0;
@@ -518,47 +624,38 @@ class RealisasiGajiController extends Controller
                                 if ($sendProgress) {
                                     $sendProgress('progress', $pData);
                                 }
-                                Cache::store('file')->put('upload_progress_'.$uploadId, $pData, 120);
+                                Cache::store('file')->put('upload_progress_'.$uploadId, $pData, 180);
                             }
 
                             continue;
                         }
 
-                        $gajiPokok = (float) $record->get('GAPOK');
-                        $pajak = (float) ($record->get('PPAJAK') ?? $record->get('TJPAJAK') ?? 0);
-                        $iwp = (float) $record->get('PIWP');
-                        $potonganLain = (float) $record->get('POTONGAN') - ($pajak + $iwp);
+                        $gajiPokok = (float) ($getDbfCol($record, 'gapok') ?? 0);
+                        $pajak = (float) ($getDbfCol($record, 'ppajak') ?? $getDbfCol($record, 'tjpajak') ?? 0);
+                        $iwp = (float) ($getDbfCol($record, 'piwp') ?? 0);
+                        $potonganLain = (float) ($getDbfCol($record, 'potongan') ?? 0) - ($pajak + $iwp);
                         if ($potonganLain < 0) {
                             $potonganLain = 0;
-                        } // fallback if negative
-                        $gajiBersih = (float) $record->get('BERSIH');
+                        }
+                        $gajiBersih = (float) ($getDbfCol($record, 'bersih') ?? 0);
 
                         // Extract all columns for raw_data
                         $rawData = [];
-                        foreach ($table->getColumns() as $column) {
-                            $colName = $column->getName();
+                        foreach ($columnNames as $colName) {
                             $rawData[$colName] = $record->get($colName);
                         }
+                        $rawData['kelompok_upload'] = $kelompokPegawai;
+                        $rawData['jenis_gaji'] = $jenisGaji;
 
-                        RealisasiGaji::updateOrCreate(
-                            [
-                                'pegawai_id' => $pegawai->id,
-                                'periode' => $periode,
-                                'jenis_gaji' => $jenisGaji,
-                            ],
-                            [
-                                'gaji_pokok' => $gajiPokok,
-                                'pajak' => $pajak,
-                                'iwp' => $iwp,
-                                'potongan_lain' => $potonganLain,
-                                'gaji_bersih' => $gajiBersih,
-                                'sub_kegiatan' => null,
-                                'raw_data' => array_merge($rawData, [
-                                    'kelompok_upload' => $kelompokPegawai,
-                                    'jenis_gaji' => $jenisGaji,
-                                ]),
-                            ]
-                        );
+                        $upsertGajiRow((int) $pegawaiId, [
+                            'gaji_pokok' => $gajiPokok,
+                            'pajak' => $pajak,
+                            'iwp' => $iwp,
+                            'potongan_lain' => $potonganLain,
+                            'gaji_bersih' => $gajiBersih,
+                            'sub_kegiatan' => null,
+                            'raw_data' => $rawData,
+                        ]);
                         $importedCount++;
 
                         if ($importedCount % $updateInterval === 0 || $importedCount === $totalRows) {
@@ -573,7 +670,7 @@ class RealisasiGajiController extends Controller
                             if ($sendProgress) {
                                 $sendProgress('progress', $pData);
                             }
-                            Cache::store('file')->put('upload_progress_'.$uploadId, $pData, 120);
+                            Cache::store('file')->put('upload_progress_'.$uploadId, $pData, 180);
                         }
                     }
                     $table->close();
@@ -594,19 +691,19 @@ class RealisasiGajiController extends Controller
                         'percent' => 0,
                         'success' => 0,
                         'failed' => 0,
-                    ], 120);
+                    ], 180);
 
-                    $updateInterval = $totalRows > 1000 ? 25 : ($totalRows > 100 ? 10 : 2);
+                    $updateInterval = $totalRows > 1000 ? 200 : ($totalRows > 100 ? 25 : 2);
 
                     $rows = SimpleExcelReader::create($path, $extension)->getRows();
                     foreach ($rows as $row) {
-                        $nip = trim($row['NIP'] ?? '');
+                        $nip = trim((string) ($row['NIP'] ?? ''));
                         if (! $nip) {
                             continue;
                         }
 
-                        $pegawai = Pegawai::where('nip', $nip)->first();
-                        if (! $pegawai) {
+                        $pegawaiId = $pegawaiMap[$nip] ?? null;
+                        if (! $pegawaiId) {
                             $failedCount++;
                             $importedCount++;
 
@@ -623,14 +720,20 @@ class RealisasiGajiController extends Controller
                                 }
                             }
 
-                            UnmatchedNip::create([
+                            $unmatchedBuffer[] = [
                                 'nip' => $nip,
                                 'nama' => $row['Nama'] ?? $row['nama'] ?? $row['NAMA'] ?? null,
                                 'status_pegawai' => $statusPgw,
                                 'jenis_file' => 'Gaji',
                                 'periode' => $periode,
                                 'keterangan' => "NIP dari file {$jenisGaji} Excel tidak ditemukan di Master Data Pegawai",
-                            ]);
+                                'created_at' => $now,
+                                'updated_at' => $now,
+                            ];
+
+                            if (count($unmatchedBuffer) >= $batchSize) {
+                                $flushBuffers();
+                            }
 
                             if ($importedCount % $updateInterval === 0 || $importedCount === $totalRows) {
                                 $percent = $totalRows > 0 ? min(100, round(($importedCount / $totalRows) * 100)) : 0;
@@ -644,38 +747,31 @@ class RealisasiGajiController extends Controller
                                 if ($sendProgress) {
                                     $sendProgress('progress', $pData);
                                 }
-                                Cache::store('file')->put('upload_progress_'.$uploadId, $pData, 120);
+                                Cache::store('file')->put('upload_progress_'.$uploadId, $pData, 180);
                             }
 
                             continue;
                         }
 
-                        $gajiPokok = (float) str_replace(',', '', $row['Gaji Pokok'] ?? 0);
-                        $pajak = (float) str_replace(',', '', $row['Pajak'] ?? 0);
-                        $iwp = (float) str_replace(',', '', $row['IWP'] ?? 0);
-                        $potonganLain = (float) str_replace(',', '', $row['Potongan Lain'] ?? 0);
-                        $gajiBersih = (float) str_replace(',', '', $row['Bersih'] ?? 0);
+                        $gajiPokok = (float) str_replace(',', '', (string) ($row['Gaji Pokok'] ?? 0));
+                        $pajak = (float) str_replace(',', '', (string) ($row['Pajak'] ?? 0));
+                        $iwp = (float) str_replace(',', '', (string) ($row['IWP'] ?? 0));
+                        $potonganLain = (float) str_replace(',', '', (string) ($row['Potongan Lain'] ?? 0));
+                        $gajiBersih = (float) str_replace(',', '', (string) ($row['Bersih'] ?? 0));
                         $subKegiatan = $row['Sub Kegiatan'] ?? null;
 
-                        RealisasiGaji::updateOrCreate(
-                            [
-                                'pegawai_id' => $pegawai->id,
-                                'periode' => $periode,
+                        $upsertGajiRow((int) $pegawaiId, [
+                            'gaji_pokok' => $gajiPokok,
+                            'pajak' => $pajak,
+                            'iwp' => $iwp,
+                            'potongan_lain' => $potonganLain,
+                            'gaji_bersih' => $gajiBersih,
+                            'sub_kegiatan' => $subKegiatan,
+                            'raw_data' => array_merge($row, [
+                                'kelompok_upload' => $kelompokPegawai,
                                 'jenis_gaji' => $jenisGaji,
-                            ],
-                            [
-                                'gaji_pokok' => $gajiPokok,
-                                'pajak' => $pajak,
-                                'iwp' => $iwp,
-                                'potongan_lain' => $potonganLain,
-                                'gaji_bersih' => $gajiBersih,
-                                'sub_kegiatan' => $subKegiatan,
-                                'raw_data' => array_merge($row, [
-                                    'kelompok_upload' => $kelompokPegawai,
-                                    'jenis_gaji' => $jenisGaji,
-                                ]),
-                            ]
-                        );
+                            ]),
+                        ]);
                         $importedCount++;
 
                         if ($importedCount % $updateInterval === 0 || $importedCount === $totalRows) {
@@ -690,11 +786,12 @@ class RealisasiGajiController extends Controller
                             if ($sendProgress) {
                                 $sendProgress('progress', $pData);
                             }
-                            Cache::store('file')->put('upload_progress_'.$uploadId, $pData, 120);
+                            Cache::store('file')->put('upload_progress_'.$uploadId, $pData, 180);
                         }
                     }
                 }
 
+                $flushBuffers();
                 DB::commit();
                 Cache::store('file')->forget('upload_progress_'.$uploadId);
 
